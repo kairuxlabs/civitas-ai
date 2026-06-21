@@ -23,7 +23,7 @@ class SimulateRequest(BaseModel):
 
 @router.post("", response_model=DecisionOut)
 async def simulate(request: SimulateRequest, session: AsyncSession = Depends(get_db)):
-    scenario_params = SCENARIOS.get(request.scenario, {})
+    scenario_params = SCENARIOS.get(request.scenario, {"rain_multiplier": 1.0, "aqi_boost": 0})
     query = f"Simulate scenario: {request.scenario}"
 
     sim_event = [
@@ -31,6 +31,8 @@ async def simulate(request: SimulateRequest, session: AsyncSession = Depends(get
             "title": f"Simulated: {request.scenario}",
             "impact_level": "high",
             "category": "simulation",
+            "rain_multiplier": scenario_params["rain_multiplier"],
+            "aqi_boost": scenario_params["aqi_boost"],
         }
     ]
 

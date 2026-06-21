@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str
-    gemini_api_key: str
+    gemini_api_key: str = ""
     chromadb_host: str = "localhost"
     chromadb_port: int = 8001
 

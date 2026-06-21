@@ -1,13 +1,13 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DecisionOut(BaseModel):
     prediction: dict
     impact: dict
     recommendations: list[str]
-    confidence: float
-    explanation: list[str]
+    confidence: float = Field(..., ge=0, le=100)
+    explanation: list[str] = Field(..., min_length=5, max_length=5)
 
 
 class AgentDecisionOut(BaseModel):
