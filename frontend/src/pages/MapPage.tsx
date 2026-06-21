@@ -9,6 +9,7 @@ import type { District, CityScore } from '../types'
 export default function MapPage() {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<maplibregl.Map | null>(null)
+  const markersRef = useRef<maplibregl.Marker[]>([])
   const [selectedDistrict, setSelectedDistrict] = useState<{ district: District; score?: CityScore } | null>(null)
 
   const { data: districts = [] } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
@@ -23,24 +24,36 @@ export default function MapPage() {
       zoom: 11,
     })
     mapInstance.current.addControl(new maplibregl.NavigationControl())
+    return () => {
+      mapInstance.current?.remove()
+      mapInstance.current = null
+    }
   }, [])
 
   useEffect(() => {
     if (!mapInstance.current || !districts.length) return
     const map = mapInstance.current
 
-    districts.forEach(d => {
-      const score = scores.find(s => s.district_id === d.id)
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current = []
+
+    districts.forEach(district => {
+      const score = scores.find(s => s.district_id === district.id)
       const color = !score ? '#64748b' :
         score.overall_score >= 70 ? '#10b981' :
         score.overall_score >= 50 ? '#f59e0b' : '#ef4444'
 
+      const lng = 105.8542 + ((district.id * 17) % 30 - 15) * 0.01
+      const lat = 21.0285 + ((district.id * 13) % 24 - 12) * 0.01
+
       const marker = new maplibregl.Marker({ color })
-        .setLngLat([105.8542 + (Math.random() - 0.5) * 0.15, 21.0285 + (Math.random() - 0.5) * 0.12])
+        .setLngLat([lng, lat])
         .addTo(map)
 
+      markersRef.current.push(marker)
+
       marker.getElement().addEventListener('click', () => {
-        setSelectedDistrict({ district: d, score })
+        setSelectedDistrict({ district, score })
       })
     })
   }, [districts, scores])
