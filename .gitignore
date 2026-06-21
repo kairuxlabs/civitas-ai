@@ -1,0 +1,33 @@
+.idea/
+docs/superpowers/
+docs/specs/idea.txt
+docs/specs
+CLAUDE.md
+.claude/
+.superpowers/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+.pytest_cache/
+.mypy_cache/
+
+# Environment
+.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Docker volumes
+docker/pgdata/
+
+# OS
+.DS_Store
+Thumbs.db
