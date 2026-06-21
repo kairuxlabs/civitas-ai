@@ -26,3 +26,16 @@ export interface DecisionOut {
 }
 
 export type SimulationScenario = 'heavy_rain' | 'air_pollution' | 'major_event' | 'heatwave';
+
+export interface AgentDecisionOut {
+  id: number;
+  city_id: string;
+  district_id: number | null;
+  query: string | null;
+  prediction: Record<string, string> | null;
+  impact: Record<string, string> | null;
+  recommendations: string[] | null;
+  confidence: number | null;
+  explanation: string[] | null;
+  created_at: string | null;
+}

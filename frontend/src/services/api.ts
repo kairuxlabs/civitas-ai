@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { District, CityScore, DecisionOut } from '../types'
+import type { District, CityScore, DecisionOut, AgentDecisionOut } from '../types'
 
 const http = axios.create({ baseURL: '' })
 
@@ -11,4 +11,5 @@ export const api = {
     http.post<DecisionOut>('/api/chat', { query, district_id: districtId }).then(r => r.data),
   simulate: (scenario: string, districtId: number) =>
     http.post<DecisionOut>('/api/simulate', { scenario, district_id: districtId }).then(r => r.data),
+  getTimeline: (limit = 20) => http.get<AgentDecisionOut[]>(`/api/timeline?limit=${limit}`).then(r => r.data),
 }

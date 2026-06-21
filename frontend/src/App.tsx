@@ -3,6 +3,8 @@ import DashboardPage from './pages/DashboardPage'
 import MapPage from './pages/MapPage'
 import CopilotPage from './pages/CopilotPage'
 import SimulatorPage from './pages/SimulatorPage'
+import RiskRadarPage from './pages/RiskRadarPage'
+import TimelinePage from './pages/TimelinePage'
 
 function Nav() {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -16,6 +18,8 @@ function Nav() {
       <NavLink to="/map" className={linkClass}>Live Map</NavLink>
       <NavLink to="/copilot" className={linkClass}>AI Copilot</NavLink>
       <NavLink to="/simulator" className={linkClass}>What-if</NavLink>
+      <NavLink to="/risk" className={linkClass}>Risk Radar</NavLink>
+      <NavLink to="/timeline" className={linkClass}>Timeline</NavLink>
     </nav>
   )
 }
@@ -31,6 +35,8 @@ export default function App() {
             <Route path="/map" element={<MapPage />} />
             <Route path="/copilot" element={<CopilotPage />} />
             <Route path="/simulator" element={<SimulatorPage />} />
+            <Route path="/risk" element={<RiskRadarPage />} />
+            <Route path="/timeline" element={<TimelinePage />} />
           </Routes>
         </main>
       </div>
