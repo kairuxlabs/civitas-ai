@@ -4,35 +4,28 @@ from src.database.connection import AsyncSessionLocal
 from src.pipelines.weather_pipeline import WeatherPipeline
 from src.pipelines.aqi_pipeline import AQIPipeline
 from src.pipelines.feedback_pipeline import FeedbackPipeline
+from src.services.city_score_service import CityScoreService
+from src.repositories.district_repo import DistrictRepo
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-async def run_weather():
+async def run_all():
     async with AsyncSessionLocal() as session:
         await WeatherPipeline.run(session)
-
-async def run_aqi():
-    async with AsyncSessionLocal() as session:
         await AQIPipeline.run(session)
-
-async def run_feedback():
-    async with AsyncSessionLocal() as session:
         await FeedbackPipeline.run(session)
+        districts = await DistrictRepo.get_all(session)
+        for d in districts:
+            await CityScoreService.calculate_and_save(session, d.id)
+        logger.info(f"Full pipeline run complete for {len(districts)} districts")
 
 async def main():
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(run_weather, "interval", minutes=15, id="weather")
-    scheduler.add_job(run_aqi, "interval", minutes=60, id="aqi")
-    scheduler.add_job(run_feedback, "interval", minutes=30, id="feedback")
-
-    # Run all pipelines immediately on startup
+    scheduler.add_job(run_all, "interval", minutes=15, id="full_pipeline")
     scheduler.start()
-    await run_weather()
-    await run_aqi()
-    await run_feedback()
-
-    logger.info("Scheduler started")
+    await run_all()
+    logger.info("Scheduler started — running every 15 minutes")
     try:
         await asyncio.Event().wait()
     except (KeyboardInterrupt, SystemExit):
