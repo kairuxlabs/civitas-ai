@@ -27,6 +27,12 @@ export interface DecisionOut {
 
 export type SimulationScenario = 'heavy_rain' | 'air_pollution' | 'major_event' | 'heatwave';
 
+export interface AQIPoint {
+  time: string;
+  aqi_index: number;
+  pm25: number;
+}
+
 export interface AgentDecisionOut {
   id: number;
   city_id: string;

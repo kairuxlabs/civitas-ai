@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { District, CityScore, DecisionOut, AgentDecisionOut } from '../types'
+import type { District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint } from '../types'
 
 const http = axios.create({ baseURL: '' })
 
@@ -12,4 +12,6 @@ export const api = {
   simulate: (scenario: string, districtId: number) =>
     http.post<DecisionOut>('/api/simulate', { scenario, district_id: districtId }).then(r => r.data),
   getTimeline: (limit = 20) => http.get<AgentDecisionOut[]>(`/api/timeline?limit=${limit}`).then(r => r.data),
+  getAQIHistory: (districtId: number, limit = 24) =>
+    http.get<AQIPoint[]>(`/api/aqi/history/${districtId}?limit=${limit}`).then(r => r.data),
 }
