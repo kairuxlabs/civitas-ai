@@ -20,20 +20,20 @@ from src.schemas.decision import DecisionOut
 def build_graph():
     graph = StateGraph(AgentState)
 
-    graph.add_node("traffic", traffic_agent)
-    graph.add_node("environment", environment_agent)
-    graph.add_node("event", event_agent)
-    graph.add_node("citizen", citizen_agent)
-    graph.add_node("decision", decision_agent)
-    graph.add_node("explanation", explanation_agent)
+    graph.add_node("traffic_node", traffic_agent)
+    graph.add_node("environment_node", environment_agent)
+    graph.add_node("event_node", event_agent)
+    graph.add_node("citizen_node", citizen_agent)
+    graph.add_node("decision_node", decision_agent)
+    graph.add_node("explanation_node", explanation_agent)
 
-    graph.set_entry_point("traffic")
-    graph.add_edge("traffic", "environment")
-    graph.add_edge("environment", "event")
-    graph.add_edge("event", "citizen")
-    graph.add_edge("citizen", "decision")
-    graph.add_edge("decision", "explanation")
-    graph.add_edge("explanation", END)
+    graph.set_entry_point("traffic_node")
+    graph.add_edge("traffic_node", "environment_node")
+    graph.add_edge("environment_node", "event_node")
+    graph.add_edge("event_node", "citizen_node")
+    graph.add_edge("citizen_node", "decision_node")
+    graph.add_edge("decision_node", "explanation_node")
+    graph.add_edge("explanation_node", END)
 
     return graph.compile()
 
