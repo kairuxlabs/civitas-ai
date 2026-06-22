@@ -1,6 +1,5 @@
 <div align="center">
 
-<img src="docs/screenshots/dashboard.png" alt="Civitas AI Dashboard" width="100%" />
 
 # Civitas AI
 
@@ -383,4 +382,4 @@ All tables include a `city_id` column (default `'hanoi'`) to support future mult
 
 ## License
 
-[MIT](LICENSE) — built by [@kairus-dev](https://github.com/kairus-dev)
+[MIT](LICENSE) — built by [@kairuslabs](https://github.com/kairuxlabs)

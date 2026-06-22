@@ -31,3 +31,5 @@ docker/pgdata/
 # OS
 .DS_Store
 Thumbs.db
+
+civitas_dev.db
