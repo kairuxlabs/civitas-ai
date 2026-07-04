@@ -33,3 +33,4 @@ docker/pgdata/
 Thumbs.db
 
 civitas_dev.db
+frontend/test-results/
