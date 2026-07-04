@@ -43,10 +43,22 @@ class KnowledgeMemory:
 
     def _qdrant_search(self, query: str, k: int) -> list[dict]:
         from qdrant_client import QdrantClient  # optional dependency
+
+        from src.agents.gemini_client import embed_text
+
+        vector = embed_text(query, task_type="RETRIEVAL_QUERY")
+        if vector is None:
+            raise RuntimeError("Gemini embedding unavailable")
+
         client = QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
-        hits = client.query(collection_name="cityos_sop", query_text=query, limit=k)
+        hits = client.search(collection_name="cityos_sop", query_vector=vector, limit=k)
         return [
-            {"id": h.id, "title": h.metadata.get("title", ""), "content": h.document, "score": h.score}
+            {
+                "id": h.payload.get("doc_id", h.id),
+                "title": h.payload.get("title", ""),
+                "content": h.payload.get("content", ""),
+                "score": h.score,
+            }
             for h in hits
         ]
 

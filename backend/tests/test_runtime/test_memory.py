@@ -1,4 +1,13 @@
+import pytest
+
 from src.runtime.memory import DecisionMemory, KnowledgeMemory
+from src.utils.config import settings
+
+
+@pytest.fixture(autouse=True)
+def _force_keyword_fallback(monkeypatch):
+    # Keep this test file offline regardless of a locally-configured QDRANT_URL
+    monkeypatch.setattr(settings, "qdrant_url", "")
 
 
 def test_knowledge_memory_finds_flood_sop():
