@@ -6,16 +6,14 @@ on:
 
 jobs:
   # ─── Deploy Backend to Render ────────────────────────────────────────────────
+  # Render free plan: auto-deploys from GitHub on push to main.
+  # No deploy hook needed — this job just confirms the push completed.
   deploy-backend:
-    name: Deploy Backend → Render
+    name: Deploy Backend → Render (auto)
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render deploy hook
-        run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
-          echo "Render response: $STATUS"
-          [ "$STATUS" = "200" ] || [ "$STATUS" = "201" ]
+      - name: Confirm push to main (Render auto-deploys)
+        run: echo "Render will auto-deploy from GitHub push. Check dashboard at render.com"
 
   # ─── Deploy Frontend to Vercel ───────────────────────────────────────────────
   deploy-frontend:
