@@ -1,7 +1,8 @@
 import axios from 'axios'
 import type { District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint } from '../types'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || ''
+const stripBOM = (s: string) => s.replace(/^﻿/, '').trim()
+const baseURL = stripBOM(import.meta.env.VITE_API_BASE_URL || '')
 const http = axios.create({ baseURL })
 
 export const api = {
@@ -20,7 +21,7 @@ export const api = {
 }
 
 export function createWebSocket(): WebSocket {
-  const wsURL = import.meta.env.VITE_WS_URL
+  const wsURL = stripBOM(import.meta.env.VITE_WS_URL || '')
   if (wsURL) {
     return new WebSocket(wsURL)
   }
