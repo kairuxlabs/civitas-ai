@@ -152,7 +152,7 @@ class SimulationEngine:
                     city_id=d.city_id, district_id=d.id, timestamp=now,
                     pm25=round(aqi_val * 0.6, 1), pm10=round(aqi_val * 0.9, 1),
                     co=round(random.uniform(0.5, 2.0), 2), no2=round(aqi_val * 0.3, 1),
-                    aqi_index=round(aqi_val, 1),
+                    aqi_index=int(round(aqi_val)),  # column is Integer
                 ))
             if profile.feedback_pool and districts:
                 for _ in range(random.randint(1, 3)):
