@@ -2,7 +2,7 @@ services:
   - type: web
     name: civitas-ai-backend
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile.prod
+    dockerfilePath: Dockerfile.prod
     dockerContext: ./backend
     plan: free
     region: singapore
