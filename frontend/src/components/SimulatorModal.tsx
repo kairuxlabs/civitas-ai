@@ -88,7 +88,7 @@ export default function SimulatorModal({ districtName, onRun, onClose, events, r
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div data-testid="simulator-modal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
@@ -110,6 +110,7 @@ export default function SimulatorModal({ districtName, onRun, onClose, events, r
                 {SCENARIOS.map(s => (
                   <button
                     key={s.key}
+                    data-testid={`scenario-${s.key}`}
                     onClick={() => setSelected(s.key)}
                     className={`rounded-xl border p-4 text-left transition-all bg-gradient-to-br ${s.color} ${
                       selected === s.key
@@ -132,6 +133,7 @@ export default function SimulatorModal({ districtName, onRun, onClose, events, r
               </div>
 
               <button
+                data-testid="simulator-run-btn"
                 onClick={handleRun}
                 disabled={!selected}
                 className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-xl transition-colors text-sm"

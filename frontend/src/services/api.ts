@@ -1,7 +1,8 @@
 import axios from 'axios'
 import type { District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint } from '../types'
 
-const http = axios.create({ baseURL: '' })
+const baseURL = import.meta.env.VITE_API_BASE_URL || ''
+const http = axios.create({ baseURL })
 
 export const api = {
   getDistricts: () => http.get<District[]>('/api/districts').then(r => r.data),
@@ -19,6 +20,10 @@ export const api = {
 }
 
 export function createWebSocket(): WebSocket {
+  const wsURL = import.meta.env.VITE_WS_URL
+  if (wsURL) {
+    return new WebSocket(wsURL)
+  }
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const host = window.location.host
   return new WebSocket(`${protocol}//${host}/ws`)

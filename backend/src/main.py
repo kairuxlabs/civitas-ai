@@ -1,6 +1,8 @@
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.api.routes import districts, scores, chat, simulator, timeline, aqi
 from src.api.routes import decisions
@@ -14,6 +16,7 @@ import src.models.decision  # noqa: F401
 import src.models.event     # noqa: F401
 import src.models.feedback  # noqa: F401
 from src.utils.config import settings
+from src.scheduler.main import run_all
 
 
 async def _seed_districts(session):
@@ -34,12 +37,23 @@ async def _seed_districts(session):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if "sqlite" in settings.database_url:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        async with AsyncSessionLocal() as session:
-            await _seed_districts(session)
+    # Tự động tạo các bảng và seed dữ liệu quận huyện
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    async with AsyncSessionLocal() as session:
+        await _seed_districts(session)
+    
+    # Khởi chạy Scheduler ngay trong tiến trình FastAPI
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(run_all, "interval", minutes=15, id="full_pipeline")
+    scheduler.start()
+    
+    # Kích hoạt chạy lượt đầu tiên bất đồng bộ dưới background để dashboard có dữ liệu ngay
+    asyncio.create_task(run_all())
+    
     yield
+    scheduler.shutdown()
 
 
 app = FastAPI(title="CityOS API", version="2.0.0", lifespan=lifespan)

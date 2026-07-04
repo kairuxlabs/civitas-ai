@@ -102,6 +102,7 @@ export default function HanoiMap({ scores, selectedDistrictId, onSelectDistrict 
           return (
             <g
               key={node.id}
+              data-testid={`district-${node.id}`}
               style={{ cursor: 'pointer', filter: glow }}
               onClick={() => onSelectDistrict(node.id)}
               onMouseEnter={() => setHovered(node.id)}
