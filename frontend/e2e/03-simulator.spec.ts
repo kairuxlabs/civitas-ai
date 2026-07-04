@@ -75,10 +75,11 @@ test.describe('Simulator modal', () => {
     await page.getByTestId('simulator-run-btn').click()
 
     // Pipeline view should appear
-    await expect(page.getByText('Pipeline đang chạy')).toBeVisible()
-    // All 7 steps rendered
+    const modal = page.getByTestId('simulator-modal')
+    await expect(modal.getByText('Pipeline đang chạy')).toBeVisible()
+    // All 7 steps rendered — scope to modal to avoid strict-mode matches in SVG/KPI elsewhere
     for (const step of ['Traffic', 'Environment', 'Event', 'Citizen', 'Knowledge', 'Decision', 'Explanation']) {
-      await expect(page.getByText(step)).toBeVisible()
+      await expect(modal.getByText(step, { exact: true }).first()).toBeVisible()
     }
   })
 })

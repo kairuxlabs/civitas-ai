@@ -17,19 +17,19 @@ test.describe('Map district selection', () => {
   for (const { id, name } of MOCK_DISTRICTS) {
     test(`clicking district ${id} (${name}) updates header and copilot label`, async ({ page }) => {
       await waitForApp(page)
-      await page.locator(`[data-testid="district-${id}"]`).click()
-      // District info bar: selected name appears
+      // SVG <g> hover handlers mutate the DOM on mousemove, making the element unstable.
+      // dispatchEvent fires the click directly without moving the mouse, bypassing all hover effects.
+      await page.locator(`[data-testid="district-${id}"]`).dispatchEvent('click')
+      // Info bar: "Selected: <name>" appears
       await expect(page.getByText(name, { exact: false }).first()).toBeVisible({ timeout: 5_000 })
-      // Copilot subtitle updates
+      // Copilot subtitle updates to "Ask about <name>"
       await expect(page.getByText(`Ask about ${name}`, { exact: false })).toBeVisible({ timeout: 5_000 })
     })
   }
 
   test('clicking a district highlights it (selection ring visible)', async ({ page }) => {
     await waitForApp(page)
-    // District 3 starts unselected; clicking should cause a ring to appear (animating circle)
-    await page.locator('[data-testid="district-3"]').click()
-    // After selection the SVG should contain a blue ring stroke
+    await page.locator('[data-testid="district-3"]').dispatchEvent('click')
     const svg = page.locator('svg').first()
     await expect(svg).toBeVisible()
   })
