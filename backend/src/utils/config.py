@@ -14,9 +14,15 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def ensure_asyncpg(cls, v: str) -> str:
-        if v.startswith("postgresql://") or v.startswith("postgres://"):
-            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
-            v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+        # Normalize scheme for asyncpg
+        for prefix in ("postgresql://", "postgres://"):
+            if v.startswith(prefix):
+                v = "postgresql+asyncpg://" + v[len(prefix):]
+                break
+        # asyncpg uses ssl=require, not sslmode=require
+        v = v.replace("sslmode=require", "ssl=require")
+        # asyncpg doesn't support channel_binding parameter
+        v = v.replace("&channel_binding=require", "").replace("channel_binding=require&", "").replace("channel_binding=require", "")
         return v
 
 
