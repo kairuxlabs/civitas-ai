@@ -33,4 +33,18 @@ test.describe('Map district selection', () => {
     const svg = page.locator('svg').first()
     await expect(svg).toBeVisible()
   })
+
+  test('regression: a genuine mouse click (not force/dispatchEvent) selects a non-default district', async ({ page }) => {
+    // The decorative background grid <svg> previously lacked pointer-events-none, so it
+    // silently intercepted every real click on the map (Playwright reported
+    // "<rect fill=url(#grid)> subtree intercepts pointer events"). Unlike dispatchEvent
+    // or { force: true }, a plain .click() performs real hit-testing and would have
+    // caught this regression.
+    await waitForApp(page)
+    await page.locator('[data-testid="district-2"]').click()
+    await expect(page.getByText('Ba Đình', { exact: false }).first()).toBeVisible()
+
+    await page.locator('[data-testid="district-5"]').click()
+    await expect(page.getByText('Hoàng Mai', { exact: false }).first()).toBeVisible()
+  })
 })

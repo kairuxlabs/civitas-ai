@@ -57,6 +57,19 @@ describe('HanoiMap', () => {
     expect(onSelect).toHaveBeenCalledWith(expect.any(Number))
   })
 
+  it('background grid overlay does not intercept clicks (pointer-events-none)', () => {
+    // Regression test: the decorative grid <svg> is absolutely positioned, so it paints
+    // above the (statically positioned) map <svg> regardless of DOM order. Without
+    // pointer-events-none it silently swallows every click aimed at district nodes.
+    const { container } = render(
+      <HanoiMap scores={[]} selectedDistrictId={null} onSelectDistrict={() => {}} />
+    )
+    const svgs = container.querySelectorAll('svg')
+    const gridSvg = Array.from(svgs).find(s => s.querySelector('rect[fill="url(#grid)"]'))
+    expect(gridSvg).toBeTruthy()
+    expect(gridSvg?.getAttribute('class')).toContain('pointer-events-none')
+  })
+
   it('renders legend items', () => {
     const { container } = render(
       <HanoiMap scores={[]} selectedDistrictId={null} onSelectDistrict={() => {}} />
