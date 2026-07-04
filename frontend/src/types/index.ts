@@ -131,6 +131,24 @@ export interface RuntimeRunSummary {
   confidence: number | null;
 }
 
+export interface SimulationStatus {
+  running: boolean;
+  scenario: string;
+  scenario_label: string;
+  interval_s: number;
+  auto_goal: boolean;
+  tick: number;
+  values: { rain: number; aqi: number; temperature: number; humidity: number; wind_speed: number };
+  last_auto_goal: string | null;
+}
+
+export interface ScenarioInfo {
+  name: string;
+  label: string;
+}
+
+export type CrawlResults = Record<string, { ok: boolean; count?: number; error?: string }>;
+
 export interface RuntimeMonitor {
   agents: Record<string, {
     runs: number;

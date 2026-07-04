@@ -2,6 +2,7 @@ import axios from 'axios'
 import type {
   District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint,
   RuntimeRun, RuntimeRunSummary, RuntimeMonitor,
+  SimulationStatus, ScenarioInfo, CrawlResults,
 } from '../types'
 
 const stripBOM = (s: string) => s.replace(/^﻿/, '').trim()
@@ -30,6 +31,18 @@ export const api = {
   resolveRun: (runId: string, approved: boolean) =>
     http.post<RuntimeRun>(`/api/v2/runs/${runId}/approval`, { approved }).then(r => r.data),
   getRuntimeMonitor: () => http.get<RuntimeMonitor>('/api/v2/monitor').then(r => r.data),
+
+  // Digital Twin simulation + crawling
+  startSimulation: (scenario: string, intervalS = 30, autoGoal = true) =>
+    http.post<SimulationStatus>('/api/v2/simulation/start', {
+      scenario, interval_s: intervalS, auto_goal: autoGoal,
+    }).then(r => r.data),
+  stopSimulation: () => http.post<SimulationStatus>('/api/v2/simulation/stop').then(r => r.data),
+  getSimulationStatus: () => http.get<SimulationStatus>('/api/v2/simulation/status').then(r => r.data),
+  getScenarios: () =>
+    http.get<{ scenarios: ScenarioInfo[] }>('/api/v2/simulation/scenarios').then(r => r.data.scenarios),
+  runCrawl: (sources?: string[]) =>
+    http.post<{ results: CrawlResults }>('/api/v2/crawl', { sources }).then(r => r.data.results),
 }
 
 export function createWebSocket(): WebSocket {

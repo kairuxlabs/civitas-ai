@@ -4,6 +4,7 @@ import {
   Activity, Brain, CheckCircle, ChevronRight, Loader2, Rocket, ShieldAlert, XCircle,
 } from 'lucide-react'
 import { api } from '../services/api'
+import SimulationPanel from '../components/SimulationPanel'
 import type { RuntimeRun, RuntimeTask } from '../types'
 
 // ─── Presets ──────────────────────────────────────────────────────────────────
@@ -267,6 +268,9 @@ export default function MissionControlPage() {
             ))}
           </div>
         </div>
+
+        {/* Digital Twin simulation + crawling */}
+        <SimulationPanel />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* DAG + monitor */}
