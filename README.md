@@ -5,16 +5,16 @@
 
 **AI-powered Urban Operating System for Hanoi**
 
-An intelligent city management platform that ingests real-time weather and air quality data, processes it through a multi-agent LangGraph pipeline powered by Google Gemini, and delivers actionable insights to city operators through a modern React dashboard.
+An intelligent city management platform that ingests real-time weather and air quality data, processes it through a 7-agent sequential pipeline powered by Google Gemini, and delivers actionable insights to city operators through a Mission Control dashboard with live WebSocket streaming.
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.2-1C3C3C?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/kairus-dev/civitas-ai/ci.yml?branch=main&label=CI&style=flat-square)](../../actions/workflows/ci.yml)
 
-[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Architecture](#architecture) · [API Reference](#api-reference) · [Development](#development)
+[Features](#features) · [Quick Start](#quick-start) · [Architecture](#architecture) · [API Reference](#api-reference) · [Testing](#testing) · [Deployment](#deployment)
 
 </div>
 
@@ -23,40 +23,12 @@ An intelligent city management platform that ingests real-time weather and air q
 ## Features
 
 - **Real-time monitoring** — Weather and AQI data fetched every 15 minutes from Open-Meteo and OpenAQ across all 12 Hanoi districts
-- **Multi-agent AI pipeline** — 6-node LangGraph graph (traffic → environment → event → citizen → decision → explanation) powered by Google Gemini
-- **Live dashboard** — Score gauges, AQI trend charts, district overview table, and auto-generated alerts
-- **Interactive map** — MapLibre GL dark map with color-coded district markers and detailed score panels
-- **Risk Radar** — Recharts radar chart across 5 risk dimensions with AI-generated mitigation recommendations
-- **AI Copilot** — Real-time chat interface that runs the full agent pipeline and returns structured decisions
+- **7-agent AI pipeline** — Sequential graph (traffic → environment → event → citizen → knowledge → decision → explanation) powered by Google Gemini
+- **Live WebSocket streaming** — Agent pipeline progress broadcast in real time; operators watch each step complete
+- **Mission Control dashboard** — SVG district map, KPI bar, AI Copilot chat, real-time Decision Report with Approve/Reject
 - **What-If Simulator** — Scenario testing (heavy rain, air pollution, major event, heatwave) with AI predictions
-- **Decision Timeline** — Persistent log of all agent decisions with confidence scores
-
----
-
-## Screenshots
-
-<table>
-  <tr>
-    <td width="50%">
-      <img src="docs/screenshots/dashboard.png" alt="Dashboard" />
-      <p align="center"><b>Dashboard</b> — City scores, AQI trend, district table</p>
-    </td>
-    <td width="50%">
-      <img src="docs/screenshots/risk-radar.png" alt="Risk Radar" />
-      <p align="center"><b>Risk Radar</b> — Multi-dimension risk chart + AI recommendation</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <img src="docs/screenshots/copilot.png" alt="AI Copilot" />
-      <p align="center"><b>AI Copilot</b> — Real-time chat with agent pipeline</p>
-    </td>
-    <td width="50%">
-      <img src="docs/screenshots/simulator.png" alt="What-If Simulator" />
-      <p align="center"><b>What-If Simulator</b> — Urban stress scenario testing</p>
-    </td>
-  </tr>
-</table>
+- **Human-in-the-loop** — Decisions with confidence < 75% or flood risk flagged as `high` require operator approval
+- **Decision Timeline** — Persistent log of all agent decisions with confidence scores and full explanations
 
 ---
 
@@ -64,13 +36,14 @@ An intelligent city management platform that ingests real-time weather and air q
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React 18, TypeScript 5.5, Vite, Tailwind CSS, Recharts, MapLibre GL, TanStack Query, Axios |
+| **Frontend** | React 18, TypeScript 5.5, Vite, Tailwind CSS, TanStack Query, Axios |
 | **Backend** | FastAPI 0.111, Python 3.11+, SQLAlchemy 2.0 (async), Pydantic v2 |
-| **AI / Agents** | LangGraph 0.2, LangChain Google Gemini, Google Generative AI |
-| **Database** | PostgreSQL 15, ChromaDB (vector store) |
-| **Scheduler** | APScheduler — triggers full pipeline every 15 minutes |
+| **AI / Agents** | Google Gemini via LangChain (sequential agent graph, no LangGraph dependency) |
+| **Database** | PostgreSQL 15 (production via Neon.tech), SQLite (local dev) |
+| **Scheduler** | APScheduler — triggers full data pipeline every 15 minutes |
 | **Data Sources** | [Open-Meteo](https://open-meteo.com) (weather), [OpenAQ](https://openaq.org) (air quality) |
-| **Infrastructure** | Docker Compose, Adminer |
+| **Testing** | pytest + httpx (backend), Vitest + Testing Library (frontend), Playwright (E2E) |
+| **CI/CD** | GitHub Actions → Render (backend) + Vercel (frontend) + Neon.tech (database) |
 
 ---
 
@@ -78,48 +51,57 @@ An intelligent city management platform that ingests real-time weather and air q
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      React Frontend (:3000)                      │
-│   Dashboard · Map · Risk Radar · Copilot · Simulator · Timeline  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │  /api/*  (Vite proxy)
-┌────────────────────────────▼────────────────────────────────────┐
+│                  React Frontend (:3000)                          │
+│        Mission Control: Map · Copilot · Simulator · Timeline     │
+└────────────────────┬────────────────────────┬───────────────────┘
+                     │  /api/* (Vite proxy)   │  /ws (WebSocket)
+┌────────────────────▼────────────────────────▼───────────────────┐
 │                    FastAPI Backend (:8000)                        │
-│                                                                  │
-│  GET /api/districts      GET /api/scores/:id                     │
-│  GET /api/aqi/history    GET /api/timeline                       │
-│  POST /api/chat          POST /api/simulate                      │
-└───────┬───────────────────────────────┬────────────────────────┘
-        │                               │
-┌───────▼───────────┐     ┌─────────────▼──────────────────────────┐
-│    PostgreSQL      │     │          LangGraph Pipeline             │
-│                   │     │                                         │
-│  districts        │     │  ┌──────────┐    ┌───────────────────┐ │
-│  weather          │◄────┤  │ AgentState│───►│ traffic_node      │ │
-│  aqi              │     │  │           │    │ environment_node  │ │
-│  city_score       │     │  │ weather   │    │ event_node        │ │
-│  agent_decisions  │     │  │ aqi       │    │ citizen_node      │ │
-└───────────────────┘     │  │ events    │    │ decision_node     │ │
-        ▲                 │  │ feedback  │    │ explanation_node  │ │
-        │                 │  └──────────┘    └───────────────────┘ │
-┌───────┴───────────────┐ │            Google Gemini via LangChain  │
-│  APScheduler (15 min) │ └────────────────────────────────────────┘
-│                       │
-│  WeatherPipeline      │  Open-Meteo API ──► weather per district
-│  AQIPipeline          │  OpenAQ API    ──► aqi per district
-│  FeedbackPipeline     │
-│  CityScoreService     │  Derives: traffic · environment · risk · overall
+│  GET /api/districts   GET /api/scores   GET /api/timeline        │
+│  POST /api/chat       POST /api/simulate                         │
+│  POST /api/decisions/{id}/approve|reject                         │
+└───────┬─────────────────────────────┬────────────────────────────┘
+        │                             │
+┌───────▼──────────┐    ┌─────────────▼───────────────────────────┐
+│   PostgreSQL      │    │           Agent Pipeline                 │
+│                  │    │                                          │
+│  districts       │    │  traffic → environment → event           │
+│  weather         │◄───┤  → citizen → knowledge → decision        │
+│  aqi             │    │  → explanation                           │
+│  city_score      │    │                                          │
+│  agent_decisions │    │  Each step broadcasts WebSocket events   │
+└───────────────────┘   │  Decisions saved to DB + returned        │
+        ▲               └──────────────────────────────────────────┘
+        │
+┌───────┴──────────────┐
+│  APScheduler (15min)  │
+│  WeatherPipeline      │  ← Open-Meteo API
+│  AQIPipeline          │  ← OpenAQ API
+│  FeedbackPipeline     │  ← synthetic citizen reports
+│  CityScoreService     │  ← derives scores from sensor data
 └───────────────────────┘
 ```
 
 ### Agent Pipeline
 
-Each `/api/chat` and `/api/simulate` request compiles and runs a stateful LangGraph graph:
+Every `/api/chat` and `/api/simulate` call runs a sequential 7-step pipeline:
 
 ```
-traffic_node ──► environment_node ──► event_node ──► citizen_node ──► decision_node ──► explanation_node
+Traffic → Environment → Event → Citizen → Knowledge → Decision → Explanation
 ```
 
-Every node reads the shared `AgentState` TypedDict (weather data, AQI data, events, citizen feedback) and writes its analysis back. `decision_node` synthesises all domain analyses into structured predictions, impact assessment, and prioritised recommendations. The result is saved to `agent_decisions` and returned to the caller.
+Each agent is a sync function called via `asyncio.to_thread()`. Between steps, WebSocket events are broadcast so the UI shows live progress. The Knowledge Agent retrieves relevant SOPs from a static keyword index. The Decision Agent synthesises all analyses into a structured response. If `confidence < 75` or `flood_risk == "high"`, the decision is flagged as `requires_approval = True`.
+
+### Score Derivation
+
+`CityScoreService` derives scores from the latest sensor readings per district:
+
+| Score | Formula |
+|---|---|
+| `traffic_score` | `100 − (aqi_index / 3)` |
+| `environment_score` | `100 − (pm25 / 1.5)` |
+| `risk_score` | `(rain × 5) + (aqi_index / 4)` |
+| `overall_score` | mean of traffic, environment, citizen, `(100 − risk)` |
 
 ---
 
@@ -136,10 +118,7 @@ Every node reads the shared `AgentState` TypedDict (weather data, AQI data, even
 git clone https://github.com/kairus-dev/civitas-ai.git
 cd civitas-ai
 
-# Create root .env with your Gemini key
 echo "GEMINI_API_KEY=your_key_here" > .env
-
-# Start all services
 docker-compose up
 ```
 
@@ -147,57 +126,31 @@ All services start automatically. PostgreSQL is initialised with the schema and 
 
 | Service | URL | Description |
 |---|---|---|
-| **Frontend** | http://localhost:3000 | React dashboard |
+| **Frontend** | http://localhost:3000 | React Mission Control |
 | **Backend API** | http://localhost:8000 | FastAPI |
 | **Swagger UI** | http://localhost:8000/docs | Interactive API docs |
 | **Adminer** | http://localhost:8080 | Database browser |
 
----
+### Local dev (without Docker)
 
-## Development
-
-### Backend
-
+**Backend:**
 ```bash
 cd backend
-
-# Copy and fill environment variables
 cp .env.example .env
-
-# Install dependencies
+# Set DATABASE_URL=sqlite+aiosqlite:///./civitas_dev.db  (tables auto-created)
 pip install -r requirements.txt
-
-# Start API server (requires PostgreSQL + ChromaDB)
 uvicorn src.main:app --reload --port 8000
 
-# Start scheduler in a separate terminal (runs pipelines every 15 min)
+# Scheduler (separate terminal — runs pipelines every 15 min)
 python -m src.scheduler.main
 ```
 
-> **Local dev without Docker:** Set `DATABASE_URL=sqlite+aiosqlite:///./civitas_dev.db` in `.env`. The app will auto-create tables and seed 12 districts on first start.
-
-### Frontend
-
+**Frontend:**
 ```bash
 cd frontend
 npm install
-npm run dev        # dev server at http://localhost:3000
-npm run build      # TypeScript check + production build
+npm run dev     # http://localhost:3000 — proxies /api/* to :8000
 ```
-
-The Vite dev server proxies `/api/*` to `http://localhost:8000` automatically.
-
-### Running Tests
-
-```bash
-cd backend
-
-pytest                                           # all tests
-pytest tests/test_health.py                      # single file
-pytest tests/test_health.py::test_health_endpoint  # single test
-```
-
-Tests use an SQLite in-memory database via a `db_session` fixture that overrides the FastAPI `get_db` dependency — no external services required.
 
 ---
 
@@ -214,16 +167,12 @@ Returns all 12 Hanoi districts.
 GET /api/scores
 GET /api/scores/{district_id}
 ```
-Returns latest computed city scores. Scores are derived from the most recent weather and AQI readings:
-- `traffic_score` — inversely proportional to AQI index
-- `environment_score` — inversely proportional to PM2.5
-- `risk_score` — function of rainfall and AQI
-- `overall_score` — weighted average of all four dimensions
+Returns latest computed city scores per district.
 
 ```http
 GET /api/aqi/history/{district_id}?limit=24
 ```
-Returns the last N AQI readings for a district, formatted as a time series for charting.
+Returns last N AQI readings for charting.
 
 ### AI Agent
 
@@ -231,25 +180,19 @@ Returns the last N AQI readings for a district, formatted as a time series for c
 POST /api/chat
 Content-Type: application/json
 
-{
-  "query": "Tình hình ngập lụt tại quận này?",
-  "district_id": 3
-}
+{ "query": "Tình hình ngập lụt tại quận này?", "district_id": 3 }
 ```
 
 ```http
 POST /api/simulate
 Content-Type: application/json
 
-{
-  "scenario": "heavy_rain",
-  "district_id": 3
-}
+{ "scenario": "heavy_rain", "district_id": 3 }
 ```
 
 Available scenarios: `heavy_rain` · `air_pollution` · `major_event` · `heatwave`
 
-Both endpoints run the full 6-node LangGraph pipeline and return:
+Both endpoints run the full 7-agent pipeline and return:
 
 ```json
 {
@@ -270,18 +213,39 @@ Both endpoints run the full 6-node LangGraph pipeline and return:
   "confidence": 85.0,
   "explanation": [
     "Traffic Analysis: HIGH traffic congestion risk due to heavy rain.",
-    "Environment Analysis: ...",
+    "Knowledge: Flood Emergency SOP triggered — activate drainage pumps...",
     "Confidence: 85% based on 4 data streams"
   ]
 }
 ```
+
+### Human-in-the-loop
+
+```http
+POST /api/decisions/{id}/approve
+POST /api/decisions/{id}/reject
+```
+
+Approving or rejecting a decision broadcasts a `approval_result` WebSocket event to all connected clients.
 
 ### Timeline
 
 ```http
 GET /api/timeline?limit=20
 ```
-Returns recent agent decisions ordered by most recent, including the original query, full prediction, and confidence score.
+Returns recent agent decisions ordered by most recent.
+
+### WebSocket
+
+Connect at `ws://localhost:8000/ws`. Events:
+
+| `type` | When |
+|---|---|
+| `pipeline_start` | Before first agent |
+| `agent_update` | Before/after each agent (`status: running\|done`) |
+| `pipeline_done` | After decision saved |
+| `approval_needed` | When `requires_approval = true` |
+| `approval_result` | After approve/reject |
 
 ---
 
@@ -289,10 +253,45 @@ Returns recent agent decisions ordered by most recent, including the original qu
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABASE_URL` | ✅ | — | Async SQLAlchemy URL. Use `postgresql+asyncpg://...` for production or `sqlite+aiosqlite:///./dev.db` for local dev |
-| `GEMINI_API_KEY` | ✅ | `""` | Google Gemini API key — get one free at [aistudio.google.com](https://aistudio.google.com) |
-| `CHROMADB_HOST` | ❌ | `localhost` | ChromaDB host |
+| `DATABASE_URL` | ✅ | — | `postgresql+asyncpg://...` for prod, `sqlite+aiosqlite:///./dev.db` for local |
+| `GEMINI_API_KEY` | ✅ | `""` | Get a free key at [aistudio.google.com](https://aistudio.google.com) |
+| `CHROMADB_HOST` | ❌ | `localhost` | ChromaDB host (future vector search) |
 | `CHROMADB_PORT` | ❌ | `8001` | ChromaDB port |
+
+---
+
+## Testing
+
+Three automated test layers totalling 113 tests.
+
+### Backend (pytest)
+
+```bash
+cd backend
+pytest                          # all 26 tests
+pytest -v tests/test_health.py  # single file
+```
+
+Uses SQLite in-memory — no external services required. See [docs/TESTING.md](docs/TESTING.md) for full details.
+
+### Frontend unit (Vitest)
+
+```bash
+cd frontend
+npm test            # 51 tests, single pass
+npm run test:watch  # watch mode
+```
+
+### E2E (Playwright)
+
+```bash
+cd frontend
+npm run e2e          # 36 tests, Chromium headless
+npm run e2e:headed   # watch the browser
+npm run e2e:ui       # interactive UI explorer
+```
+
+Suites 01–04 mock all API calls and run without a backend. Suite 05 is a full-stack integration test that auto-skips if the backend is unreachable.
 
 ---
 
@@ -300,83 +299,81 @@ Returns recent agent decisions ordered by most recent, including the original qu
 
 ```
 civitas-ai/
+├── .github/workflows/
+│   ├── ci.yml              # tests on every push/PR (4 parallel jobs)
+│   └── deploy.yml          # deploy to Render + Vercel on main push
 │
 ├── backend/
 │   ├── src/
-│   │   ├── agents/              # LangGraph agent nodes
-│   │   │   ├── base.py          # AgentState TypedDict
-│   │   │   ├── traffic_agent.py
-│   │   │   ├── environment_agent.py
-│   │   │   ├── event_agent.py
-│   │   │   ├── citizen_agent.py
-│   │   │   ├── decision_agent.py
-│   │   │   └── explanation_agent.py
-│   │   ├── api/routes/          # FastAPI routers (one file per domain)
+│   │   ├── agents/         # 7 agent node functions (sync, called via asyncio.to_thread)
+│   │   ├── api/routes/     # FastAPI routers: districts, scores, chat, simulate, decisions, timeline, ws
 │   │   ├── orchestrator/
-│   │   │   └── graph.py         # builds + runs LangGraph StateGraph
-│   │   ├── pipelines/           # data ingestion from external APIs
-│   │   ├── repositories/        # async SQLAlchemy query helpers
-│   │   ├── services/
-│   │   │   └── city_score_service.py
-│   │   ├── scheduler/
-│   │   │   └── main.py          # APScheduler entry point
-│   │   ├── models/              # SQLAlchemy ORM models
-│   │   ├── schemas/             # Pydantic v2 request/response schemas
-│   │   └── utils/               # config (pydantic-settings), logger
-│   ├── tests/                   # pytest async test suite
-│   ├── .env.example
+│   │   │   └── graph.py    # sequential pipeline runner + WebSocket broadcasting
+│   │   ├── pipelines/      # WeatherPipeline, AQIPipeline, FeedbackPipeline
+│   │   ├── repositories/   # async SQLAlchemy query helpers
+│   │   ├── services/       # CityScoreService
+│   │   ├── scheduler/      # APScheduler entry point
+│   │   ├── models/         # SQLAlchemy ORM models
+│   │   ├── schemas/        # Pydantic v2 schemas
+│   │   ├── ws/             # WebSocket connection manager
+│   │   └── utils/          # pydantic-settings config, logger
+│   ├── scripts/
+│   │   └── migrate_neon.py # one-time Neon.tech migration + district seed
+│   ├── tests/              # 26 async pytest tests
+│   ├── Dockerfile.prod     # production Docker image (2 Uvicorn workers)
 │   └── requirements.txt
 │
 ├── frontend/
-│   └── src/
-│       ├── pages/
-│       │   ├── DashboardPage.tsx
-│       │   ├── MapPage.tsx          # MapLibre GL
-│       │   ├── RiskRadarPage.tsx    # Recharts RadarChart
-│       │   ├── CopilotPage.tsx      # AI chat interface
-│       │   ├── SimulatorPage.tsx
-│       │   └── TimelinePage.tsx
-│       ├── components/              # ScoreGauge, DistrictCard, AlertBanner, DecisionPanel
-│       ├── services/api.ts          # Axios client
-│       └── types/index.ts           # shared TypeScript interfaces
+│   ├── src/
+│   │   ├── pages/CommandCenterPage.tsx  # main Mission Control layout
+│   │   ├── components/
+│   │   │   ├── HanoiMap.tsx            # SVG district map with click handlers
+│   │   │   ├── SimulatorModal.tsx      # scenario selector modal
+│   │   │   └── AgentGraph.tsx          # live pipeline progress SVG
+│   │   ├── hooks/useWebSocket.ts       # auto-reconnecting WebSocket hook
+│   │   ├── services/api.ts             # Axios client
+│   │   └── types/index.ts             # shared TypeScript interfaces
+│   ├── e2e/                            # Playwright test suites (01-05)
+│   ├── playwright.config.ts
+│   └── vercel.json                     # SPA rewrite + build config
 │
-├── docker/
-│   └── postgres/init.sql        # schema DDL + 12 district seed data
-├── docs/
-│   └── screenshots/
-├── docker-compose.yml
-└── README.md
+├── render.yaml             # Render Blueprint for backend service
+├── docker-compose.yml      # local full-stack dev
+└── docs/
+    ├── DEPLOYMENT.md       # step-by-step Neon + Render + Vercel setup
+    └── TESTING.md          # test layer details + Playwright guide
 ```
 
 ---
 
 ## Database Schema
 
-Schema is auto-applied on Docker first-boot from `docker/postgres/init.sql`.
-
 | Table | Description |
 |---|---|
-| `cities` | Top-level city record (`city_id = 'hanoi'`) |
-| `districts` | 12 Hanoi districts with optional GeoJSON geometry |
-| `weather` | Per-district timestamped readings: temperature, humidity, rain, wind speed |
-| `aqi` | Per-district timestamped readings: PM2.5, PM10, CO, NO₂, AQI index |
-| `events` | City events with impact level (used by event_agent) |
-| `citizen_feedback` | Citizen reports with sentiment (used by citizen_agent) |
+| `districts` | 12 Hanoi districts with optional geometry |
+| `weather` | Per-district readings: temperature, humidity, rain, wind speed |
+| `aqi` | Per-district readings: PM2.5, PM10, CO, NO₂, AQI index |
+| `events` | City events with impact level |
+| `citizen_feedback` | Citizen reports with sentiment |
 | `city_score` | Derived scores: traffic, environment, citizen, risk, overall |
-| `agent_decisions` | Full LangGraph output: prediction, impact, recommendations, confidence, explanation |
+| `agent_decisions` | Full pipeline output: prediction, impact, recommendations, confidence, explanation, approval status |
 
-All tables include a `city_id` column (default `'hanoi'`) to support future multi-city deployments.
+All tables carry a `city_id` column (default `'hanoi'`) for future multi-city support.
 
 ---
 
-## Roadmap
+## Deployment
 
-- [ ] Real-time WebSocket score updates (eliminate polling)
-- [ ] GeoJSON district boundary overlays on the map
-- [ ] Citizen feedback ingestion from a public-facing form
-- [ ] Notification system (email / push) for high-risk events
-- [ ] Multi-city support (extend beyond Hanoi)
-- [ ] LLM-generated natural language alerts in Vietnamese
+Production stack: **Neon.tech** (PostgreSQL) + **Render** (backend) + **Vercel** (frontend), orchestrated by GitHub Actions.
+
+Quick setup overview:
+
+1. **Neon.tech** — Create project → copy connection string → run `python -m scripts.migrate_neon`
+2. **Render** — New Web Service → Docker → set `DATABASE_URL` + `GEMINI_API_KEY` → copy deploy hook URL
+3. **Vercel** — `vercel link` in `frontend/` → set `VITE_API_BASE_URL` + `VITE_WS_URL` → get token/IDs
+4. **GitHub Secrets** — Add `RENDER_DEPLOY_HOOK_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide.
 
 ---
 
