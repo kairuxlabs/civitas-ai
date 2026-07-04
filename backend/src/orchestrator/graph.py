@@ -53,17 +53,17 @@ async def run_agent_graph(
     db_feedback = await FeedbackRepo.get_recent(session, district_id)
 
     weather_data = {
-        "temperature": weather.temperature if weather else 30,
-        "humidity": weather.humidity if weather else 70,
-        "rain": weather.rain if weather else 0,
-        "wind_speed": weather.wind_speed if weather else 10,
+        "temperature": float(weather.temperature or 30) if weather else 30,
+        "humidity": float(weather.humidity or 70) if weather else 70,
+        "rain": float(weather.rain or 0) if weather else 0,
+        "wind_speed": float(weather.wind_speed or 10) if weather else 10,
     }
     aqi_data = {
-        "pm25": aqi.pm25 if aqi else 50,
-        "pm10": aqi.pm10 if aqi else 80,
-        "co": aqi.co if aqi else 1.0,
-        "no2": aqi.no2 if aqi else 40,
-        "aqi_index": aqi.aqi_index if aqi else 100,
+        "pm25": float(aqi.pm25 or 50) if aqi else 50,
+        "pm10": float(aqi.pm10 or 80) if aqi else 80,
+        "co": float(aqi.co or 1.0) if aqi else 1.0,
+        "no2": float(aqi.no2 or 40) if aqi else 40,
+        "aqi_index": float(aqi.aqi_index or 100) if aqi else 100,
     }
 
     if event_data:

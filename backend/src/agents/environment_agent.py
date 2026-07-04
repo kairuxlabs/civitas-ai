@@ -7,9 +7,9 @@ logger = get_logger(__name__)
 
 def environment_agent(state: AgentState) -> dict:
     aqi = state.get("aqi_data", {})
-    pm25 = aqi.get("pm25", 50)
-    pm10 = aqi.get("pm10", 80)
-    aqi_index = aqi.get("aqi_index", 100)
+    pm25 = float(aqi.get("pm25") or 50)
+    pm10 = float(aqi.get("pm10") or 80)
+    aqi_index = float(aqi.get("aqi_index") or 100)
 
     if aqi_index > 150:
         level = "HAZARDOUS"

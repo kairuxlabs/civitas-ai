@@ -9,8 +9,8 @@ def traffic_agent(state: AgentState) -> dict:
     aqi = state.get("aqi_data", {})
     weather = state.get("weather_data", {})
 
-    aqi_index = aqi.get("aqi_index", 100)
-    rain = weather.get("rain", 0)
+    aqi_index = float(aqi.get("aqi_index") or 100)
+    rain = float(weather.get("rain") or 0)
 
     if aqi_index > 150 or rain > 10:
         analysis = "HIGH traffic congestion risk due to poor air quality or heavy rain."

@@ -74,8 +74,8 @@ def _keyword_match(query: str, keywords: list[str]) -> int:
 
 def knowledge_agent(state: AgentState) -> dict:
     query = state.get("query", "").lower()
-    aqi_index = state.get("aqi_data", {}).get("aqi_index", 100)
-    rain = state.get("weather_data", {}).get("rain", 0)
+    aqi_index = float(state.get("aqi_data", {}).get("aqi_index") or 100)
+    rain = float(state.get("weather_data", {}).get("rain") or 0)
 
     # Augment query with sensor context for better matching
     context_hints = []
