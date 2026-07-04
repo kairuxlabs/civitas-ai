@@ -1,4 +1,3 @@
-# backend/src/agents/base.py
 from typing import TypedDict
 
 
@@ -14,6 +13,7 @@ class AgentState(TypedDict):
     environment_analysis: str
     event_analysis: str
     citizen_analysis: str
+    knowledge_summary: str
     decision: dict
     explanation: list[str]
     confidence: float

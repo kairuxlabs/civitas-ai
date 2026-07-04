@@ -25,7 +25,7 @@ export interface DecisionOut {
   explanation: string[];
 }
 
-export type SimulationScenario = 'heavy_rain' | 'air_pollution' | 'major_event' | 'heatwave';
+export type SimulationScenario = 'heavy_rain' | 'air_pollution' | 'major_event' | 'heatwave' | 'earthquake' | 'flood' | 'festival';
 
 export interface AQIPoint {
   time: string;
@@ -43,5 +43,15 @@ export interface AgentDecisionOut {
   recommendations: string[] | null;
   confidence: number | null;
   explanation: string[] | null;
+  requires_approval: boolean;
+  approved: boolean | null;
   created_at: string | null;
+}
+
+export interface AgentEvent {
+  type: 'pipeline_start' | 'agent_update' | 'pipeline_done' | 'approval_needed' | 'approval_result';
+  agent: string;
+  status: 'planning' | 'running' | 'done' | 'waiting' | 'approved' | 'rejected';
+  detail: string;
+  ts: string;
 }

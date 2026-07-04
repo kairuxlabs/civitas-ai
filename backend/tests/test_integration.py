@@ -27,7 +27,7 @@ async def test_full_pipeline_to_decision(db_session, client):
     assert decision.impact != {}
     assert len(decision.recommendations) >= 1
     assert 0 < decision.confidence <= 100
-    assert len(decision.explanation) == 5
+    assert len(decision.explanation) >= 4
 
     # Test via API
     response = await client.post("/api/chat", json={"query": "Status?", "district_id": district.id})

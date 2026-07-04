@@ -14,4 +14,12 @@ export const api = {
   getTimeline: (limit = 20) => http.get<AgentDecisionOut[]>(`/api/timeline?limit=${limit}`).then(r => r.data),
   getAQIHistory: (districtId: number, limit = 24) =>
     http.get<AQIPoint[]>(`/api/aqi/history/${districtId}?limit=${limit}`).then(r => r.data),
+  approveDecision: (id: number) => http.post(`/api/decisions/${id}/approve`).then(r => r.data),
+  rejectDecision: (id: number) => http.post(`/api/decisions/${id}/reject`).then(r => r.data),
+}
+
+export function createWebSocket(): WebSocket {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const host = window.location.host
+  return new WebSocket(`${protocol}//${host}/ws`)
 }

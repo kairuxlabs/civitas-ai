@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS agent_decisions (
     recommendations JSONB,
     confidence FLOAT,
     explanation JSONB,
+    requires_approval BOOLEAN DEFAULT FALSE,
+    approved BOOLEAN,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

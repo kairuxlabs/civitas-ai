@@ -1,6 +1,5 @@
-# backend/src/models/decision.py
 from datetime import datetime
-from sqlalchemy import Integer, String, Float, Text, JSON, ForeignKey, DateTime
+from sqlalchemy import Integer, String, Float, Text, JSON, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database.connection import Base
 
@@ -16,4 +15,6 @@ class AgentDecision(Base):
     recommendations: Mapped[list | None] = mapped_column(JSON, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     explanation: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    requires_approval: Mapped[bool] = mapped_column(Boolean, default=False)
+    approved: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

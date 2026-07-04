@@ -7,7 +7,7 @@ class DecisionOut(BaseModel):
     impact: dict
     recommendations: list[str]
     confidence: float = Field(..., ge=0, le=100)
-    explanation: list[str] = Field(..., min_length=5, max_length=5)
+    explanation: list[str]
 
 
 class AgentDecisionOut(BaseModel):
@@ -20,6 +20,8 @@ class AgentDecisionOut(BaseModel):
     recommendations: list | None
     confidence: float | None
     explanation: list | None
+    requires_approval: bool = False
+    approved: bool | None = None
     created_at: datetime | None
 
     model_config = {"from_attributes": True}

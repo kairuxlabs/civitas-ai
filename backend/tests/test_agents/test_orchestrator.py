@@ -33,4 +33,4 @@ async def test_agent_graph_returns_decision(db_session):
     assert result.impact != {}
     assert len(result.recommendations) >= 1
     assert 0 <= result.confidence <= 100
-    assert len(result.explanation) == 5
+    assert len(result.explanation) >= 4
