@@ -72,21 +72,27 @@ def _keyword_match(query: str, keywords: list[str]) -> int:
     return sum(1 for kw in keywords if kw in q)
 
 
+def _first_action(content: str) -> str:
+    """Extract step (1) from SOP content."""
+    import re
+    m = re.search(r"\(1\)\s*([^.]+\.)", content)
+    return m.group(1).strip() if m else content[:80]
+
+
 def knowledge_agent(state: AgentState) -> dict:
     query = state.get("query", "").lower()
     aqi_index = float(state.get("aqi_data", {}).get("aqi_index") or 100)
     rain = float(state.get("weather_data", {}).get("rain") or 0)
+    temperature = float(state.get("weather_data", {}).get("temperature") or 30)
 
-    # Augment query with sensor context for better matching
+    # Only add context hints when thresholds are clearly exceeded
     context_hints = []
     if aqi_index > 150:
         context_hints.append("hazardous aqi air quality pollution")
-    elif aqi_index > 100:
-        context_hints.append("aqi air quality")
     if rain > 20:
         context_hints.append("heavy rain flood drainage")
-    elif rain > 5:
-        context_hints.append("rain")
+    if temperature > 38:
+        context_hints.append("heatwave heat temperature")
 
     enriched_query = query + " " + " ".join(context_hints)
 
@@ -95,15 +101,35 @@ def knowledge_agent(state: AgentState) -> dict:
         for doc in _SOP_DOCS
     ]
     scored.sort(key=lambda x: x[1], reverse=True)
-
     top = [doc for doc, score in scored if score > 0][:2]
 
-    if top:
-        summary = "Relevant SOPs: " + "; ".join(
-            f"[{doc['title']}] {doc['content'][:120]}..." for doc in top
-        )
-    else:
+    if not top:
         summary = "No specific SOP matched. Apply general city operations protocol."
+        logger.info("Knowledge agent: no SOP matched")
+        return {"knowledge_summary": summary}
 
-    logger.info(f"Knowledge agent found {len(top)} relevant SOPs")
+    # Try Gemini to synthesize a brief action summary
+    try:
+        from src.agents.gemini_client import call_gemini
+        sop_texts = "\n".join(f"- {doc['title']}: {doc['content']}" for doc in top)
+        prompt = (
+            f"Dựa trên tình huống: AQI={aqi_index:.0f}, mưa={rain:.0f}mm/h, nhiệt độ={temperature:.0f}°C, "
+            f"câu hỏi: '{state.get('query', '')}'\n\n"
+            f"Các SOP liên quan:\n{sop_texts}\n\n"
+            f"Hãy tóm tắt trong 1-2 câu tiếng Việt: cần thực hiện hành động ưu tiên nào ngay lập tức? "
+            f"Chỉ nêu hành động cụ thể, không giải thích dài dòng."
+        )
+        gemini_summary = call_gemini(prompt)
+        if gemini_summary:
+            sop_names = ", ".join(doc["title"] for doc in top)
+            summary = f"[{sop_names}] {gemini_summary}"
+            logger.info(f"Knowledge agent (Gemini): {len(top)} SOPs → summary")
+            return {"knowledge_summary": summary}
+    except Exception:
+        pass
+
+    # Fallback: title + first action only
+    parts = [f"{doc['title']}: {_first_action(doc['content'])}" for doc in top]
+    summary = " | ".join(parts)
+    logger.info(f"Knowledge agent (rule-based): {len(top)} SOPs")
     return {"knowledge_summary": summary}

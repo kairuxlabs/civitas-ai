@@ -61,8 +61,6 @@ def _rule_based_explanation(state: AgentState, confidence: float) -> list[str]:
         f"Tổng quan: {'; '.join(conditions)}. Ưu tiên: {priority}.",
         f"Nguy cơ lũ: {flood_risk.upper()} | Độ tin cậy: {confidence:.0f}% ({sources} nguồn dữ liệu)",
     ]
-    if knowledge and "No specific SOP" not in knowledge:
-        lines.append(f"SOP tham chiếu: {knowledge[:200]}")
     return lines
 
 
