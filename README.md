@@ -1,31 +1,47 @@
 <div align="center">
 
+![CityOS Dashboard](docs/screenshots/dashboard.png)
 
-# Civitas AI
+# CityOS (Civitas AI)
 
-**AI-powered Urban Operating System for Hanoi**
+**An Autonomous Multi-Agent Decision Intelligence Platform for Smart Cities**
 
-An intelligent city management platform that ingests real-time weather and air quality data, processes it through a 7-agent sequential pipeline powered by Google Gemini, and delivers actionable insights to city operators through a Mission Control dashboard with live WebSocket streaming.
+CityOS ingests real-time weather, air quality, traffic, and citizen data, reasons over it with a goal-driven multi-agent runtime backed by a Neo4j + Qdrant knowledge graph and NVIDIA Nemotron models (via OpenRouter), and surfaces explainable, human-approved decisions through a live Mission Control dashboard.
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Neo4j](https://img.shields.io/badge/Neo4j-Knowledge_Graph-008CC1?style=flat-square&logo=neo4j&logoColor=white)](https://neo4j.com)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Vector_Search-DC244C?style=flat-square)](https://qdrant.tech)
+[![NVIDIA](https://img.shields.io/badge/NVIDIA-Nemotron_via_OpenRouter-76B900?style=flat-square&logo=nvidia&logoColor=white)](https://openrouter.ai/nvidia)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/kairus-dev/civitas-ai/ci.yml?branch=main&label=CI&style=flat-square)](../../actions/workflows/ci.yml)
 
-[Features](#features) · [Quick Start](#quick-start) · [Architecture](#architecture) · [API Reference](#api-reference) · [Testing](#testing) · [Deployment](#deployment)
+[Demo](#demo) · [Features](#features) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Screenshots](#screenshots) · [Roadmap](#roadmap)
 
 </div>
 
 ---
 
+## Demo
+
+| | |
+|---|---|
+| **Live deployment** | Frontend: `<vercel-url>` · Backend: `<render-url>` *(fill in before submission)* |
+| **Demo video (3 min)** | `<youtube/loom-url>` *(fill in before submission)* |
+| **Scenario shown** | Heavy rain triggers flash-flood risk in Hanoi → Planner dispatches Traffic + Emergency + Knowledge agents in parallel → Decision recommends road closures + shelter alerts → operator approves from Mission Control |
+
+---
+
 ## Features
 
+- **Goal-driven multi-agent runtime (v2)** — a Planner decomposes a goal into a dependency-aware DAG; Traffic, Environment, Emergency, Citizen, and Knowledge workers execute in parallel waves, reflect on their own confidence, and feed a Decision stage that requires human approval
+- **RAG knowledge layer** — OpenStreetMap, Wikipedia, Wikidata, GeoJSON boundaries, and government PDFs are chunked, embedded, and indexed into **Neo4j** (entity graph) + **Qdrant** (vector search), retrieved via an embed → search → rerank pipeline
+- **NVIDIA Nemotron AI Gateway** — planning, embedding, reranking, and content-safety all route through NVIDIA Nemotron models via **OpenRouter**, behind a single gateway so the backing model can change without touching any agent; falls back to Google Gemini automatically for resilience
 - **Real-time monitoring** — Weather and AQI data fetched every 15 minutes from Open-Meteo and OpenAQ across all 12 Hanoi districts
-- **7-agent AI pipeline** — Sequential graph (traffic → environment → event → citizen → knowledge → decision → explanation) powered by Google Gemini
+- **7-agent v1 pipeline** — Sequential graph (traffic → environment → event → citizen → knowledge → decision → explanation) powered by Google Gemini
 - **Live WebSocket streaming** — Agent pipeline progress broadcast in real time; operators watch each step complete
-- **Mission Control dashboard** — SVG district map, KPI bar, AI Copilot chat, real-time Decision Report with Approve/Reject
+- **Mission Control dashboard** — SVG district map, KPI bar, AI Copilot chat, live DAG view, real-time Decision Report with Approve/Reject
 - **What-If Simulator** — Scenario testing (heavy rain, air pollution, major event, heatwave) with AI predictions
 - **Human-in-the-loop** — Decisions with confidence < 75% or flood risk flagged as `high` require operator approval
 - **Decision Timeline** — Persistent log of all agent decisions with confidence scores and full explanations
@@ -38,7 +54,10 @@ An intelligent city management platform that ingests real-time weather and air q
 |---|---|
 | **Frontend** | React 18, TypeScript 5.5, Vite, Tailwind CSS, TanStack Query, Axios |
 | **Backend** | FastAPI 0.111, Python 3.11+, SQLAlchemy 2.0 (async), Pydantic v2 |
-| **AI / Agents** | Google Gemini via LangChain (sequential agent graph, no LangGraph dependency) |
+| **Multi-Agent Runtime** | Event-driven Planner → Scheduler → Workers → Reflection → Decision (`src/runtime/`), pub/sub over `event_bus.py` |
+| **AI Gateway** | NVIDIA Nemotron (planner, embedding, reranker, content-safety) via **OpenRouter**, Google Gemini fallback (`src/ai/`) |
+| **Knowledge Graph** | **Neo4j** (entity/relation graph), **Qdrant** (vector search + RAG rerank) |
+| **Knowledge Sources** | OpenStreetMap, Wikipedia, Wikidata, GeoJSON, government PDFs (`src/knowledge_pipeline/`) |
 | **Database** | PostgreSQL 15 (production via Neon.tech), SQLite (local dev) |
 | **Scheduler** | APScheduler — triggers full data pipeline every 15 minutes |
 | **Data Sources** | [Open-Meteo](https://open-meteo.com) (weather), [OpenAQ](https://openaq.org) (air quality) |
@@ -91,6 +110,47 @@ Traffic → Environment → Event → Citizen → Knowledge → Decision → Exp
 ```
 
 Each agent is a sync function called via `asyncio.to_thread()`. Between steps, WebSocket events are broadcast so the UI shows live progress. The Knowledge Agent retrieves relevant SOPs from a static keyword index. The Decision Agent synthesises all analyses into a structured response. If `confidence < 75` or `flood_risk == "high"`, the decision is flagged as `requires_approval = True`.
+
+### CityOS v2 Runtime — Multi-Agent + RAG (`backend/src/runtime/`, `src/ai/`)
+
+```
+                              User Goal
+                                  │
+                            Planner (DAG)
+                                  │
+                 ┌────────────────┼────────────────┐
+                 ▼                ▼                ▼
+          Traffic Worker   Emergency Worker   Knowledge Worker
+                 │                │                │
+                 └────────────────┼────────────────┘
+                                  ▼
+                            Reflection
+                     (confidence check, re-dispatch)
+                                  │
+                                  ▼
+                              Decision
+                       (requires human approval)
+                                  │
+                                  ▼
+                              Workflow
+
+     Knowledge Worker retrieval path:
+       Query → Embedding → Qdrant (top 20) → Nemotron Rerank → top 5 → context
+
+     AI Gateway (backend/src/ai/gateway.py) — single choke point:
+       Planner / Embedding / Reranker / Content-Safety
+                          │
+                 NVIDIA Nemotron (via OpenRouter)
+                          │
+              (falls back to Google Gemini on failure)
+
+     Knowledge Graph:
+       OSM + Wikipedia + Wikidata + GeoJSON + Gov PDFs
+                          │
+                 Neo4j (entities/relations) + Qdrant (vectors)
+```
+
+Every event (`plan_created`, `worker_started`, `reflection`, `decision_ready`, `approval_needed`, ...) is published on an async `event_bus.py` and bridged to the frontend as `runtime_event` over the same WebSocket used by the v1 pipeline, driving the live DAG view in Mission Control.
 
 ### Score Derivation
 
@@ -362,6 +422,18 @@ All tables carry a `city_id` column (default `'hanoi'`) for future multi-city su
 
 ---
 
+## Screenshots
+
+| Dashboard | City Map |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![City Map](docs/screenshots/map.png) |
+
+| AI Copilot | Risk Radar | What-If Simulator |
+|---|---|---|
+| ![AI Copilot](docs/screenshots/copilot.png) | ![Risk Radar](docs/screenshots/risk-radar.png) | ![What-If Simulator](docs/screenshots/simulator.png) |
+
+---
+
 ## Deployment
 
 Production stack: **Neon.tech** (PostgreSQL) + **Render** (backend) + **Vercel** (frontend), orchestrated by GitHub Actions.
@@ -377,7 +449,9 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide
 
 ---
 
-## Knowledge Pipeline Roadmap
+## Roadmap
+
+### Knowledge Pipeline
 
 **v1 (current)** — manual bootstrap via `python -m src.knowledge_pipeline.bootstrap`:
 - ✅ OpenStreetMap (hospitals, schools, police, fire stations, roads, bus stops, parks, rivers, buildings)
@@ -393,6 +467,14 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide
 
 **v3 (future)**:
 - Streaming ingestion (Kafka or equivalent), real-time knowledge updates
+
+### Vision
+
+- **Digital Twin** — full 3D city model synced to live sensor + agent state
+- **Drone & IoT integration** — live aerial feeds and sensor networks as first-class agent inputs
+- **NVIDIA NIM** — self-hosted Nemotron microservices for latency-sensitive/offline deployments, drop-in via the existing AI Gateway
+- **Omniverse** — physics-based simulation for testing agent decisions against synthetic disaster scenarios before they reach production
+- **Robotics** — dispatching autonomous ground/aerial units as an executable output of the Decision stage, not just a recommendation
 
 ---
 

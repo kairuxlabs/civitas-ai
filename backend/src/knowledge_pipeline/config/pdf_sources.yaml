@@ -1,11 +1,23 @@
-sources: []
-# Example entries — uncomment and edit to enable (no unverified URLs ship
-# by default; see docs/superpowers/specs/2026-07-05-knowledge-bootstrap-pipeline-design.md):
+sources:
+  - name: "Quyết định 1459/QĐ-TCMT - Chỉ số chất lượng không khí Việt Nam (AQI)"
+    type: remote
+    url: "https://cem.gov.vn/storage/news_file_attach/QD%201459%20TCMT%20ngay%2012.11.2019%20AQI.pdf"
+    category: air_pollution
+  - name: "Cục Đường bộ Việt Nam - Văn bản hướng dẫn Luật Đường bộ (an toàn giao thông)"
+    type: remote
+    url: "https://drvn.gov.vn/upload/2006538/20251023/view__2__68749.pdf"
+    category: transportation
+  - name: "Bộ Xây dựng - Công điện ứng phó thiên tai, bão lũ"
+    type: remote
+    url: "https://www.moc.gov.vn/Images/FileVanBan/BXD_99-CD-BXD_27112025.pdf"
+    category: disaster
+  - name: "UBND tỉnh Nghệ An - Báo cáo phòng chống dịch COVID-19 2020-2023"
+    type: remote
+    url: "https://datafiles.nghean.gov.vn/nan-ubnd/1/steeringdocument/127%20B%C3%A1o%20c%C3%A1o%20k%E1%BA%BFt%20qu%E1%BA%A3%20c%C3%B4ng%20t%C3%A1c%20ph%C3%B2ng%20ch%E1%BB%91ng%20d%E1%BB%8Bch%20COVID-19%20giai%20%C4%91o%E1%BA%A1n%202020-2023%20tr%C3%AAn%20%C4%91%E1%BB%8Ba%20b%C3%A0n%20t%E1%BB%89nh%20Ngh%E1%BB%87%20An638469496738999609.pdf"
+    category: public_health
+
+# More examples — uncomment and edit to add local files:
 # - name: "Flood Emergency SOP"
 #   type: local
 #   path: datasets/pdf/flood_sop.pdf
 #   category: disaster
-# - name: "Traffic Safety Guideline"
-#   type: remote
-#   url: https://example.gov.vn/traffic-safety.pdf
-#   category: transportation
