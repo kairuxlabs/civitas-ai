@@ -26,7 +26,7 @@ def extract_entities(chunk_text: str) -> dict:
         return {"entities": [], "relations": []}
 
     parsed = parse_json_safe(raw)
-    if not parsed:
+    if not isinstance(parsed, dict) or not parsed:
         logger.warning("Entity extraction: Gemini response was not valid JSON")
         return {"entities": [], "relations": []}
 
