@@ -89,7 +89,7 @@ async def bootstrap() -> dict:
     relations: list[dict] = []
     for chunk in chunks:
         try:
-            extraction = extract_entities(chunk["content"])
+            extraction = await asyncio.to_thread(extract_entities, chunk["content"])
             type_by_name = {e["name"]: e["type"] for e in extraction.get("entities", []) if e.get("name")}
             for rel in extraction.get("relations", []):
                 from_name, to_name = rel.get("from", ""), rel.get("to", "")

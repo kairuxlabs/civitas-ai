@@ -1,4 +1,6 @@
 # backend/tests/test_knowledge_pipeline/test_bootstrap.py
+import asyncio
+
 import pytest
 from unittest.mock import AsyncMock, patch
 
@@ -169,6 +171,55 @@ async def test_bootstrap_survives_wikidata_failure_and_still_upserts_to_neo4j(mo
 
     assert "wikidata_enriched" not in summary
     assert summary["neo4j_nodes"] == {"Hospital": 1}
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_calls_extract_entities_off_the_event_loop_thread(monkeypatch, db_session):
+    """extract_entities() -> call_gemini() may bridge to the OpenRouter fallback
+    via asyncio.run(), which raises if invoked while a loop is already running
+    on the calling thread. bootstrap() is itself a coroutine, so this call must
+    go through asyncio.to_thread (matching every other call_gemini call site
+    in this codebase) rather than being invoked directly."""
+    class _CtxWrapper:
+        async def __aenter__(self):
+            return db_session
+        async def __aexit__(self, *exc):
+            return None
+    monkeypatch.setattr(bootstrap_module, "AsyncSessionLocal", lambda: _CtxWrapper())
+
+    result_holder = {}
+
+    def fake_extract_entities(chunk_text):
+        try:
+            asyncio.get_running_loop()
+            result_holder["called_on_loop_thread"] = True
+        except RuntimeError:
+            result_holder["called_on_loop_thread"] = False
+        return {"entities": [], "relations": []}
+
+    with patch.object(bootstrap_module, "OSMCollector") as mock_osm_cls, \
+         patch.object(bootstrap_module, "WikidataCollector") as mock_wikidata_cls, \
+         patch.object(bootstrap_module, "WikipediaCollector") as mock_wiki_cls, \
+         patch.object(bootstrap_module, "GovernmentPDFCollector") as mock_pdf_cls, \
+         patch.object(bootstrap_module, "Neo4jLoader") as mock_neo4j_cls, \
+         patch.object(bootstrap_module.graph_builder, "build_entity_graph", return_value={}), \
+         patch.object(bootstrap_module.postgres_loader, "update_district_geojson", new=AsyncMock(return_value=0)), \
+         patch.object(bootstrap_module.qdrant_loader, "load_chunks", return_value=0), \
+         patch.object(bootstrap_module, "extract_entities", side_effect=fake_extract_entities):
+
+        mock_osm = mock_osm_cls.return_value
+        mock_osm.collect = AsyncMock(return_value=[])
+        mock_osm.collect_district_boundaries = AsyncMock(return_value=[])
+        mock_wikidata_cls.return_value.collect = AsyncMock(return_value=[])
+        mock_wiki_cls.return_value.collect = AsyncMock(return_value=[
+            {"title": "Flood", "content": "Flood text.", "language": "en", "category": "disaster", "source": "Wikipedia", "confidence": 0.85}
+        ])
+        mock_pdf_cls.return_value.collect = AsyncMock(return_value=[])
+        mock_neo4j_cls.return_value.close = lambda: None
+
+        await bootstrap_module.bootstrap()
+
+    assert result_holder["called_on_loop_thread"] is False
 
 
 @pytest.mark.asyncio
