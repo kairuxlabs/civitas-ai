@@ -15,7 +15,11 @@ COLLECTION = "city_knowledge"
 def _client() -> QdrantClient | None:
     if not settings.qdrant_url:
         return None
-    return QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
+    try:
+        return QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
+    except Exception as e:
+        logger.warning(f"Failed to initialize QdrantClient: {e}")
+        return None
 
 
 def _ensure_collection(client: QdrantClient) -> None:

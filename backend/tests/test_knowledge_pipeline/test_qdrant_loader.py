@@ -82,3 +82,16 @@ def test_returns_zero_when_qdrant_network_call_fails(monkeypatch):
         count = qdrant_loader.load_chunks([{"content": "x", "title": "t", "chunk_index": 0}])
 
     assert count == 0
+
+
+def test_returns_zero_when_qdrant_client_construction_fails(monkeypatch):
+    """Verifies that malformed QdrantClient config (bad URL scheme, etc.) is
+    caught during _client() construction, logged, and returns 0 rather than
+    propagating the exception — preserving the 'fail in isolation' contract."""
+    monkeypatch.setattr(settings, "qdrant_url", "https://invalid.qdrant.io")
+    monkeypatch.setattr(qdrant_loader, "embed_text", lambda text, task_type=None: [0.1, 0.2, 0.3])
+
+    with patch("src.knowledge_pipeline.loaders.qdrant_loader.QdrantClient", side_effect=ValueError("invalid config")):
+        count = qdrant_loader.load_chunks([{"content": "x", "title": "t", "chunk_index": 0}])
+
+    assert count == 0
