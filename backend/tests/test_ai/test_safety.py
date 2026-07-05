@@ -34,3 +34,14 @@ async def test_fails_open_when_gateway_returns_none():
         result = await check_safety("anything")
 
     assert result == {"safe": True, "reason": None}
+
+
+@pytest.mark.asyncio
+async def test_fails_open_when_gateway_returns_malformed_shape():
+    with patch(
+        "src.ai.safety.call_openrouter",
+        new=AsyncMock(return_value={"choices": []}),
+    ):
+        result = await check_safety("anything")
+
+    assert result == {"safe": True, "reason": None}
