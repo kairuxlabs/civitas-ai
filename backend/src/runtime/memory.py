@@ -51,7 +51,38 @@ class KnowledgeMemory:
             raise RuntimeError("Gemini embedding unavailable")
 
         client = QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
-        hits = client.search(collection_name="cityos_sop", query_vector=vector, limit=k)
+
+        # Reranking is opt-in (requires an OpenRouter key). When disabled, this
+        # path is byte-identical to the original: same limit, same order.
+        use_rerank = bool(settings.openrouter_api_key)
+        search_limit = max(k * 4, 20) if use_rerank else k
+        hits = client.search(collection_name="cityos_sop", query_vector=vector, limit=search_limit)
+
+        if use_rerank and hits:
+            try:
+                import asyncio
+
+                from src.ai.reranker import rerank
+
+                documents = [h.payload.get("content", "") for h in hits]
+                # _qdrant_search is sync and must only be invoked from a context with no
+                # running event loop (e.g. via asyncio.to_thread, matching how the v1 agent
+                # pipeline calls sync agent functions elsewhere in this codebase). If this
+                # is ever called from within a running loop, asyncio.run() raises
+                # RuntimeError, which the except below silently swallows and degrades to
+                # the Qdrant-order fallback instead of crashing.
+                order = asyncio.run(rerank(query, documents, top_k=k))
+                reranked = [hits[i] for i in order if 0 <= i < len(hits)]
+                if reranked:
+                    hits = reranked
+                else:
+                    hits = hits[:k]
+            except Exception as e:
+                logger.warning(f"Rerank unavailable, using Qdrant order: {e}")
+                hits = hits[:k]
+        else:
+            hits = hits[:k]
+
         return [
             {
                 "id": h.payload.get("doc_id", h.id),
