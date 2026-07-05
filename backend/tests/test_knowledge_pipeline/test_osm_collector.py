@@ -66,6 +66,39 @@ async def test_collect_survives_a_failing_request():
 
 
 @pytest.mark.asyncio
+async def test_collect_returns_partial_results_when_one_query_fails():
+    """Test that when one Overpass query fails, others still succeed and results are aggregated."""
+    one_element = {
+        "elements": [{"type": "node", "id": 1, "lat": 21.0, "lon": 105.8, "tags": {"name": "X"}}]
+    }
+
+    # Create a mocked response for successful queries
+    mock_resp = MagicMock()
+    mock_resp.json = AsyncMock(return_value=one_element)
+    mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_resp.__aexit__ = AsyncMock(return_value=None)
+
+    # Total number of queries: entity_types + road_types + rivers
+    total_queries = len(ENTITY_TYPES) + len(ROAD_TYPES["values"]) + len(NAMED_RIVERS)
+
+    # Side effect: first query fails, all others succeed
+    side_effect = [RuntimeError("first query down")] + [mock_resp] * (total_queries - 1)
+
+    with patch("src.knowledge_pipeline.collectors.osm_collector.aiohttp.ClientSession") as mock_client:
+        mock_session = MagicMock()
+        mock_session.post = MagicMock(side_effect=side_effect)
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        mock_client.return_value = mock_session
+
+        entities = await OSMCollector().collect()
+
+    # Assert that results from the successful queries are returned (non-empty)
+    assert len(entities) > 0, "Expected partial results from successful queries, but got empty list"
+    # Verify no exception was raised (would have happened if one failure aborted the loop)
+
+
+@pytest.mark.asyncio
 async def test_collect_district_boundaries_returns_raw_elements():
     boundary_response = {"elements": [{"type": "relation", "id": 99, "tags": {"name": "Ba Dinh"}}]}
     with patch("src.knowledge_pipeline.collectors.osm_collector.aiohttp.ClientSession") as mock_client:
