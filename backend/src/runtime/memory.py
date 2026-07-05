@@ -65,6 +65,12 @@ class KnowledgeMemory:
                 from src.ai.reranker import rerank
 
                 documents = [h.payload.get("content", "") for h in hits]
+                # _qdrant_search is sync and must only be invoked from a context with no
+                # running event loop (e.g. via asyncio.to_thread, matching how the v1 agent
+                # pipeline calls sync agent functions elsewhere in this codebase). If this
+                # is ever called from within a running loop, asyncio.run() raises
+                # RuntimeError, which the except below silently swallows and degrades to
+                # the Qdrant-order fallback instead of crashing.
                 order = asyncio.run(rerank(query, documents, top_k=k))
                 reranked = [hits[i] for i in order if 0 <= i < len(hits)]
                 if reranked:
