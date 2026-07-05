@@ -7,6 +7,10 @@ logger = get_logger(__name__)
 
 WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql"
 
+# Wikimedia blocks unidentified clients with 403; a descriptive User-Agent is required.
+# https://meta.wikimedia.org/wiki/User-Agent_policy
+USER_AGENT = "CivitasAI-CityOS/1.0 (https://github.com/kairuxlabs/civitas-ai) aiohttp"
+
 
 def build_sparql_query(qids: list[str]) -> str:
     values = " ".join(f"wd:{qid}" for qid in qids)
@@ -41,7 +45,7 @@ class WikidataCollector(BaseCollector):
                 async with http.get(
                     WIKIDATA_SPARQL_URL,
                     params={"query": query, "format": "json"},
-                    headers={"Accept": "application/sparql-results+json"},
+                    headers={"Accept": "application/sparql-results+json", "User-Agent": USER_AGENT},
                 ) as resp:
                     data = await resp.json()
         except Exception as e:

@@ -8,6 +8,10 @@ logger = get_logger(__name__)
 
 WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
 
+# Wikimedia blocks unidentified clients with 403; a descriptive User-Agent is required.
+# https://meta.wikimedia.org/wiki/User-Agent_policy
+USER_AGENT = "CivitasAI-CityOS/1.0 (https://github.com/kairuxlabs/civitas-ai) aiohttp"
+
 # (title, category) — organized by category for easy extension later.
 TOPICS: list[tuple[str, str]] = [
     ("Hanoi", "city"),
@@ -31,7 +35,7 @@ class WikipediaCollector(BaseCollector):
                         "action": "query", "prop": "extracts", "explaintext": 1,
                         "titles": title, "format": "json", "redirects": 1,
                     }
-                    async with http.get(WIKIPEDIA_API_URL, params=params) as resp:
+                    async with http.get(WIKIPEDIA_API_URL, params=params, headers={"User-Agent": USER_AGENT}) as resp:
                         data = await resp.json()
                     pages = data.get("query", {}).get("pages", {})
                     for page in pages.values():
