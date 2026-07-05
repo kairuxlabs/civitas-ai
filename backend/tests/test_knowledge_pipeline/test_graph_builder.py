@@ -31,6 +31,27 @@ def test_to_node_row_flattens_geometry_metadata_and_capacity():
     assert row["capacity"] == '{"beds": 1200}'
     assert row["source"] == "OpenStreetMap"
     assert "geometry" not in row and "metadata" not in row
+    assert row["wikidata_label"] is None
+    assert row["wikidata_instance_of"] is None
+
+
+def test_to_node_row_carries_wikidata_enrichment_fields_when_present():
+    entity = {
+        "id": "hospital_1", "name": "Bach Mai", "display_name": "Bệnh viện Bạch Mai",
+        "geometry": {"type": "Point", "lat": 21.0, "lon": 105.8},
+        "district": "Hai Ba Trung", "tags": ["healthcare"],
+        "importance": 95, "criticality": "critical", "status": "normal", "confidence": 0.9,
+        "capacity": None,
+        "metadata": {
+            "source": "OpenStreetMap", "updated_at": "2026-07-05",
+            "wikidata_qid": "Q194189",
+            "wikidata_label": "Bach Mai Hospital",
+            "wikidata_instance_of": "hospital",
+        },
+    }
+    row = to_node_row(entity)
+    assert row["wikidata_label"] == "Bach Mai Hospital"
+    assert row["wikidata_instance_of"] == "hospital"
 
 
 def test_build_entity_graph_groups_by_type_and_upserts_per_label():

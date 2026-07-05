@@ -29,6 +29,8 @@ def to_node_row(entity: dict) -> dict:
         "capacity": json.dumps(capacity) if capacity is not None else None,
         "source": metadata.get("source", ""),
         "updated_at": metadata.get("updated_at", ""),
+        "wikidata_label": metadata.get("wikidata_label"),
+        "wikidata_instance_of": metadata.get("wikidata_instance_of"),
     }
 
 

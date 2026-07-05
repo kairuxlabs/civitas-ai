@@ -32,10 +32,22 @@ async def bootstrap() -> dict:
     summary: dict = {}
     osm = OSMCollector()
 
-    # 1. OSM entities -> Neo4j nodes
+    # 1. OSM entities -> Wikidata enrichment (in place) -> Neo4j nodes
     entities: list[dict] = []
     try:
         entities = await osm.collect()
+    except Exception as e:
+        logger.warning(f"OSM collection step failed: {e}")
+
+    # 1b. Wikidata enrichment (best-effort, mutates `entities` in place) —
+    # must run BEFORE the Neo4j upsert so enriched fields are persisted.
+    try:
+        enriched = await WikidataCollector(entities).collect()
+        summary["wikidata_enriched"] = len(enriched)
+    except Exception as e:
+        logger.warning(f"Wikidata enrichment step failed: {e}")
+
+    try:
         loader = Neo4jLoader()
         summary["neo4j_nodes"] = graph_builder.build_entity_graph(entities, loader)
         loader.close()
@@ -51,14 +63,7 @@ async def bootstrap() -> dict:
     except Exception as e:
         logger.warning(f"GeoJSON -> Postgres step failed: {e}")
 
-    # 3. Wikidata enrichment (best-effort, mutates `entities` in place)
-    try:
-        enriched = await WikidataCollector(entities).collect()
-        summary["wikidata_enriched"] = len(enriched)
-    except Exception as e:
-        logger.warning(f"Wikidata enrichment step failed: {e}")
-
-    # 4. Wikipedia + Government PDF -> chunks -> Qdrant
+    # 3. Wikipedia + Government PDF -> chunks -> Qdrant
     docs: list[dict] = []
     try:
         docs.extend(await WikipediaCollector().collect())
@@ -80,7 +85,7 @@ async def bootstrap() -> dict:
     except Exception as e:
         logger.warning(f"Qdrant load step failed: {e}")
 
-    # 5. Entity extraction over the same chunks -> Neo4j relations
+    # 4. Entity extraction over the same chunks -> Neo4j relations
     relations: list[dict] = []
     for chunk in chunks:
         try:
