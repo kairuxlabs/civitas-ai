@@ -66,3 +66,20 @@ def test_upsert_nodes_returns_zero_on_driver_error(monkeypatch):
         count = loader.upsert_nodes("Hospital", [{"id": "h1"}])
 
     assert count == 0
+
+
+def test_init_handles_driver_construction_failure(monkeypatch):
+    """Verify that driver construction errors degrade to no-op instead of crashing."""
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://invalid-uri-scheme")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    with patch(
+        "src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver",
+        side_effect=ValueError("invalid URI scheme")
+    ):
+        loader = Neo4jLoader()  # Should not raise
+
+    # Verify it degraded to no-op
+    assert loader.upsert_nodes("Hospital", [{"id": "h1"}]) == 0
+    assert loader.merge_relation_by_name("Flood", "Flood", "IMPACTS", "Hospital", "Bach Mai") is False

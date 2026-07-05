@@ -14,9 +14,13 @@ class Neo4jLoader:
     def __init__(self):
         self._driver = None
         if settings.neo4j_uri:
-            self._driver = GraphDatabase.driver(
-                settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password)
-            )
+            try:
+                self._driver = GraphDatabase.driver(
+                    settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password)
+                )
+            except Exception as e:
+                logger.warning(f"Failed to initialize Neo4j driver: {e}")
+                self._driver = None
 
     def close(self) -> None:
         if self._driver:
