@@ -408,6 +408,8 @@ Centralizes all OpenRouter/Nemotron calls behind one gateway so no agent talks t
 
 Wired into `KnowledgeMemory._qdrant_search` (`src/runtime/memory.py`) as an optional post-processing step: widens the Qdrant candidate set and reranks it before truncating to `k`.
 
+**Gemini quota fallback:** `call_gemini()` (`src/agents/gemini_client.py`) — used by all 7 agents and the knowledge pipeline's entity extractor — now falls back to `planner.complete()` (OpenRouter/Nemotron) whenever the Gemini call fails, e.g. on free-tier `429 RESOURCE_EXHAUSTED`. This runs automatically once `OPENROUTER_API_KEY` is set; unaffected (same as before) when unset.
+
 **Before demoing with a real `OPENROUTER_API_KEY`:** every module in this package is tested offline (mocked gateway) — no test proves the OpenRouter model slugs or `embeddings`/`rerank` endpoint paths actually resolve. A wrong slug degrades silently to `None`/passthrough with only a log warning. Manually call `complete()`, `embed()`, `rerank()`, and `check_safety()` once each against the real API before relying on this layer.
 
 **Inactive by default.** Every function in this package degrades gracefully (`None`/passthrough, never raises) when `OPENROUTER_API_KEY` is unset in `.env` — existing Gemini-based agents and pipelines are unaffected. Set `OPENROUTER_API_KEY` to activate.
