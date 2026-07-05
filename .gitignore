@@ -5,6 +5,7 @@ docs/specs
 CLAUDE.md
 .claude/
 .superpowers/
+.worktrees/
 
 # Python
 __pycache__/

@@ -1,14 +1,18 @@
 # Deployment Guide
 
-Civitas AI deploys across three managed cloud services:
+Civitas AI (CityOS v2) deploys across three managed cloud services, plus two optional knowledge-layer services:
 
-| Service | Role | Platform |
-|---|---|---|
-| **Neon.tech** | PostgreSQL database | Serverless Postgres |
-| **Render** | FastAPI backend | Docker container |
-| **Vercel** | React frontend | Static + CDN |
+| Service | Role | Platform | Required |
+|---|---|---|---|
+| **Neon.tech** | PostgreSQL database | Serverless Postgres | ✅ |
+| **Render** | FastAPI backend + v2 runtime | Docker container | ✅ |
+| **Vercel** | React frontend | Static + CDN | ✅ |
+| **Neo4j Aura** | Decision memory graph | Free tier | Optional |
+| **Qdrant Cloud** | SOP vector search | Free tier | Optional |
 
-GitHub Actions orchestrates the full pipeline: tests run on every push, deploys trigger on `main` only.
+The optional services power the v2 knowledge layer. When their env vars are unset the backend degrades gracefully to in-memory fallbacks — the whole platform works without them.
+
+GitHub Actions orchestrates the pipeline: tests run on every push, deploys trigger on `main` only.
 
 ---
 
@@ -66,30 +70,77 @@ This is idempotent — if run again on an already-seeded database, it skips the 
 
 In **Environment** tab, add:
 
-| Variable | Value |
-|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://...` from Neon |
-| `GEMINI_API_KEY` | Your Google Gemini key |
+| Variable | Required | Value |
+|---|---|---|
+| `DATABASE_URL` | ✅ | `postgresql+asyncpg://...` from Neon |
+| `GEMINI_API_KEY` | ✅ | Google Gemini key (planner/decision/knowledge fall back to rules without it) |
+| `NEO4J_URI` | ❌ | `neo4j+s://xxx.databases.neo4j.io` from Neo4j Aura — enables persistent decision-memory graph |
+| `NEO4J_USER` | ❌ | Usually `neo4j` |
+| `NEO4J_PASSWORD` | ❌ | From Aura credentials file |
+| `QDRANT_URL` | ❌ | `https://xxx.cloud.qdrant.io` — enables vector SOP search |
+| `QDRANT_API_KEY` | ❌ | From Qdrant Cloud dashboard |
 
-### Get the deploy hook
+### Auto-deploy from GitHub
 
-1. Go to **Settings → Deploy Hook**
-2. Copy the URL — it looks like `https://api.render.com/deploy/srv-xxx?key=yyy`
-3. Save this as GitHub secret `RENDER_DEPLOY_HOOK_URL`
+Render deploys automatically on every push to `main` (default **Auto-Deploy: Yes** when the repo is connected). No deploy hook or GitHub secret is needed for the backend — the `deploy-backend` job in `deploy.yml` is informational only.
 
 ### Verify deployment
 
-After the first deploy, check the health endpoint:
+After the first deploy, check the health endpoint and the v2 runtime:
+
 ```bash
 curl https://civitas-ai-backend.onrender.com/health
 # → {"status":"ok","version":"2.0.0"}
+
+# Submit an autonomous goal to the v2 runtime
+curl -X POST https://civitas-ai-backend.onrender.com/api/v2/goal \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Chuẩn bị thành phố cho trận mưa lớn tối nay", "district_id": 1}'
+# → 202 with {"run_id": "...", "status": "planning", ...}
+
+# Poll the run until "awaiting_approval", then approve
+curl https://civitas-ai-backend.onrender.com/api/v2/runs/<run_id>
+curl -X POST https://civitas-ai-backend.onrender.com/api/v2/runs/<run_id>/approval \
+  -H "Content-Type: application/json" -d '{"approved": true}'
+
+# Digital Twin simulation + data crawl
+curl -X POST https://civitas-ai-backend.onrender.com/api/v2/simulation/start \
+  -H "Content-Type: application/json" -d '{"scenario": "heavy_rain", "interval_s": 30}'
+curl https://civitas-ai-backend.onrender.com/api/v2/simulation/status
+curl -X POST https://civitas-ai-backend.onrender.com/api/v2/simulation/stop
+curl -X POST https://civitas-ai-backend.onrender.com/api/v2/crawl \
+  -H "Content-Type: application/json" -d '{"sources": ["weather", "news"]}'
 ```
 
 The Swagger UI is available at `https://civitas-ai-backend.onrender.com/docs`.
 
 ---
 
-## 3. Vercel (Frontend)
+## 3. Optional Knowledge Layer (Neo4j Aura + Qdrant Cloud)
+
+Both services are free-tier and optional. Without them:
+- Decision memory (Incident → Decision → Workflow → Outcome chains) lives in process memory and resets on redeploy.
+- SOP retrieval uses keyword matching over the built-in SOP documents.
+
+### Neo4j Aura
+
+1. Sign up at [neo4j.com/cloud/aura](https://neo4j.com/cloud/aura) → create a **Free** instance
+2. Download the credentials file when prompted (shown once)
+3. Set `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` on Render
+
+Decision chains are written as `(:Incident)-[:LED_TO]->(:Decision)-[:EXECUTED_AS]->(:Workflow)-[:RESULTED_IN]->(:Outcome)`.
+
+### Qdrant Cloud
+
+1. Sign up at [cloud.qdrant.io](https://cloud.qdrant.io) → create a free cluster
+2. Create a collection named `cityos_sop` and index the SOP documents
+3. Set `QDRANT_URL`, `QDRANT_API_KEY` on Render
+
+If the collection is missing or the service is unreachable, the backend logs a warning and falls back to keyword search — requests never fail because of it.
+
+---
+
+## 4. Vercel (Frontend)
 
 ### Link your project
 
@@ -109,6 +160,8 @@ In the Vercel dashboard under **Settings → Environment Variables**, add:
 | `VITE_API_BASE_URL` | `https://civitas-ai-backend.onrender.com` |
 | `VITE_WS_URL` | `wss://civitas-ai-backend.onrender.com/ws` |
 
+> ⚠️ Paste values as plain text — a BOM character copied into these values has previously broken API calls in production (the frontend strips a leading BOM defensively, but keep values clean).
+
 ### Get GitHub secrets
 
 You need three values from Vercel for the CI/CD pipeline:
@@ -124,7 +177,7 @@ VERCEL_PROJECT_ID=...
 
 ### SPA routing
 
-`frontend/vercel.json` is already configured with the rewrite rule that sends all requests to `index.html`, enabling React Router's client-side navigation:
+`frontend/vercel.json` is already configured with the rewrite rule that sends all requests to `index.html`:
 
 ```json
 {
@@ -134,7 +187,7 @@ VERCEL_PROJECT_ID=...
 
 ---
 
-## 4. GitHub Actions Setup
+## 5. GitHub Actions Setup
 
 ### Add repository secrets
 
@@ -142,10 +195,11 @@ In **Settings → Secrets and variables → Actions**, add:
 
 | Secret | Description |
 |---|---|
-| `RENDER_DEPLOY_HOOK_URL` | From Render → Service → Settings → Deploy Hook |
 | `VERCEL_TOKEN` | From vercel.com/account/tokens |
 | `VERCEL_ORG_ID` | From `.vercel/project.json` after `vercel link` |
 | `VERCEL_PROJECT_ID` | From `.vercel/project.json` after `vercel link` |
+
+The backend needs no secret: Render auto-deploys from the GitHub push itself.
 
 ### Workflow overview
 
@@ -154,11 +208,11 @@ Two workflow files manage the pipeline:
 **`.github/workflows/ci.yml`** — runs on every push and pull request:
 
 ```
-backend tests (pytest)
+backend tests (pytest, 94 tests)
     └─ SQLite in-memory, no external services needed
+       (v2 runtime tests force Gemini/Qdrant/Neo4j fallback paths)
 
-frontend unit tests (Vitest)
-    └─ 51 tests, runs isolated
+frontend unit tests (Vitest, 52 tests)
 
 frontend E2E tests (Playwright, suites 01–04)
     └─ Chromium, API responses mocked
@@ -167,13 +221,13 @@ frontend build check
     └─ TypeScript + Vite production build
 ```
 
-All four jobs run in parallel. The deploy workflow only triggers after CI passes.
+All four jobs run in parallel. Deploys are independent of CI (see below).
 
 **`.github/workflows/deploy.yml`** — runs on push to `main` only:
 
 ```
-deploy-backend  → POST to Render deploy hook → Render pulls Docker image and redeploys
-deploy-frontend → vercel deploy --prod        → Vercel builds from source and publishes
+deploy-backend  → informational (Render auto-deploys from the GitHub push)
+deploy-frontend → vercel deploy --prod → Vercel builds from source and publishes
 ```
 
 ### Deployment flow
@@ -182,19 +236,20 @@ deploy-frontend → vercel deploy --prod        → Vercel builds from source an
 git push origin main
     │
     ├── ci.yml (parallel)
-    │   ├── backend: pytest
-    │   ├── frontend-unit: vitest
+    │   ├── backend: pytest (94)
+    │   ├── frontend-unit: vitest (52)
     │   ├── frontend-e2e: playwright (suites 01-04)
     │   └── frontend-build: npm run build
     │
-    └── deploy.yml (on main, independent of ci.yml)
-        ├── Render deploy hook → new Docker container
+    ├── Render auto-deploy → new Docker container (triggered by the push itself)
+    │
+    └── deploy.yml (on main)
         └── vercel deploy --prod → new Vercel deployment
 ```
 
 ---
 
-## 5. Production Docker Image
+## 6. Production Docker Image
 
 `backend/Dockerfile.prod` builds a minimal production image:
 
@@ -205,24 +260,24 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
 ```
 
-Key differences from the local dev setup:
+Key points:
 - No `--reload` flag (hot-reload disabled)
-- 2 Uvicorn workers for concurrency
+- **Exactly 1 Uvicorn worker** — the v2 runtime keeps run state, the simulation engine, and the event bus in process memory. Multiple workers would split that state: a run created on worker A would 404 on worker B, and simulation start/status would disagree between workers. Scale vertically (bigger instance), not horizontally, unless run state is moved to a shared store first.
 - Slim base image to minimize image size
 
 ---
 
-## 6. Render Blueprint
+## 7. Render Blueprint
 
-`render.yaml` at the repo root is a Render Blueprint that defines the service declaratively. You can use it to provision the service automatically:
+`render.yaml` at the repo root defines the service declaratively:
 
 1. In Render dashboard: **New → Blueprint**
 2. Connect your GitHub repo
 3. Render reads `render.yaml` and creates the service
-4. Set `DATABASE_URL` and `GEMINI_API_KEY` manually in the dashboard (marked `sync: false` in the blueprint)
+4. Set `DATABASE_URL` and `GEMINI_API_KEY` manually in the dashboard (marked `sync: false`); add the optional `NEO4J_*` / `QDRANT_*` variables there too if used
 
 ---
 
@@ -231,6 +286,22 @@ Key differences from the local dev setup:
 **Backend returns 502 on Render free plan**
 
 Render free services spin down after inactivity. The first request after ~15 min will cold-start the container (10–30s). Use Render's Starter plan for always-on.
+
+**`GET /api/v2/runs/{id}` returns 404 for a run you just created**
+
+The backend is running more than one worker process — v2 run state is in-memory and per-worker. Ensure the container runs `--workers 1` (see section 6) and that no platform-level replica count > 1 is set.
+
+**Simulation stops by itself on the free plan**
+
+The Digital Twin loop lives inside the web process. When Render spins the free instance down after inactivity, the loop stops and `simulation/status` resets after cold start. Restart it with `POST /api/v2/simulation/start`, or use the Starter plan for continuous simulation. Runs it already triggered are unaffected in Postgres (`agent_decisions`), but in-memory run history resets.
+
+**Auto-goal fires no runs even though simulation is running**
+
+Auto-goal requires `auto_goal: true` on start, values over threshold (rain > 20mm or AQI > 150 — the `normal` scenario never crosses them), and a 5-minute cooldown between triggers. Check `GET /api/v2/simulation/status` → `last_auto_goal`.
+
+**Crawl returns `ok: false` for a source**
+
+Each source fails independently (`weather` = Open-Meteo, `aqi` = OpenAQ, `news` = VnExpress RSS). SSL or rate-limit errors from one provider don't affect the others; the error text is returned per-source in the response.
 
 **Frontend shows "Failed to fetch" errors**
 

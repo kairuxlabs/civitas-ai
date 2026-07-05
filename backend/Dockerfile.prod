@@ -10,5 +10,6 @@ COPY . .
 
 EXPOSE 8000
 
-# Production: no --reload, use Gunicorn workers with Uvicorn worker class
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Production: no --reload. Single worker required: the v2 runtime keeps
+# run/simulation state in-memory, which multiple workers would split.
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

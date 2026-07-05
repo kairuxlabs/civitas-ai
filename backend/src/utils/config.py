@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     chromadb_host: str = "localhost"
     chromadb_port: int = 8001
+    # Optional knowledge-layer services (in-memory fallbacks when unset)
+    neo4j_uri: str = ""
+    neo4j_user: str = ""
+    neo4j_password: str = ""
+    qdrant_url: str = ""
+    qdrant_api_key: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

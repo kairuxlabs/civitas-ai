@@ -55,3 +55,107 @@ export interface AgentEvent {
   detail: string;
   ts: string;
 }
+
+// ── CityOS v2 Autonomous Runtime ──────────────────────────────────────
+
+export type RuntimeTaskStatus = 'pending' | 'running' | 'done' | 'failed';
+
+export type RuntimeRunStatus =
+  | 'planning' | 'running' | 'reflecting' | 'deciding'
+  | 'awaiting_approval' | 'executing_workflow'
+  | 'done' | 'failed' | 'rejected';
+
+export interface RuntimeTask {
+  id: string;
+  agent: string;
+  depends_on: string[];
+  priority: number;
+  status: RuntimeTaskStatus;
+  attempts: number;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  latency_ms: number | null;
+}
+
+export interface RuntimeEvidence {
+  task: string;
+  agent: string;
+  summary: string;
+  confidence: number | null;
+}
+
+export interface RuntimeDecision {
+  summary: string;
+  prediction: string;
+  risk: 'low' | 'medium' | 'high';
+  recommendation: string[];
+  confidence: number;
+  evidence: RuntimeEvidence[];
+}
+
+export interface WorkflowStep {
+  step: string;
+  detail: string;
+  ts: string;
+}
+
+export interface TimelineEntry {
+  ts: string;
+  actor: string;
+  message: string;
+}
+
+export interface RuntimeRun {
+  run_id: string;
+  goal: string;
+  district_id: number;
+  status: RuntimeRunStatus;
+  tasks: RuntimeTask[];
+  decision: RuntimeDecision | null;
+  workflow_steps: WorkflowStep[];
+  timeline: TimelineEntry[];
+  created_at: string;
+  decision_record_id: number | null;
+  reflection: { avg_confidence: number; notes: string[]; missing: string[] } | null;
+}
+
+export interface RuntimeRunSummary {
+  run_id: string;
+  goal: string;
+  district_id: number;
+  status: RuntimeRunStatus;
+  created_at: string;
+  task_count: number;
+  confidence: number | null;
+}
+
+export interface SimulationStatus {
+  running: boolean;
+  scenario: string;
+  scenario_label: string;
+  interval_s: number;
+  auto_goal: boolean;
+  tick: number;
+  values: { rain: number; aqi: number; temperature: number; humidity: number; wind_speed: number };
+  last_auto_goal: string | null;
+}
+
+export interface ScenarioInfo {
+  name: string;
+  label: string;
+}
+
+export type CrawlResults = Record<string, { ok: boolean; count?: number; error?: string }>;
+
+export interface RuntimeMonitor {
+  agents: Record<string, {
+    runs: number;
+    failures: number;
+    avg_latency_ms: number | null;
+    last_status: string;
+  }>;
+  active_runs: number;
+  total_runs: number;
+}

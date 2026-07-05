@@ -6,6 +6,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.api.routes import districts, scores, chat, simulator, timeline, aqi
 from src.api.routes import decisions
+from src.api.routes import runtime as runtime_routes
+from src.api.routes import simulation_v2
 from src.api.routes.ws import router as ws_router
 from src.database.connection import Base, engine, AsyncSessionLocal
 import src.models.district  # noqa: F401
@@ -74,6 +76,8 @@ app.include_router(simulator.router)
 app.include_router(timeline.router)
 app.include_router(aqi.router)
 app.include_router(decisions.router)
+app.include_router(runtime_routes.router)
+app.include_router(simulation_v2.router)
 
 
 @app.get("/health")
