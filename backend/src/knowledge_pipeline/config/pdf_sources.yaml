@@ -1,0 +1,11 @@
+sources: []
+# Example entries — uncomment and edit to enable (no unverified URLs ship
+# by default; see docs/superpowers/specs/2026-07-05-knowledge-bootstrap-pipeline-design.md):
+# - name: "Flood Emergency SOP"
+#   type: local
+#   path: datasets/pdf/flood_sop.pdf
+#   category: disaster
+# - name: "Traffic Safety Guideline"
+#   type: remote
+#   url: https://example.gov.vn/traffic-safety.pdf
+#   category: transportation
