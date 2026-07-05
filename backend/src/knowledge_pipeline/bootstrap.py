@@ -69,7 +69,12 @@ async def bootstrap() -> dict:
     except Exception as e:
         logger.warning(f"Government PDF collection failed: {e}")
 
-    chunks = _docs_to_chunks(docs)
+    chunks: list[dict] = []
+    try:
+        chunks = _docs_to_chunks(docs)
+    except Exception as e:
+        logger.warning(f"Doc chunking step failed: {e}")
+
     try:
         summary["qdrant_chunks"] = qdrant_loader.load_chunks(chunks)
     except Exception as e:
