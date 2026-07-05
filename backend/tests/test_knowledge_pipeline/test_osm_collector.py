@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.knowledge_pipeline.collectors.osm_collector import (
-    OSMCollector, build_tag_query, build_river_query, build_boundary_query,
+    OSMCollector, build_tag_query, build_river_query, build_water_query, build_boundary_query,
 )
-from src.knowledge_pipeline.config.entity_types import ENTITY_TYPES, ROAD_TYPES, NAMED_RIVERS
+from src.knowledge_pipeline.config.entity_types import ENTITY_TYPES, ROAD_TYPES, NAMED_RIVERS, NAMED_LAKES
 
 
 def test_build_tag_query_includes_tag_value_and_bbox():
@@ -17,6 +17,13 @@ def test_build_river_query_includes_name():
     query = build_river_query("Sông Hồng")
     assert "Sông Hồng" in query
     assert "waterway" in query
+
+
+def test_build_water_query_includes_name_and_natural_water_tag():
+    query = build_water_query("Hồ Tây")
+    assert "Hồ Tây" in query
+    assert 'natural"="water"' in query
+    assert "waterway" not in query
 
 
 def test_build_boundary_query_targets_admin_level_8():
@@ -46,9 +53,9 @@ async def test_collect_aggregates_across_all_entity_types_roads_and_rivers():
         mock_client.return_value = _mock_http_session(one_element)
         entities = await OSMCollector().collect()
 
-    expected_count = len(ENTITY_TYPES) + len(ROAD_TYPES["values"]) + len(NAMED_RIVERS)
+    expected_count = len(ENTITY_TYPES) + len(ROAD_TYPES["values"]) + len(NAMED_RIVERS) + len(NAMED_LAKES)
     assert len(entities) == expected_count
-    assert {e["type"] for e in entities} >= set(ENTITY_TYPES) | {"road", "river"}
+    assert {e["type"] for e in entities} >= set(ENTITY_TYPES) | {"road", "river", "lake"}
 
 
 @pytest.mark.asyncio
@@ -78,8 +85,8 @@ async def test_collect_returns_partial_results_when_one_query_fails():
     mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
     mock_resp.__aexit__ = AsyncMock(return_value=None)
 
-    # Total number of queries: entity_types + road_types + rivers
-    total_queries = len(ENTITY_TYPES) + len(ROAD_TYPES["values"]) + len(NAMED_RIVERS)
+    # Total number of queries: entity_types + road_types + rivers + lakes
+    total_queries = len(ENTITY_TYPES) + len(ROAD_TYPES["values"]) + len(NAMED_RIVERS) + len(NAMED_LAKES)
 
     # Side effect: first query fails, all others succeed
     side_effect = [RuntimeError("first query down")] + [mock_resp] * (total_queries - 1)

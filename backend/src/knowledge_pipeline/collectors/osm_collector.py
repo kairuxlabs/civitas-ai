@@ -2,7 +2,7 @@ import aiohttp
 
 from src.knowledge_pipeline.collectors.base import BaseCollector
 from src.knowledge_pipeline.config.entity_types import (
-    ENTITY_TYPES, HANOI_BBOX, NAMED_RIVERS, RIVER_CONFIG, ROAD_TYPES,
+    ENTITY_TYPES, HANOI_BBOX, NAMED_LAKES, NAMED_RIVERS, RIVER_CONFIG, ROAD_TYPES,
 )
 from src.knowledge_pipeline.parsers.osm_parser import parse_osm_elements
 from src.utils.logger import get_logger
@@ -30,6 +30,13 @@ def build_river_query(name: str) -> str:
     return f'[out:json][timeout:60];way["waterway"]["name"="{name}"]({_bbox_str()});out center;'
 
 
+def build_water_query(name: str) -> str:
+    """Lakes (and other standing water bodies) are tagged `natural=water`
+    in OpenStreetMap, not `waterway` — `build_river_query`'s query always
+    returns zero elements for them against the real Overpass API."""
+    return f'[out:json][timeout:60];way["natural"="water"]["name"="{name}"]({_bbox_str()});out center;'
+
+
 def build_boundary_query() -> str:
     return (
         f'[out:json][timeout:60];'
@@ -53,6 +60,10 @@ class OSMCollector(BaseCollector):
             for name in NAMED_RIVERS:
                 elements = await self._query(http, build_river_query(name), f"river/{name}")
                 entities.extend(parse_osm_elements(elements, "river", RIVER_CONFIG))
+
+            for name in NAMED_LAKES:
+                elements = await self._query(http, build_water_query(name), f"lake/{name}")
+                entities.extend(parse_osm_elements(elements, "lake", RIVER_CONFIG))
 
         return entities
 

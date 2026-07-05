@@ -3,7 +3,7 @@ import json
 LABEL_BY_TYPE: dict[str, str] = {
     "hospital": "Hospital", "fire_station": "FireStation", "police": "PoliceStation",
     "school": "School", "road": "Road", "bus_stop": "BusStop", "park": "Park",
-    "river": "River", "building": "Building",
+    "river": "River", "lake": "Lake", "building": "Building",
 }
 
 

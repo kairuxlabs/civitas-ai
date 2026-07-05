@@ -18,7 +18,11 @@ ROAD_TYPES: dict = {
     "criticality": "high",
 }
 
-NAMED_RIVERS: list[str] = ["Sông Hồng", "Sông Tô Lịch", "Hồ Tây", "Hồ Hoàn Kiếm"]
+NAMED_RIVERS: list[str] = ["Sông Hồng", "Sông Tô Lịch"]
+
+# Lakes are tagged `natural=water` in OSM, not `waterway` — they need a
+# different Overpass query builder (see osm_collector.build_water_query).
+NAMED_LAKES: list[str] = ["Hồ Tây", "Hồ Hoàn Kiếm"]
 
 RIVER_CONFIG: dict = {"importance": 60, "criticality": "medium"}
 
