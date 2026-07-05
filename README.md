@@ -28,7 +28,7 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 | | |
 |---|---|
 | **Live deployment** | Frontend: [frontend-eta-six-46.vercel.app](https://frontend-eta-six-46.vercel.app) · Backend: [civitas-ai-backend.onrender.com](https://civitas-ai-backend.onrender.com) |
-| **Demo video (3 min)** | `<youtube/loom-url>` *(fill in before submission)* |
+| **Demo video (3 min)** | `<youtube/loom-url>` *(fill in before submission — see `docs/demo/cityos_demo_recording.webm` for a raw, unnarrated Playwright screen capture of the live app to use as B-roll/reference)* |
 | **Scenario shown** | Heavy rain triggers flash-flood risk in Hanoi → Planner dispatches Traffic + Emergency + Knowledge agents in parallel → Decision recommends road closures + shelter alerts → operator approves from Mission Control |
 
 ---
