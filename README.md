@@ -377,6 +377,25 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide
 
 ---
 
+## Knowledge Pipeline Roadmap
+
+**v1 (current)** — manual bootstrap via `python -m src.knowledge_pipeline.bootstrap`:
+- ✅ OpenStreetMap (hospitals, schools, police, fire stations, roads, bus stops, parks, rivers, buildings)
+- ✅ Wikipedia (8 topics: Hanoi, Flood, Natural disaster, Transportation, Public health, Air pollution, Climate change, Emergency management)
+- ✅ GeoJSON district boundaries (derived from OSM admin boundaries)
+- ✅ Wikidata (best-effort enrichment of OSM entities)
+- ✅ Government PDF (fully functional, ships with an empty `config/pdf_sources.yaml` — add entries to activate)
+- ✅ Neo4j city entity graph + Qdrant `city_knowledge` collection
+
+**v2 (planned)**:
+- `scheduler.py`: weekly automated Wikipedia refresh (stubbed in v1 — see `src/knowledge_pipeline/scheduler.py`)
+- Incremental updates, RSS/news source integration, automated PDF discovery
+
+**v3 (future)**:
+- Streaming ingestion (Kafka or equivalent), real-time knowledge updates
+
+---
+
 ## License
 
 [MIT](LICENSE) — built by [@kairuslabs](https://github.com/kairuxlabs)
