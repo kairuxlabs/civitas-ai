@@ -27,7 +27,7 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 
 | | |
 |---|---|
-| **Live deployment** | Frontend: `<vercel-url>` · Backend: `<render-url>` *(fill in before submission)* |
+| **Live deployment** | Frontend: [frontend-eta-six-46.vercel.app](https://frontend-eta-six-46.vercel.app) · Backend: [civitas-ai-backend.onrender.com](https://civitas-ai-backend.onrender.com) |
 | **Demo video (3 min)** | `<youtube/loom-url>` *(fill in before submission)* |
 | **Scenario shown** | Heavy rain triggers flash-flood risk in Hanoi → Planner dispatches Traffic + Emergency + Knowledge agents in parallel → Decision recommends road closures + shelter alerts → operator approves from Mission Control |
 
@@ -424,13 +424,15 @@ All tables carry a `city_id` column (default `'hanoi'`) for future multi-city su
 
 ## Screenshots
 
-| Dashboard | City Map |
-|---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![City Map](docs/screenshots/map.png) |
+*Live captures from the deployed app ([frontend-eta-six-46.vercel.app](https://frontend-eta-six-46.vercel.app)).*
 
-| AI Copilot | Risk Radar | What-If Simulator |
-|---|---|---|
-| ![AI Copilot](docs/screenshots/copilot.png) | ![Risk Radar](docs/screenshots/risk-radar.png) | ![What-If Simulator](docs/screenshots/simulator.png) |
+| Mission Control — Digital Twin | Agent Monitor |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Monitor](docs/screenshots/monitor.png) |
+
+| AI Copilot — live agent run | What-If Simulator |
+|---|---|
+| ![AI Copilot](docs/screenshots/copilot.png) | ![What-If Simulator](docs/screenshots/simulator.png) |
 
 ---
 
