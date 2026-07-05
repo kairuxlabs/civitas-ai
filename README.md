@@ -396,6 +396,22 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide
 
 ---
 
+## AI Gateway (`backend/src/ai/`)
+
+Centralizes all OpenRouter/Nemotron calls behind one gateway so no agent talks to the network directly:
+
+- `gateway.py` — `call_openrouter(models, payload, endpoint)`: tries each model in a fallback list, returns the first successful response or `None`.
+- `safety.py` — `check_safety(text)`: content-safety check, fails **open** (`safe=True`) if the gateway is unreachable.
+- `embedding.py` — `embed(text)`: standalone embedding call (not wired into the existing Gemini-backed `city_knowledge`/`cityos_sop` Qdrant collections).
+- `reranker.py` — `rerank(query, documents, top_k)`: reorders candidates, falls back to original order on failure.
+- `planner.py` — `complete(prompt, context)`: safety-checked completion (pre- and post-check).
+
+Wired into `KnowledgeMemory._qdrant_search` (`src/runtime/memory.py`) as an optional post-processing step: widens the Qdrant candidate set and reranks it before truncating to `k`.
+
+**Inactive by default.** Every function in this package degrades gracefully (`None`/passthrough, never raises) when `OPENROUTER_API_KEY` is unset in `.env` — existing Gemini-based agents and pipelines are unaffected. Set `OPENROUTER_API_KEY` to activate.
+
+---
+
 ## License
 
 [MIT](LICENSE) — built by [@kairuslabs](https://github.com/kairuxlabs)
