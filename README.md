@@ -410,6 +410,8 @@ Wired into `KnowledgeMemory._qdrant_search` (`src/runtime/memory.py`) as an opti
 
 **Gemini quota fallback:** `call_gemini()` (`src/agents/gemini_client.py`) — used by all 7 agents and the knowledge pipeline's entity extractor — now falls back to `planner.complete()` (OpenRouter/Nemotron) whenever the Gemini call fails, e.g. on free-tier `429 RESOURCE_EXHAUSTED`. This runs automatically once `OPENROUTER_API_KEY` is set; unaffected (same as before) when unset.
 
+**Model slugs — live-verified 2026-07-05:** the planner model was live-tested against the real OpenRouter API and found wrong (`nvidia/nemotron-3-ultra:free` → HTTP 400); fixed to `nvidia/nemotron-3-ultra-550b-a55b:free` (confirmed HTTP 200) in `src/ai/planner.py`. `openrouter/free` (fallback) confirmed to be a real OpenRouter free-model router. The `safety`/`embedding`/`reranker` model slugs were cross-checked against OpenRouter's public NVIDIA model catalog (all matched) but not live-tested end-to-end — do one live call per function before depending on them for a demo.
+
 **Before demoing with a real `OPENROUTER_API_KEY`:** every module in this package is tested offline (mocked gateway) — no test proves the OpenRouter model slugs or `embeddings`/`rerank` endpoint paths actually resolve. A wrong slug degrades silently to `None`/passthrough with only a log warning. Manually call `complete()`, `embed()`, `rerank()`, and `check_safety()` once each against the real API before relying on this layer.
 
 **Inactive by default.** Every function in this package degrades gracefully (`None`/passthrough, never raises) when `OPENROUTER_API_KEY` is unset in `.env` — existing Gemini-based agents and pipelines are unaffected. Set `OPENROUTER_API_KEY` to activate.

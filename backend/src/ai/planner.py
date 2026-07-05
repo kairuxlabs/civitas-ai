@@ -1,7 +1,7 @@
 from src.ai.gateway import call_openrouter
 from src.ai.safety import check_safety
 
-PLANNER_MODELS = ["nvidia/nemotron-3-ultra:free", "openrouter/free"]
+PLANNER_MODELS = ["nvidia/nemotron-3-ultra-550b-a55b:free", "openrouter/free"]
 
 
 async def complete(prompt: str, context: str = "") -> str | None:
