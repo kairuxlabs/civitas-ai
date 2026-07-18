@@ -47,10 +47,12 @@ async def run_agent_graph(
     event_data: list | None = None,
     feedback_data: list | None = None,
 ) -> DecisionOut:
-    weather = await WeatherRepo.get_latest(session, district_id)
-    aqi = await AQIRepo.get_latest(session, district_id)
-    db_events = await EventRepo.get_current(session, district_id)
-    db_feedback = await FeedbackRepo.get_recent(session, district_id)
+    weather, aqi, db_events, db_feedback = await asyncio.gather(
+        WeatherRepo.get_latest(session, district_id),
+        AQIRepo.get_latest(session, district_id),
+        EventRepo.get_current(session, district_id),
+        FeedbackRepo.get_recent(session, district_id),
+    )
 
     weather_data = {
         "temperature": float(weather.temperature or 30) if weather else 30,
