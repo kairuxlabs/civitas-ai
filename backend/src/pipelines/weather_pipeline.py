@@ -26,8 +26,8 @@ class WeatherPipeline:
         timestamp = datetime.now(timezone.utc)
 
         districts = await DistrictRepo.get_all(session)
-        for district in districts:
-            weather = Weather(
+        weathers = [
+            Weather(
                 city_id=district.city_id,
                 district_id=district.id,
                 timestamp=timestamp,
@@ -36,5 +36,7 @@ class WeatherPipeline:
                 rain=current.get("precipitation"),
                 wind_speed=current.get("wind_speed_10m"),
             )
-            await WeatherRepo.save(session, weather)
-            logger.info(f"Saved weather for district {district.name}")
+            for district in districts
+        ]
+        await WeatherRepo.save_all(session, weathers)
+        logger.info(f"Saved weather for {len(districts)} districts")

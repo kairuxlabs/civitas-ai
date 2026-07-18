@@ -6,11 +6,9 @@ from src.models.weather import Weather
 
 class WeatherRepo:
     @staticmethod
-    async def save(session: AsyncSession, weather: Weather) -> Weather:
-        session.add(weather)
+    async def save_all(session: AsyncSession, weathers: list[Weather]) -> None:
+        session.add_all(weathers)
         await session.commit()
-        await session.refresh(weather)
-        return weather
 
     @staticmethod
     async def get_latest(session: AsyncSession, district_id: int) -> Weather | None:

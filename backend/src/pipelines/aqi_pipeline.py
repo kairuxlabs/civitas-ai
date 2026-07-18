@@ -25,9 +25,8 @@ class AQIPipeline:
         timestamp = datetime.now(timezone.utc)
         districts = await DistrictRepo.get_all(session)
 
-        for district in districts:
-            # Use real data if available, else generate realistic mock
-            aqi_record = AQI(
+        aqis = [
+            AQI(
                 city_id=district.city_id,
                 district_id=district.id,
                 timestamp=timestamp,
@@ -37,5 +36,7 @@ class AQIPipeline:
                 no2=random.uniform(10, 80),
                 aqi_index=random.randint(50, 180),
             )
-            await AQIRepo.save(session, aqi_record)
-            logger.info(f"Saved AQI for district {district.name}")
+            for district in districts
+        ]
+        await AQIRepo.save_all(session, aqis)
+        logger.info(f"Saved AQI for {len(districts)} districts")

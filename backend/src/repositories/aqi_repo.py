@@ -6,11 +6,9 @@ from src.models.aqi import AQI
 
 class AQIRepo:
     @staticmethod
-    async def save(session: AsyncSession, aqi: AQI) -> AQI:
-        session.add(aqi)
+    async def save_all(session: AsyncSession, aqis: list[AQI]) -> None:
+        session.add_all(aqis)
         await session.commit()
-        await session.refresh(aqi)
-        return aqi
 
     @staticmethod
     async def get_latest(session: AsyncSession, district_id: int) -> AQI | None:
