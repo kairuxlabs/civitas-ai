@@ -12,7 +12,9 @@ All tests are fully offline: no real Gemini/OpenRouter calls are made.
 """
 import pytest
 
+import src.agents.decision_agent as decision_agent_module
 from src.agents.base import AgentState
+from src.agents.decision_agent import decision_agent
 from src.agents.knowledge_agent import knowledge_agent
 from src.utils.config import settings
 
@@ -126,3 +128,53 @@ def test_event_scenario_retrieves_event_sop():
 def test_baseline_scenario_retrieves_no_sop():
     result = knowledge_agent(SCENARIOS["baseline"]["state"])
     assert result["knowledge_summary"] == "No specific SOP matched. Apply general city operations protocol."
+
+
+def _decision_prompt_for(scenario_name: str, monkeypatch) -> str:
+    """Run knowledge_agent for real to get the actual retrieved SOP summary,
+    inject it into the scenario's state, then call decision_agent with
+    call_gemini mocked to capture the prompt it was given."""
+    state = dict(SCENARIOS[scenario_name]["state"])
+    state["knowledge_summary"] = knowledge_agent(state)["knowledge_summary"]
+
+    captured_prompts = []
+
+    def fake_call_gemini(prompt, expect_json=False):
+        captured_prompts.append(prompt)
+        return None  # force the rule-based fallback path; we only care about the prompt here
+
+    monkeypatch.setattr(decision_agent_module, "call_gemini", fake_call_gemini)
+    decision_agent(state)
+
+    assert len(captured_prompts) == 1
+    return captured_prompts[0]
+
+
+def test_flood_decision_prompt_includes_retrieved_sop(monkeypatch):
+    prompt = _decision_prompt_for("flood", monkeypatch)
+    summary = knowledge_agent(SCENARIOS["flood"]["state"])["knowledge_summary"]
+    assert summary in prompt
+
+
+def test_aqi_decision_prompt_includes_retrieved_sop(monkeypatch):
+    prompt = _decision_prompt_for("aqi", monkeypatch)
+    summary = knowledge_agent(SCENARIOS["aqi"]["state"])["knowledge_summary"]
+    assert summary in prompt
+
+
+def test_heatwave_decision_prompt_includes_retrieved_sop(monkeypatch):
+    prompt = _decision_prompt_for("heatwave", monkeypatch)
+    summary = knowledge_agent(SCENARIOS["heatwave"]["state"])["knowledge_summary"]
+    assert summary in prompt
+
+
+def test_traffic_decision_prompt_includes_retrieved_sop(monkeypatch):
+    prompt = _decision_prompt_for("traffic", monkeypatch)
+    summary = knowledge_agent(SCENARIOS["traffic"]["state"])["knowledge_summary"]
+    assert summary in prompt
+
+
+def test_event_decision_prompt_includes_retrieved_sop(monkeypatch):
+    prompt = _decision_prompt_for("event", monkeypatch)
+    summary = knowledge_agent(SCENARIOS["event"]["state"])["knowledge_summary"]
+    assert summary in prompt
