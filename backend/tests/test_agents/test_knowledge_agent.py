@@ -1,5 +1,18 @@
 from src.agents.knowledge_agent import knowledge_agent
 from src.agents.base import AgentState
+import pytest
+from src.utils.config import settings
+
+
+@pytest.fixture(autouse=True)
+def _force_offline(monkeypatch):
+    """Force all LLM/Qdrant keys empty so every test in this file stays fully
+    offline, regardless of what's in a local .env — knowledge_agent() calls
+    call_gemini() internally, and (after Task 3) also calls
+    qdrant_loader.search_chunks() when qdrant_url is set."""
+    monkeypatch.setattr(settings, "gemini_api_key", "")
+    monkeypatch.setattr(settings, "openrouter_api_key", "")
+    monkeypatch.setattr(settings, "qdrant_url", "")
 
 
 def _state(query: str, aqi: int = 100, rain: float = 0) -> AgentState:
