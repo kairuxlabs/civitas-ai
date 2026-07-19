@@ -6,6 +6,7 @@ from src.pipelines.aqi_pipeline import AQIPipeline
 from src.pipelines.feedback_pipeline import FeedbackPipeline
 from src.services.city_score_service import CityScoreService
 from src.repositories.district_repo import DistrictRepo
+from src.knowledge_pipeline import scheduler as knowledge_scheduler
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,6 +24,7 @@ async def run_all():
 async def main():
     scheduler = AsyncIOScheduler()
     scheduler.add_job(run_all, "interval", minutes=15, id="full_pipeline")
+    knowledge_scheduler.register(scheduler)
     scheduler.start()
     await run_all()
     logger.info("Scheduler started — running every 15 minutes")
