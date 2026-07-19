@@ -49,7 +49,7 @@ async def bootstrap() -> dict:
 
     try:
         loader = Neo4jLoader()
-        summary["neo4j_nodes"] = graph_builder.build_entity_graph(entities, loader)
+        summary["neo4j_nodes"] = await asyncio.to_thread(graph_builder.build_entity_graph, entities, loader)
         loader.close()
     except Exception as e:
         logger.warning(f"OSM -> Neo4j step failed: {e}")
@@ -81,7 +81,7 @@ async def bootstrap() -> dict:
         logger.warning(f"Doc chunking step failed: {e}")
 
     try:
-        summary["qdrant_chunks"] = qdrant_loader.load_chunks(chunks)
+        summary["qdrant_chunks"] = await asyncio.to_thread(qdrant_loader.load_chunks, chunks)
     except Exception as e:
         logger.warning(f"Qdrant load step failed: {e}")
 
@@ -108,7 +108,7 @@ async def bootstrap() -> dict:
     if relations:
         try:
             loader = Neo4jLoader()
-            summary["neo4j_relations"] = graph_builder.build_relation_graph(relations, loader)
+            summary["neo4j_relations"] = await asyncio.to_thread(graph_builder.build_relation_graph, relations, loader)
             loader.close()
         except Exception as e:
             logger.warning(f"Relation graph step failed: {e}")

@@ -50,6 +50,13 @@ Migration complete.
 
 This is idempotent — if run again on an already-seeded database, it skips the seed step.
 
+**If your Neon database was provisioned before 2026-07-18**, it is missing two indexes added since (`idx_events_district_start`, `idx_citizen_feedback_district_created`). Add them once via `psql` or the Neon SQL editor:
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_events_district_start ON events(district_id, start_time DESC);
+CREATE INDEX IF NOT EXISTS idx_citizen_feedback_district_created ON citizen_feedback(district_id, created_at DESC);
+```
+
 ---
 
 ## 2. Render (Backend)
