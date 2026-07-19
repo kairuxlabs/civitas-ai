@@ -10,8 +10,21 @@ Three groups, in three tasks of the same implementation plan:
 
 All tests are fully offline: no real Gemini/OpenRouter calls are made.
 """
+import pytest
+
 from src.agents.base import AgentState
 from src.agents.knowledge_agent import knowledge_agent
+from src.utils.config import settings
+
+
+@pytest.fixture(autouse=True)
+def _force_offline(monkeypatch):
+    """Force both LLM keys empty so every test in this file stays fully
+    offline, regardless of what's in a local .env — knowledge_agent()
+    and decision_agent() both call call_gemini() internally, which only
+    skips real network calls when both keys are unset."""
+    monkeypatch.setattr(settings, "gemini_api_key", "")
+    monkeypatch.setattr(settings, "openrouter_api_key", "")
 
 
 def _state(
