@@ -1,12 +1,13 @@
 # backend/src/models/feedback.py
 from datetime import datetime
-from sqlalchemy import Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Integer, String, Text, ForeignKey, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database.connection import Base
 
 
 class CitizenFeedback(Base):
     __tablename__ = "citizen_feedback"
+    __table_args__ = (Index("idx_citizen_feedback_district_created", "district_id", "created_at"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     city_id: Mapped[str] = mapped_column(String(50), default="hanoi")
     district_id: Mapped[int | None] = mapped_column(ForeignKey("districts.id"), nullable=True)
