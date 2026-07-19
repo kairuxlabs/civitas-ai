@@ -5,6 +5,7 @@ notify → create incident → store memory → done.
 Persistence into the v1 agent_decisions table is best-effort: the
 runtime keeps working when no database is reachable.
 """
+import asyncio
 from datetime import datetime, timezone
 
 from src.runtime.event_bus import Event, EventBus, EventTypes
@@ -34,7 +35,8 @@ class WorkflowRuntime:
         if not approved:
             run.status = RunStatus.REJECTED
             run.log("Recommendation rejected by operator", actor="workflow")
-            decision_memory.store_chain(
+            await asyncio.to_thread(
+                decision_memory.store_chain,
                 incident=self._incident(run),
                 decision=run.decision or {},
                 workflow={"steps": []},
@@ -48,7 +50,8 @@ class WorkflowRuntime:
         await self._update_persisted(run, approved=True)
         await self._step(run, "notify", "Đã gửi thông báo tới các đơn vị liên quan")
         await self._step(run, "create_incident", f"Đã tạo sự cố cho mục tiêu: {run.goal}")
-        decision_memory.store_chain(
+        await asyncio.to_thread(
+            decision_memory.store_chain,
             incident=self._incident(run),
             decision=run.decision or {},
             workflow={"steps": [s["step"] for s in run.workflow_steps] + ["store_memory", "done"]},
