@@ -95,3 +95,55 @@ def test_returns_zero_when_qdrant_client_construction_fails(monkeypatch):
         count = qdrant_loader.load_chunks([{"content": "x", "title": "t", "chunk_index": 0}])
 
     assert count == 0
+
+
+def test_search_chunks_returns_empty_when_qdrant_not_configured(monkeypatch):
+    monkeypatch.setattr(settings, "qdrant_url", "")
+    assert qdrant_loader.search_chunks("flood risk") == []
+
+
+def test_search_chunks_returns_empty_when_embedding_fails(monkeypatch):
+    monkeypatch.setattr(settings, "qdrant_url", "https://fake.qdrant.io")
+    monkeypatch.setattr(qdrant_loader, "embed_text", lambda text, task_type=None: None)
+    assert qdrant_loader.search_chunks("flood risk") == []
+
+
+def test_search_chunks_returns_mapped_hits(monkeypatch):
+    monkeypatch.setattr(settings, "qdrant_url", "https://fake.qdrant.io")
+    monkeypatch.setattr(qdrant_loader, "embed_text", lambda text, task_type=None: [0.1, 0.2, 0.3])
+
+    mock_hit = MagicMock()
+    mock_hit.payload = {
+        "title": "Hoan Kiem Lake",
+        "content": "A lake in central Hanoi.",
+        "category": "geography",
+        "source": "Wikipedia",
+    }
+    mock_client = MagicMock()
+    mock_client.search.return_value = [mock_hit]
+
+    with patch("src.knowledge_pipeline.loaders.qdrant_loader.QdrantClient", return_value=mock_client):
+        results = qdrant_loader.search_chunks("Hoan Kiem Lake", k=2)
+
+    assert results == [{
+        "title": "Hoan Kiem Lake",
+        "content": "A lake in central Hanoi.",
+        "category": "geography",
+        "source": "Wikipedia",
+    }]
+    _, kwargs = mock_client.search.call_args
+    assert kwargs["collection_name"] == "city_knowledge"
+    assert kwargs["limit"] == 2
+
+
+def test_search_chunks_returns_empty_when_search_call_fails(monkeypatch):
+    monkeypatch.setattr(settings, "qdrant_url", "https://fake.qdrant.io")
+    monkeypatch.setattr(qdrant_loader, "embed_text", lambda text, task_type=None: [0.1, 0.2, 0.3])
+
+    mock_client = MagicMock()
+    mock_client.search.side_effect = Exception("connection refused")
+
+    with patch("src.knowledge_pipeline.loaders.qdrant_loader.QdrantClient", return_value=mock_client):
+        results = qdrant_loader.search_chunks("flood risk")
+
+    assert results == []
