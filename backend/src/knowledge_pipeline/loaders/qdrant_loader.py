@@ -67,3 +67,32 @@ def load_chunks(chunks: list[dict]) -> int:
     except Exception as e:
         logger.warning(f"Qdrant load_chunks failed: {e}")
         return 0
+
+
+def search_chunks(query: str, k: int = 3) -> list[dict]:
+    """Semantic search over the city_knowledge collection. Returns up to k
+    {title, content, category, source} dicts, or [] on any failure (no
+    qdrant_url, embedding failure, network error, collection missing) —
+    mirrors load_chunks's fail-in-isolation convention."""
+    client = _client()
+    if client is None:
+        return []
+
+    vector = embed_text(query, task_type="RETRIEVAL_QUERY")
+    if vector is None:
+        return []
+
+    try:
+        hits = client.search(collection_name=COLLECTION, query_vector=vector, limit=k)
+        return [
+            {
+                "title": h.payload.get("title", ""),
+                "content": h.payload.get("content", ""),
+                "category": h.payload.get("category", ""),
+                "source": h.payload.get("source", ""),
+            }
+            for h in hits
+        ]
+    except Exception as e:
+        logger.warning(f"Qdrant search_chunks failed: {e}")
+        return []
