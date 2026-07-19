@@ -1,9 +1,14 @@
 from src.agents.base import AgentState
+from src.agents.gemini_client import call_gemini
+from src.knowledge_pipeline.loaders import qdrant_loader
+from src.utils.config import settings
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Static SOP knowledge base — replaced by ChromaDB vector search when available
+# Static SOP knowledge base — kept for concrete, action-oriented emergency
+# steps even after city_knowledge (Qdrant) integration below; city_knowledge
+# adds broader informational grounding, not a replacement for these SOPs.
 _SOP_DOCS = [
     {
         "id": "sop-flood-001",
@@ -103,33 +108,57 @@ def knowledge_agent(state: AgentState) -> dict:
     scored.sort(key=lambda x: x[1], reverse=True)
     top = [doc for doc, score in scored if score > 0][:2]
 
-    if not top:
+    city_chunks = []
+    if settings.qdrant_url:
+        city_chunks = qdrant_loader.search_chunks(state.get("query", ""), k=2)
+
+    if not top and not city_chunks:
         summary = "No specific SOP matched. Apply general city operations protocol."
         logger.info("Knowledge agent: no SOP matched")
         return {"knowledge_summary": summary}
 
-    # Try Gemini to synthesize a brief action summary
+    # Try Gemini to synthesize a brief action summary from whatever context is available
     try:
-        from src.agents.gemini_client import call_gemini
-        sop_texts = "\n".join(f"- {doc['title']}: {doc['content']}" for doc in top)
+        context_blocks = []
+        if top:
+            sop_texts = "\n".join(f"- {doc['title']}: {doc['content']}" for doc in top)
+            context_blocks.append(f"Các SOP liên quan:\n{sop_texts}")
+        if city_chunks:
+            chunk_texts = "\n".join(
+                f"- {c['title']} ({c['source']}): {c['content']}" for c in city_chunks
+            )
+            context_blocks.append(f"Ngữ cảnh liên quan:\n{chunk_texts}")
+
         prompt = (
             f"Dựa trên tình huống: AQI={aqi_index:.0f}, mưa={rain:.0f}mm/h, nhiệt độ={temperature:.0f}°C, "
             f"câu hỏi: '{state.get('query', '')}'\n\n"
-            f"Các SOP liên quan:\n{sop_texts}\n\n"
-            f"Hãy tóm tắt trong 1-2 câu tiếng Việt: cần thực hiện hành động ưu tiên nào ngay lập tức? "
-            f"Chỉ nêu hành động cụ thể, không giải thích dài dòng."
+            + "\n\n".join(context_blocks) +
+            "\n\nHãy tóm tắt trong 1-2 câu tiếng Việt: cần thực hiện hành động ưu tiên nào ngay lập tức? "
+            "Chỉ nêu hành động cụ thể, không giải thích dài dòng."
         )
         gemini_summary = call_gemini(prompt)
         if gemini_summary:
-            sop_names = ", ".join(doc["title"] for doc in top)
-            summary = f"[{sop_names}] {gemini_summary}"
-            logger.info(f"Knowledge agent (Gemini): {len(top)} SOPs → summary")
+            if top:
+                sop_names = ", ".join(doc["title"] for doc in top)
+                summary = f"[{sop_names}] {gemini_summary}"
+            else:
+                summary = gemini_summary
+            logger.info(
+                f"Knowledge agent (Gemini): {len(top)} SOPs, {len(city_chunks)} city_knowledge chunks → summary"
+            )
             return {"knowledge_summary": summary}
     except Exception:
         pass
 
-    # Fallback: title + first action only
-    parts = [f"{doc['title']}: {_first_action(doc['content'])}" for doc in top]
-    summary = " | ".join(parts)
-    logger.info(f"Knowledge agent (rule-based): {len(top)} SOPs")
+    # Fallback: deterministic, SOP-only — city_chunks are intentionally not
+    # stitched in without an LLM (a raw concatenation of Wikipedia/OSM text
+    # and SOP action steps would read as incoherent).
+    if top:
+        parts = [f"{doc['title']}: {_first_action(doc['content'])}" for doc in top]
+        summary = " | ".join(parts)
+        logger.info(f"Knowledge agent (rule-based): {len(top)} SOPs")
+        return {"knowledge_summary": summary}
+
+    summary = "No specific SOP matched. Apply general city operations protocol."
+    logger.info("Knowledge agent: no SOP matched (city_knowledge unavailable without LLM)")
     return {"knowledge_summary": summary}
