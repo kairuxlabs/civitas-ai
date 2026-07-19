@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     qdrant_url: str = ""
     qdrant_api_key: str = ""
     openrouter_api_key: str = ""
+    openrouter_timeout_seconds: float = 10.0
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

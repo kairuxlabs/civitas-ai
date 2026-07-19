@@ -223,6 +223,92 @@ async def test_bootstrap_calls_extract_entities_off_the_event_loop_thread(monkey
 
 
 @pytest.mark.asyncio
+async def test_bootstrap_calls_load_chunks_off_the_event_loop_thread(monkeypatch, db_session):
+    class _CtxWrapper:
+        async def __aenter__(self):
+            return db_session
+        async def __aexit__(self, *exc):
+            return None
+    monkeypatch.setattr(bootstrap_module, "AsyncSessionLocal", lambda: _CtxWrapper())
+
+    result_holder = {}
+
+    def fake_load_chunks(chunks):
+        try:
+            asyncio.get_running_loop()
+            result_holder["called_on_loop_thread"] = True
+        except RuntimeError:
+            result_holder["called_on_loop_thread"] = False
+        return 0
+
+    with patch.object(bootstrap_module, "OSMCollector") as mock_osm_cls, \
+         patch.object(bootstrap_module, "WikidataCollector") as mock_wikidata_cls, \
+         patch.object(bootstrap_module, "WikipediaCollector") as mock_wiki_cls, \
+         patch.object(bootstrap_module, "GovernmentPDFCollector") as mock_pdf_cls, \
+         patch.object(bootstrap_module, "Neo4jLoader") as mock_neo4j_cls, \
+         patch.object(bootstrap_module.graph_builder, "build_entity_graph", return_value={}), \
+         patch.object(bootstrap_module.postgres_loader, "update_district_geojson", new=AsyncMock(return_value=0)), \
+         patch.object(bootstrap_module.qdrant_loader, "load_chunks", side_effect=fake_load_chunks), \
+         patch.object(bootstrap_module, "extract_entities", return_value={"entities": [], "relations": []}):
+
+        mock_osm = mock_osm_cls.return_value
+        mock_osm.collect = AsyncMock(return_value=[])
+        mock_osm.collect_district_boundaries = AsyncMock(return_value=[])
+        mock_wikidata_cls.return_value.collect = AsyncMock(return_value=[])
+        mock_wiki_cls.return_value.collect = AsyncMock(return_value=[
+            {"title": "Flood", "content": "Flood text.", "language": "en", "category": "disaster", "source": "Wikipedia", "confidence": 0.85}
+        ])
+        mock_pdf_cls.return_value.collect = AsyncMock(return_value=[])
+        mock_neo4j_cls.return_value.close = lambda: None
+
+        await bootstrap_module.bootstrap()
+
+    assert result_holder["called_on_loop_thread"] is False
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_calls_build_entity_graph_off_the_event_loop_thread(monkeypatch, db_session):
+    class _CtxWrapper:
+        async def __aenter__(self):
+            return db_session
+        async def __aexit__(self, *exc):
+            return None
+    monkeypatch.setattr(bootstrap_module, "AsyncSessionLocal", lambda: _CtxWrapper())
+
+    result_holder = {}
+
+    def fake_build_entity_graph(entities, loader):
+        try:
+            asyncio.get_running_loop()
+            result_holder["called_on_loop_thread"] = True
+        except RuntimeError:
+            result_holder["called_on_loop_thread"] = False
+        return {}
+
+    with patch.object(bootstrap_module, "OSMCollector") as mock_osm_cls, \
+         patch.object(bootstrap_module, "WikidataCollector") as mock_wikidata_cls, \
+         patch.object(bootstrap_module, "WikipediaCollector") as mock_wiki_cls, \
+         patch.object(bootstrap_module, "GovernmentPDFCollector") as mock_pdf_cls, \
+         patch.object(bootstrap_module, "Neo4jLoader") as mock_neo4j_cls, \
+         patch.object(bootstrap_module.graph_builder, "build_entity_graph", side_effect=fake_build_entity_graph), \
+         patch.object(bootstrap_module.postgres_loader, "update_district_geojson", new=AsyncMock(return_value=0)), \
+         patch.object(bootstrap_module.qdrant_loader, "load_chunks", return_value=0), \
+         patch.object(bootstrap_module, "extract_entities", return_value={"entities": [], "relations": []}):
+
+        mock_osm = mock_osm_cls.return_value
+        mock_osm.collect = AsyncMock(return_value=[{"id": "hospital_1", "type": "hospital", "name": "A", "metadata": {}}])
+        mock_osm.collect_district_boundaries = AsyncMock(return_value=[])
+        mock_wikidata_cls.return_value.collect = AsyncMock(return_value=[])
+        mock_wiki_cls.return_value.collect = AsyncMock(return_value=[])
+        mock_pdf_cls.return_value.collect = AsyncMock(return_value=[])
+        mock_neo4j_cls.return_value.close = lambda: None
+
+        await bootstrap_module.bootstrap()
+
+    assert result_holder["called_on_loop_thread"] is False
+
+
+@pytest.mark.asyncio
 async def test_bootstrap_survives_chunking_failure(monkeypatch, db_session):
     class _CtxWrapper:
         async def __aenter__(self):

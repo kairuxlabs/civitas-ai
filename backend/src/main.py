@@ -19,6 +19,7 @@ import src.models.event     # noqa: F401
 import src.models.feedback  # noqa: F401
 from src.utils.config import settings
 from src.scheduler.main import run_all
+from src.knowledge_pipeline import scheduler as knowledge_scheduler
 
 
 async def _seed_districts(session):
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
     # Khởi chạy Scheduler ngay trong tiến trình FastAPI
     scheduler = AsyncIOScheduler()
     scheduler.add_job(run_all, "interval", minutes=15, id="full_pipeline")
+    knowledge_scheduler.register(scheduler)
     scheduler.start()
     
     # Kích hoạt chạy lượt đầu tiên bất đồng bộ dưới background để dashboard có dữ liệu ngay

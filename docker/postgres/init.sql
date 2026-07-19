@@ -109,3 +109,5 @@ ON CONFLICT DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_weather_district_time ON weather(district_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_aqi_district_time ON aqi(district_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_city_score_district_time ON city_score(district_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_events_district_start ON events(district_id, start_time DESC);
+CREATE INDEX IF NOT EXISTS idx_citizen_feedback_district_created ON citizen_feedback(district_id, created_at DESC);
