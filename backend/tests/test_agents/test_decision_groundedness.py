@@ -14,7 +14,7 @@ import pytest
 
 import src.agents.decision_agent as decision_agent_module
 from src.agents.base import AgentState
-from src.agents.decision_agent import decision_agent
+from src.agents.decision_agent import decision_agent, _rule_based_decision
 from src.agents.knowledge_agent import knowledge_agent
 from src.utils.config import settings
 
@@ -178,3 +178,42 @@ def test_event_decision_prompt_includes_retrieved_sop(monkeypatch):
     prompt = _decision_prompt_for("event", monkeypatch)
     summary = knowledge_agent(SCENARIOS["event"]["state"])["knowledge_summary"]
     assert summary in prompt
+
+
+def test_flood_fallback_recommends_drainage_action():
+    decision = _rule_based_decision(SCENARIOS["flood"]["state"])
+    recommendations_text = " ".join(decision["recommendations"])
+    assert SCENARIOS["flood"]["fallback_keyword"] in recommendations_text
+
+
+def test_aqi_fallback_recommends_health_advisory():
+    decision = _rule_based_decision(SCENARIOS["aqi"]["state"])
+    recommendations_text = " ".join(decision["recommendations"])
+    assert SCENARIOS["aqi"]["fallback_keyword"] in recommendations_text
+
+
+def test_heatwave_fallback_recommends_cooling_centers():
+    decision = _rule_based_decision(SCENARIOS["heatwave"]["state"])
+    recommendations_text = " ".join(decision["recommendations"])
+    assert SCENARIOS["heatwave"]["fallback_keyword"] in recommendations_text
+
+
+def test_event_fallback_recommends_security_and_medical():
+    decision = _rule_based_decision(SCENARIOS["event"]["state"])
+    recommendations_text = " ".join(decision["recommendations"])
+    assert SCENARIOS["event"]["fallback_keyword"] in recommendations_text
+
+
+def test_traffic_fallback_has_no_scenario_specific_recommendation():
+    """Documents a known pre-existing gap: _rule_based_decision has no
+    traffic-specific branch, so a pure-traffic scenario (no other risk
+    factors triggered) falls through to the generic stable-conditions
+    message rather than anything referencing traffic. Not a bug to fix in
+    this plan — see Task 3, Step 1."""
+    decision = _rule_based_decision(SCENARIOS["traffic"]["state"])
+    assert decision["recommendations"] == ["Các chỉ số thành phố ổn định — duy trì giám sát thường xuyên"]
+
+
+def test_baseline_fallback_recommends_stable_monitoring_only():
+    decision = _rule_based_decision(SCENARIOS["baseline"]["state"])
+    assert decision["recommendations"] == ["Các chỉ số thành phố ổn định — duy trì giám sát thường xuyên"]
