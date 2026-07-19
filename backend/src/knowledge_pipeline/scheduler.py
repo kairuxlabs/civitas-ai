@@ -37,8 +37,18 @@ async def refresh_wikipedia() -> int:
         logger.warning(f"Wikipedia refresh collection failed: {e}")
         return 0
 
-    chunks = _docs_to_chunks(docs)
-    count = await asyncio.to_thread(qdrant_loader.load_chunks, chunks)
+    try:
+        chunks = _docs_to_chunks(docs)
+    except Exception as e:
+        logger.warning(f"Wikipedia refresh chunking failed: {e}")
+        return 0
+
+    try:
+        count = await asyncio.to_thread(qdrant_loader.load_chunks, chunks)
+    except Exception as e:
+        logger.warning(f"Wikipedia refresh load failed: {e}")
+        return 0
+
     logger.info(f"Wikipedia refresh upserted {count} chunks")
     return count
 

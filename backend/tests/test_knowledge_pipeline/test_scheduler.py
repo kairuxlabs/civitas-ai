@@ -76,3 +76,29 @@ async def test_refresh_wikipedia_survives_collector_failure():
         count = await kp_scheduler.refresh_wikipedia()
 
     assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_refresh_wikipedia_survives_chunking_failure():
+    with patch.object(kp_scheduler, "WikipediaCollector") as mock_wiki_cls, \
+         patch.object(kp_scheduler, "_docs_to_chunks", side_effect=RuntimeError("Chunking error")):
+        mock_wiki_cls.return_value.collect = AsyncMock(return_value=[
+            {"title": "Test", "content": "Test content.", "language": "en", "category": "test", "source": "Wikipedia", "confidence": 0.9}
+        ])
+
+        count = await kp_scheduler.refresh_wikipedia()
+
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_refresh_wikipedia_survives_load_chunks_failure():
+    with patch.object(kp_scheduler, "WikipediaCollector") as mock_wiki_cls, \
+         patch.object(kp_scheduler.qdrant_loader, "load_chunks", side_effect=RuntimeError("Qdrant load error")):
+        mock_wiki_cls.return_value.collect = AsyncMock(return_value=[
+            {"title": "Test", "content": "Test content.", "language": "en", "category": "test", "source": "Wikipedia", "confidence": 0.9}
+        ])
+
+        count = await kp_scheduler.refresh_wikipedia()
+
+    assert count == 0
