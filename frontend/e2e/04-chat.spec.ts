@@ -15,6 +15,10 @@ const MOCK_DECISION = {
     'No active flood warnings for this district.',
     'Recommend standard monitoring protocols.',
   ],
+  evidence: [
+    { id: 'ev-1', agent: 'traffic', source: 'OpenAQ', type: 'sensor', content: 'AQI 90 (moderate)', confidence: 0.9, time: '2026-07-20T08:00:00Z' },
+    { id: 'ev-2', agent: 'environment', source: 'OpenAQ', type: 'sensor', content: 'AQI 90 (MODERATE)', confidence: 0.9, time: '2026-07-20T08:00:00Z' },
+  ],
 }
 
 test.describe('AI Copilot chat', () => {
@@ -69,5 +73,19 @@ test.describe('AI Copilot chat', () => {
     await page.getByTestId('chat-input').fill('Clear me?')
     await page.getByTestId('chat-send').click()
     await expect(page.getByTestId('chat-input')).toHaveValue('')
+  })
+
+  test('clicking a recommendation opens the evidence modal', async ({ page }) => {
+    await page.getByTestId('chat-input').fill('Status?')
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByTestId('chat-messages').getByText('Recommend standard monitoring protocols.')
+    ).toBeVisible({ timeout: 10_000 })
+    await page.getByTestId('recommendation-item').first().click()
+    await expect(page.getByTestId('evidence-modal')).toBeVisible()
+    // exact: true — the mock's two evidence items differ only by case
+    // ("moderate" vs "MODERATE"), and Playwright's getByText is
+    // case-insensitive by default, which would otherwise match both.
+    await expect(page.getByText('AQI 90 (moderate)', { exact: true })).toBeVisible()
   })
 })

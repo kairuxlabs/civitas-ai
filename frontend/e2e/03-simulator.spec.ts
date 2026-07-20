@@ -65,6 +65,7 @@ test.describe('Simulator modal', () => {
           recommendations: ['Evacuate low areas'],
           confidence: 88,
           explanation: ['Heavy rain detected', 'Flood risk elevated'],
+          evidence: [],
         }),
       })
     })

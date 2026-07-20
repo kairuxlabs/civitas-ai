@@ -6,6 +6,7 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import HanoiMap from '../components/HanoiMap'
 import AgentGraph from '../components/AgentGraph'
 import SimulatorModal from '../components/SimulatorModal'
+import EvidenceModal from '../components/EvidenceModal'
 import type { AgentEvent, DecisionOut } from '../types'
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
@@ -112,12 +113,13 @@ function AgentTimeline({ events }: { events: AgentEvent[] }) {
 
 // ─── Decision Panel ────────────────────────────────────────────────────────────
 function DecisionPanel({
-  decision, pendingDecisionId, onApprove, onReject
+  decision, pendingDecisionId, onApprove, onReject, onEvidenceClick
 }: {
   decision: DecisionOut | null
   pendingDecisionId: number | null
   onApprove: () => void
   onReject: () => void
+  onEvidenceClick: () => void
 }) {
   if (!decision) return (
     <div className="flex items-center justify-center h-full text-slate-600 text-sm">
@@ -164,12 +166,20 @@ function DecisionPanel({
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-1.5">Recommendations</p>
           <ul className="space-y-1">
             {decision.recommendations.map((r, i) => (
-              <li key={i} className="flex gap-2 text-xs text-slate-300">
+              <li
+                key={i}
+                data-testid="recommendation-item"
+                onClick={decision.evidence.length > 0 ? onEvidenceClick : undefined}
+                className={`flex gap-2 text-xs text-slate-300 ${decision.evidence.length > 0 ? 'cursor-pointer hover:text-slate-100' : ''}`}
+              >
                 <span className="text-blue-400 shrink-0 mt-0.5">▸</span>
                 <span>{r}</span>
               </li>
             ))}
           </ul>
+          {decision.evidence.length > 0 && (
+            <p className="text-[10px] text-slate-600 mt-1.5">Click a recommendation to view supporting evidence</p>
+          )}
         </div>
       )}
 
@@ -214,6 +224,7 @@ export default function CommandCenterPage() {
   const [viewTab, setViewTab] = useState<ViewTab>('graph')
   const [simulatorOpen, setSimulatorOpen] = useState(false)
   const [simulatorRunning, setSimulatorRunning] = useState(false)
+  const [evidenceModalOpen, setEvidenceModalOpen] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const { data: districts = [] } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
@@ -490,6 +501,7 @@ export default function CommandCenterPage() {
                 pendingDecisionId={pendingDecisionId}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onEvidenceClick={() => setEvidenceModalOpen(true)}
               />
             </div>
           </div>
@@ -503,6 +515,13 @@ export default function CommandCenterPage() {
           onClose={() => setSimulatorOpen(false)}
           events={agentEvents}
           running={simulatorRunning}
+        />
+      )}
+
+      {evidenceModalOpen && decision && (
+        <EvidenceModal
+          evidence={decision.evidence}
+          onClose={() => setEvidenceModalOpen(false)}
         />
       )}
     </div>
