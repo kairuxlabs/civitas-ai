@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from src.agents.base import AgentState
 from src.agents.gemini_client import call_gemini
 from src.knowledge_pipeline.loaders import qdrant_loader
@@ -112,10 +114,35 @@ def knowledge_agent(state: AgentState) -> dict:
     if settings.qdrant_url:
         city_chunks = qdrant_loader.search_chunks(state.get("query", ""), k=2)
 
+    now = datetime.now(timezone.utc).isoformat()
+    evidence = [
+        {
+            "id": f"ev-knowledge-sop-{i + 1}",
+            "agent": "knowledge",
+            "source": "SOP",
+            "type": "sop",
+            "content": f"{doc['title']}: {_first_action(doc['content'])}",
+            "confidence": 0.9,
+            "time": "static",
+        }
+        for i, doc in enumerate(top)
+    ] + [
+        {
+            "id": f"ev-knowledge-chunk-{i + 1}",
+            "agent": "knowledge",
+            "source": chunk["source"],
+            "type": "knowledge",
+            "content": f"{chunk['title']}: {chunk['content'][:150]}",
+            "confidence": 0.7,
+            "time": now,
+        }
+        for i, chunk in enumerate(city_chunks)
+    ]
+
     if not top and not city_chunks:
         summary = "No specific SOP matched. Apply general city operations protocol."
         logger.info("Knowledge agent: no SOP matched")
-        return {"knowledge_summary": summary}
+        return {"knowledge_summary": summary, "knowledge_evidence": evidence}
 
     # Try Gemini to synthesize a brief action summary from whatever context is available
     try:
@@ -146,7 +173,7 @@ def knowledge_agent(state: AgentState) -> dict:
             logger.info(
                 f"Knowledge agent (Gemini): {len(top)} SOPs, {len(city_chunks)} city_knowledge chunks → summary"
             )
-            return {"knowledge_summary": summary}
+            return {"knowledge_summary": summary, "knowledge_evidence": evidence}
     except Exception:
         pass
 
@@ -157,8 +184,8 @@ def knowledge_agent(state: AgentState) -> dict:
         parts = [f"{doc['title']}: {_first_action(doc['content'])}" for doc in top]
         summary = " | ".join(parts)
         logger.info(f"Knowledge agent (rule-based): {len(top)} SOPs")
-        return {"knowledge_summary": summary}
+        return {"knowledge_summary": summary, "knowledge_evidence": evidence}
 
     summary = "No specific SOP matched. Apply general city operations protocol."
     logger.info("Knowledge agent: no SOP matched (city_knowledge unavailable without LLM)")
-    return {"knowledge_summary": summary}
+    return {"knowledge_summary": summary, "knowledge_evidence": evidence}

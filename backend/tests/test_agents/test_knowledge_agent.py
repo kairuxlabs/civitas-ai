@@ -153,3 +153,37 @@ def test_does_not_call_search_chunks_when_qdrant_unset(monkeypatch):
     knowledge_agent(state)
 
     assert called == []
+
+
+def test_matched_sop_produces_evidence():
+    state = _state("What should we do?", rain=25.0)
+    result = knowledge_agent(state)
+    ev = result["knowledge_evidence"]
+    assert len(ev) >= 1
+    assert all(e["source"] == "SOP" for e in ev)
+    assert all(e["type"] == "sop" for e in ev)
+    assert all(e["agent"] == "knowledge" for e in ev)
+    assert all(e["time"] == "static" for e in ev)
+
+
+def test_no_match_produces_no_evidence():
+    state = _state("What is the current status?", aqi=80, rain=0)
+    result = knowledge_agent(state)
+    assert result["knowledge_evidence"] == []
+
+
+def test_city_chunks_produce_evidence_with_real_source(monkeypatch):
+    import src.agents.knowledge_agent as ka
+
+    monkeypatch.setattr(settings, "qdrant_url", "http://fake-qdrant:6333")
+    monkeypatch.setattr(
+        ka.qdrant_loader, "search_chunks",
+        lambda query, k=2: [{"title": "Hanoi Metro", "source": "wikipedia", "content": "Metro Line 2A..."}],
+    )
+    state = _state("Tell me about Hanoi transport", aqi=80, rain=0)
+    result = knowledge_agent(state)
+    ev = result["knowledge_evidence"]
+    chunk_items = [e for e in ev if e["source"] == "wikipedia"]
+    assert len(chunk_items) == 1
+    assert chunk_items[0]["type"] == "knowledge"
+    assert chunk_items[0]["agent"] == "knowledge"
