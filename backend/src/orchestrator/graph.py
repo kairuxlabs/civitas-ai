@@ -47,6 +47,10 @@ async def run_agent_graph(
     event_data: list | None = None,
     feedback_data: list | None = None,
 ) -> DecisionOut:
+    # Kept sequential on purpose: these 4 reads share one AsyncSession, and
+    # asyncio.gather()-ing multiple queries on a single asyncpg connection
+    # corrupts the connection state in production. Each query is already
+    # indexed and narrow (single district_id), so the latency cost is minimal.
     weather = await WeatherRepo.get_latest(session, district_id)
     aqi = await AQIRepo.get_latest(session, district_id)
     db_events = await EventRepo.get_current(session, district_id)
