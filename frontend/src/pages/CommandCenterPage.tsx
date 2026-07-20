@@ -169,15 +169,15 @@ function DecisionPanel({
               <li
                 key={i}
                 data-testid="recommendation-item"
-                onClick={decision.evidence.length > 0 ? onEvidenceClick : undefined}
-                className={`flex gap-2 text-xs text-slate-300 ${decision.evidence.length > 0 ? 'cursor-pointer hover:text-slate-100' : ''}`}
+                onClick={(decision.evidence ?? []).length > 0 ? onEvidenceClick : undefined}
+                className={`flex gap-2 text-xs text-slate-300 ${(decision.evidence ?? []).length > 0 ? 'cursor-pointer hover:text-slate-100' : ''}`}
               >
                 <span className="text-blue-400 shrink-0 mt-0.5">▸</span>
                 <span>{r}</span>
               </li>
             ))}
           </ul>
-          {decision.evidence.length > 0 && (
+          {(decision.evidence ?? []).length > 0 && (
             <p className="text-[10px] text-slate-600 mt-1.5">Click a recommendation to view supporting evidence</p>
           )}
         </div>
@@ -520,7 +520,7 @@ export default function CommandCenterPage() {
 
       {evidenceModalOpen && decision && (
         <EvidenceModal
-          evidence={decision.evidence}
+          evidence={decision.evidence ?? []}
           onClose={() => setEvidenceModalOpen(false)}
         />
       )}
