@@ -1,12 +1,21 @@
+import re
 from datetime import datetime, timezone
 
 from src.agents.base import AgentState
 from src.agents.gemini_client import call_gemini
 from src.knowledge_pipeline.loaders import qdrant_loader
+from src.knowledge_pipeline.loaders.neo4j_loader import Neo4jLoader
 from src.utils.config import settings
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+_GRAPH_STOPWORDS = {
+    "what", "when", "where", "which", "does", "this", "that", "with", "from",
+    "have", "about", "tell", "describe", "current", "happen", "happens",
+    "happening", "situation", "should", "would", "could", "will",
+    "hiện", "tình", "trạng",
+}
 
 # Static SOP knowledge base — kept for concrete, action-oriented emergency
 # steps even after city_knowledge (Qdrant) integration below; city_knowledge
@@ -81,9 +90,17 @@ def _keyword_match(query: str, keywords: list[str]) -> int:
 
 def _first_action(content: str) -> str:
     """Extract step (1) from SOP content."""
-    import re
     m = re.search(r"\(1\)\s*([^.]+\.)", content)
     return m.group(1).strip() if m else content[:80]
+
+
+def _graph_keywords(query: str) -> list[str]:
+    """Extract up to 3 candidate proper-noun-ish keywords from a free-text
+    query for graph lookup: words >= 4 chars, not in the stopword list,
+    longest first (alphabetical tiebreak keeps this fully deterministic)."""
+    words = re.findall(r"\w+", query)
+    candidates = {w for w in words if len(w) >= 4 and w.lower() not in _GRAPH_STOPWORDS}
+    return sorted(candidates, key=lambda w: (-len(w), w))[:3]
 
 
 def knowledge_agent(state: AgentState) -> dict:
@@ -114,6 +131,14 @@ def knowledge_agent(state: AgentState) -> dict:
     if settings.qdrant_url:
         city_chunks = qdrant_loader.search_chunks(state.get("query", ""), k=2)
 
+    graph_facts = []
+    if settings.neo4j_uri:
+        keywords = _graph_keywords(state.get("query", ""))
+        if keywords:
+            loader = Neo4jLoader()
+            graph_facts = loader.find_related(keywords, limit=5)
+            loader.close()
+
     now = datetime.now(timezone.utc).isoformat()
     evidence = [
         {
@@ -137,9 +162,23 @@ def knowledge_agent(state: AgentState) -> dict:
             "time": now,
         }
         for i, chunk in enumerate(city_chunks)
+    ] + [
+        {
+            "id": f"ev-knowledge-graph-{i + 1}",
+            "agent": "knowledge",
+            "source": "Neo4j Knowledge Graph",
+            "type": "knowledge",
+            "content": (
+                f"{fact['name']} ({fact['label']})"
+                + (f" —[{fact['relation']}]→ {fact['related_name']}" if fact.get("relation") else "")
+            ),
+            "confidence": 0.6,
+            "time": "static",
+        }
+        for i, fact in enumerate(graph_facts)
     ]
 
-    if not top and not city_chunks:
+    if not top and not city_chunks and not graph_facts:
         summary = "No specific SOP matched. Apply general city operations protocol."
         logger.info("Knowledge agent: no SOP matched")
         return {"knowledge_summary": summary, "knowledge_evidence": evidence}
@@ -155,6 +194,13 @@ def knowledge_agent(state: AgentState) -> dict:
                 f"- {c['title']} ({c['source']}): {c['content']}" for c in city_chunks
             )
             context_blocks.append(f"Ngữ cảnh liên quan:\n{chunk_texts}")
+        if graph_facts:
+            graph_texts = "\n".join(
+                f"- {f['name']} ({f['label']})"
+                + (f" —[{f['relation']}]→ {f['related_name']}" if f.get("relation") else "")
+                for f in graph_facts
+            )
+            context_blocks.append(f"Kiến thức đồ thị liên quan:\n{graph_texts}")
 
         prompt = (
             f"Dựa trên tình huống: AQI={aqi_index:.0f}, mưa={rain:.0f}mm/h, nhiệt độ={temperature:.0f}°C, "
