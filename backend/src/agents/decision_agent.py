@@ -96,6 +96,15 @@ def _rule_based_decision(state: AgentState) -> dict:
     }
 
 
+def _collect_evidence(state: AgentState) -> list[dict]:
+    fields = ("traffic_evidence", "environment_evidence", "event_evidence",
+              "citizen_evidence", "knowledge_evidence")
+    items = [item for field in fields for item in state.get(field, [])]
+    for i, item in enumerate(items):
+        item["id"] = f"ev-{i + 1}"
+    return items
+
+
 def decision_agent(state: AgentState) -> dict:
     aqi = state.get("aqi_data", {})
     weather = state.get("weather_data", {})
@@ -142,16 +151,18 @@ Trả về JSON theo đúng định dạng sau (không thêm text ngoài JSON):
 
 Lưu ý: confidence từ 45-95 dựa trên mức độ rủi ro và chất lượng dữ liệu."""
 
+    evidence = _collect_evidence(state)
+
     raw = call_gemini(prompt, expect_json=True)
     if raw:
         parsed = parse_json_safe(raw)
         if parsed and "recommendations" in parsed and "confidence" in parsed:
             confidence = float(parsed.get("confidence", 70))
             logger.info(f"Gemini decision: confidence={confidence:.0f}%, recommendations={len(parsed['recommendations'])}")
-            return {"decision": parsed, "confidence": confidence}
+            return {"decision": parsed, "confidence": confidence, "evidence": evidence}
         logger.warning(f"Gemini returned invalid JSON, falling back. Raw: {raw[:200]}")
 
     # Fallback to rule-based
     decision = _rule_based_decision(state)
     logger.info(f"Rule-based decision: confidence={decision['confidence']:.0f}%")
-    return {"decision": decision, "confidence": decision["confidence"]}
+    return {"decision": decision, "confidence": decision["confidence"], "evidence": evidence}

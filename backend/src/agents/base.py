@@ -17,3 +17,5 @@ class AgentState(TypedDict):
     decision: dict
     explanation: list[str]
     confidence: float
+    evidence: list[dict]
+    critic_notes: list[str]
