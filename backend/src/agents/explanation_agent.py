@@ -110,5 +110,8 @@ Yêu cầu: Đề cập số liệu cụ thể, chỉ rõ mức độ khẩn c�
     else:
         explanation = _rule_based_explanation(state, confidence)
 
+    for note in state.get("critic_notes", []):
+        explanation.append(f"⚠ Critic: {note}")
+
     logger.info(f"Explanation: {len(explanation)} items, gemini={'yes' if gemini_text else 'no'}, confidence={confidence:.0f}%")
     return {"explanation": explanation}

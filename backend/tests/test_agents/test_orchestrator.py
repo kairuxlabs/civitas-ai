@@ -1,9 +1,13 @@
 # backend/tests/test_agents/test_orchestrator.py
 from datetime import datetime, timezone
+from unittest.mock import patch
+
+from sqlalchemy import select
 
 from src.models.district import District
 from src.models.weather import Weather
 from src.models.aqi import AQI
+from src.models.decision import AgentDecision
 from src.orchestrator.graph import run_agent_graph
 
 
@@ -160,3 +164,26 @@ async def test_simulate_unknown_scenario_uses_defaults(db_session, client):
     assert response.status_code == 200
     data = response.json()
     assert "prediction" in data
+
+
+async def test_critic_low_confidence_triggers_requires_approval(db_session):
+    """When critic.review forces confidence below 75, the persisted decision
+    must have requires_approval=True — reusing the existing approval gate."""
+    district = District(city_id="hanoi", name="CriticTest")
+    db_session.add(district)
+    await db_session.flush()
+
+    with patch("src.agents.critic_agent.critic.review", return_value={"confidence": 40.0, "critic_notes": ["forced low confidence for test"]}):
+        result = await run_agent_graph(
+            query="status check",
+            district_id=district.id,
+            session=db_session,
+        )
+
+    assert result.confidence == 40.0
+    assert any("Critic" in line for line in result.explanation)
+
+    row = (await db_session.execute(
+        select(AgentDecision).where(AgentDecision.district_id == district.id)
+    )).scalar_one()
+    assert row.requires_approval is True

@@ -10,6 +10,7 @@ from src.agents.event_agent import event_agent
 from src.agents.citizen_agent import citizen_agent
 from src.agents.knowledge_agent import knowledge_agent
 from src.agents.decision_agent import decision_agent
+from src.agents.critic_agent import critic_agent
 from src.agents.explanation_agent import explanation_agent
 from src.models.decision import AgentDecision
 from src.repositories.weather_repo import WeatherRepo
@@ -26,6 +27,7 @@ PIPELINE = [
     ("citizen_node",      "Citizen Agent",       citizen_agent),
     ("knowledge_node",    "Knowledge Agent",     knowledge_agent),
     ("decision_node",     "Decision Agent",      decision_agent),
+    ("critic_node",       "Critic Agent",        critic_agent),
     ("explanation_node",  "Explanation Agent",   explanation_agent),
 ]
 
