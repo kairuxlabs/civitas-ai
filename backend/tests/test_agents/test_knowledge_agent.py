@@ -93,6 +93,7 @@ def test_combines_sop_and_city_knowledge_when_both_available(monkeypatch):
     result = knowledge_agent(state)
 
     assert result["knowledge_summary"] == "[Flood Emergency SOP] Kich hoat bom thoat nuoc ngay."
+    assert len(result["knowledge_evidence"]) >= 2
 
 
 def test_falls_back_to_sop_only_when_gemini_fails_with_city_knowledge_present(monkeypatch):
@@ -125,6 +126,7 @@ def test_synthesizes_city_knowledge_only_when_no_sop_matches(monkeypatch):
     result = knowledge_agent(state)
 
     assert result["knowledge_summary"] == "Ho Hoan Kiem nam o trung tam Ha Noi."
+    assert len(result["knowledge_evidence"]) >= 1
 
 
 def test_no_sop_and_no_city_knowledge_and_gemini_fails_returns_baseline_message(monkeypatch):
