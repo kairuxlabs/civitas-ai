@@ -96,6 +96,7 @@ class WorkflowRuntime:
                     recommendations=d.get("recommendation", []),
                     confidence=float(d.get("confidence", 0)),
                     explanation=[d.get("summary", "")],
+                    evidence=d.get("evidence"),
                     requires_approval=True,
                     approved=None,
                     created_at=datetime.now(timezone.utc),
