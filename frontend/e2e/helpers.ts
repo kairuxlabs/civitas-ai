@@ -52,4 +52,28 @@ export async function backendReachable(page: Page): Promise<boolean> {
   }
 }
 
+/** Registers v2 API mocks, switches to the "Mission Control v2" tab, and waits for it to render. Call after waitForApp(page). */
+export async function switchToMissionControl(page: Page) {
+  await page.route('**/api/v2/runs', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ runs: [] }) })
+  )
+  await page.route('**/api/v2/monitor', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ agents: {}, active_runs: 0, total_runs: 0 }) })
+  )
+  await page.route('**/api/v2/simulation/scenarios', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ scenarios: [{ name: 'heavy_rain', label: 'Mưa lớn' }] }) })
+  )
+  await page.route('**/api/v2/simulation/status', route =>
+    route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        running: false, scenario: 'normal', scenario_label: 'Bình thường', interval_s: 30, auto_goal: true, tick: 0,
+        values: { rain: 0, aqi: 90, temperature: 30, humidity: 70, wind_speed: 10 }, last_auto_goal: null,
+      }),
+    })
+  )
+  await page.getByRole('button', { name: 'Mission Control v2' }).click()
+  await expect(page.getByPlaceholder(/Chuẩn bị thành phố/)).toBeVisible()
+}
+
 export { MOCK_DISTRICTS }
