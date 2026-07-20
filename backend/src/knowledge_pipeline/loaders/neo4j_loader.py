@@ -61,3 +61,35 @@ class Neo4jLoader:
         except Exception as e:
             logger.warning(f"Neo4j merge_relation_by_name failed: {e}")
             return False
+
+    def find_related(self, keywords: list[str], limit: int = 5) -> list[dict]:
+        """Read-side counterpart to upsert_nodes/merge_relation_by_name. Finds
+        nodes whose name or display_name contains any of the given keywords
+        (case-insensitive), along with one hop of their relations. No-ops
+        (returns []) when Neo4j isn't configured, the driver failed to
+        initialize, or keywords is empty."""
+        if not self._driver or not keywords:
+            return []
+        query = (
+            "UNWIND $keywords AS kw "
+            "MATCH (n) "
+            "WHERE toLower(n.name) CONTAINS toLower(kw) OR toLower(n.display_name) CONTAINS toLower(kw) "
+            "OPTIONAL MATCH (n)-[r]-(m) "
+            "RETURN DISTINCT n.name AS name, labels(n)[0] AS label, type(r) AS relation, m.name AS related_name "
+            "LIMIT $limit"
+        )
+        try:
+            with self._driver.session() as session:
+                result = session.run(query, keywords=keywords, limit=limit)
+                return [
+                    {
+                        "name": row["name"],
+                        "label": row["label"],
+                        "relation": row["relation"],
+                        "related_name": row["related_name"],
+                    }
+                    for row in result
+                ]
+        except Exception as e:
+            logger.warning(f"Neo4j find_related failed: {e}")
+            return []
