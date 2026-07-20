@@ -49,7 +49,11 @@ async def weather_worker(run: RunState, spec: TaskSpec) -> dict:
 
 async def traffic_worker(run: RunState, spec: TaskSpec) -> dict:
     analysis = await _run_v1_agent(traffic_agent, run, "traffic_analysis")
-    return {"summary": analysis or "No traffic signal", "confidence": 0.85 if analysis else 0.4}
+    return {
+        "summary": analysis or "No traffic signal",
+        "confidence": 0.85 if analysis else 0.4,
+        "evidence": run.context.get("traffic_evidence", []),
+    }
 
 
 async def environment_worker(run: RunState, spec: TaskSpec) -> dict:
@@ -58,12 +62,17 @@ async def environment_worker(run: RunState, spec: TaskSpec) -> dict:
         "summary": analysis or "No environment signal",
         "aqi_index": float(_aqi(run).get("aqi_index") or 0),
         "confidence": 0.85 if analysis else 0.4,
+        "evidence": run.context.get("environment_evidence", []),
     }
 
 
 async def citizen_worker(run: RunState, spec: TaskSpec) -> dict:
     analysis = await _run_v1_agent(citizen_agent, run, "citizen_analysis")
-    return {"summary": analysis or "No citizen reports", "confidence": 0.8 if analysis else 0.4}
+    return {
+        "summary": analysis or "No citizen reports",
+        "confidence": 0.8 if analysis else 0.4,
+        "evidence": run.context.get("citizen_evidence", []),
+    }
 
 
 async def knowledge_worker(run: RunState, spec: TaskSpec) -> dict:
@@ -74,7 +83,11 @@ async def knowledge_worker(run: RunState, spec: TaskSpec) -> dict:
             f"rain {(_weather(run).get('rain') or 0)}mm aqi {(_aqi(run).get('aqi_index') or 0)}"
         )
     summary = await _run_v1_agent(knowledge_agent, run, "knowledge_summary")
-    return {"summary": summary or "No relevant SOP found", "confidence": 0.9 if summary else 0.3}
+    return {
+        "summary": summary or "No relevant SOP found",
+        "confidence": 0.9 if summary else 0.3,
+        "evidence": run.context.get("knowledge_evidence", []),
+    }
 
 
 async def forecast_worker(run: RunState, spec: TaskSpec) -> dict:

@@ -5,6 +5,7 @@
 import asyncio
 
 from src.agents.gemini_client import call_gemini, parse_json_safe
+from src.reasoning import critic
 from src.runtime.event_bus import Event, EventBus, EventTypes
 from src.runtime.state import RunState, TaskStatus
 from src.utils.logger import get_logger
@@ -28,16 +29,18 @@ Respond in Vietnamese. Output ONLY JSON:
 
 
 def _evidence(run: RunState) -> list[dict]:
-    return [
-        {
+    items: list[dict] = []
+    for t in run.tasks.values():
+        if t.status != TaskStatus.DONE or not t.result:
+            continue
+        items.append({
             "task": t.spec.id,
             "agent": t.spec.agent,
-            "summary": (t.result or {}).get("summary", ""),
-            "confidence": (t.result or {}).get("confidence"),
-        }
-        for t in run.tasks.values()
-        if t.status == TaskStatus.DONE and t.result
-    ]
+            "summary": t.result.get("summary", ""),
+            "confidence": t.result.get("confidence"),
+        })
+        items.extend(t.result.get("evidence", []))
+    return items
 
 
 def _fallback_decision(run: RunState) -> dict:
@@ -115,6 +118,9 @@ async def make_decision(run: RunState, bus: EventBus) -> dict:
         decision = _fallback_decision(run)
 
     decision["evidence"] = _evidence(run)
+    critic_result = critic.review(decision, decision["evidence"])
+    decision["confidence"] = critic_result["confidence"]
+    decision["critic_notes"] = critic_result["critic_notes"]
     run.log(f"Decision ready (confidence {decision['confidence']:.0f}%)", actor="decision")
     await bus.publish(Event(
         type=EventTypes.DECISION_READY,

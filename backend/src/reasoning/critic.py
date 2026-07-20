@@ -16,6 +16,10 @@ def review(decision: dict, evidence: list[dict]) -> dict:
 
     evidence_types = {e.get("type") for e in evidence}
     prediction = decision.get("prediction", {}) or {}
+    if not isinstance(prediction, dict):
+        # v2 runtime decisions carry "prediction" as a free-text string, not a
+        # structured dict like v1's AgentState — nothing to structurally check.
+        prediction = {}
 
     if prediction.get("flood_risk") == "high" and "sensor" not in evidence_types:
         notes.append("Prediction flood_risk=high is not backed by any sensor evidence.")

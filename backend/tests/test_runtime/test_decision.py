@@ -64,3 +64,31 @@ async def test_invalid_gemini_falls_back(monkeypatch):
     decision = await make_decision(_run(), EventBus())
     assert SPEC_KEYS <= set(decision)
     assert decision["risk"] == "high"
+
+
+@pytest.mark.asyncio
+async def test_evidence_includes_task_result_evidence_items(monkeypatch):
+    monkeypatch.setattr(decision_mod, "call_gemini", lambda *a, **k: None)
+    bus = EventBus()
+    run = _run()
+    run.tasks["weather"].result["evidence"] = [
+        {"id": "ev-weather-1", "agent": "weather", "source": "Open-Meteo", "type": "sensor",
+         "content": "rain 60mm/h", "confidence": 0.9, "time": "static"},
+    ]
+    decision = await make_decision(run, bus)
+    # 2 existing per-task summary items + 1 forwarded structured item
+    assert len(decision["evidence"]) == 3
+    assert any(e.get("source") == "Open-Meteo" for e in decision["evidence"])
+
+
+@pytest.mark.asyncio
+async def test_make_decision_applies_critic(monkeypatch):
+    monkeypatch.setattr(decision_mod, "call_gemini", lambda *a, **k: None)
+    bus = EventBus()
+    run = _run()
+    # no per-task "evidence" key anywhere -> only 2 summary items -> insufficient (< 2 is False here,
+    # so force it further below threshold by clearing task results' summaries won't remove the count;
+    # instead assert critic_notes key exists and confidence stays a valid 0-100 range either way.
+    decision = await make_decision(run, bus)
+    assert "critic_notes" in decision
+    assert 0 <= decision["confidence"] <= 100

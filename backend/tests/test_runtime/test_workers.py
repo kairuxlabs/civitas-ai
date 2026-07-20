@@ -2,7 +2,7 @@ import pytest
 
 from src.runtime.planner import AGENT_CATALOG
 from src.runtime.state import RunState, TaskSpec
-from src.runtime.workers import WORKERS
+from src.runtime.workers import WORKERS, knowledge_worker, traffic_worker
 
 
 def _make_run(rain: float = 0.0, aqi: float = 100.0) -> RunState:
@@ -65,3 +65,29 @@ async def test_analytics_worker_aggregates_outputs():
     result = await WORKERS["analytics"](run, TaskSpec(id="analytics", agent="analytics"))
     assert result["flood_risk"] == "high"
     assert result["aqi_index"] == 180
+
+
+@pytest.mark.asyncio
+async def test_traffic_worker_forwards_evidence():
+    run = RunState(goal="test")
+    run.context["aqi_data"] = {"aqi_index": 180}
+    run.context["weather_data"] = {"rain": 0}
+    result = await traffic_worker(run, TaskSpec(id="t1", agent="traffic"))
+    assert "evidence" in result
+    assert len(result["evidence"]) == 1
+    assert result["evidence"][0]["agent"] == "traffic"
+
+
+@pytest.mark.asyncio
+async def test_knowledge_worker_forwards_evidence(monkeypatch):
+    from src.utils.config import settings
+    monkeypatch.setattr(settings, "gemini_api_key", "")
+    monkeypatch.setattr(settings, "openrouter_api_key", "")
+    monkeypatch.setattr(settings, "qdrant_url", "")
+    run = RunState(goal="flood emergency")
+    run.context["query"] = "flood drainage needed"
+    run.context["aqi_data"] = {}
+    run.context["weather_data"] = {"rain": 25}
+    result = await knowledge_worker(run, TaskSpec(id="k1", agent="knowledge"))
+    assert "evidence" in result
+    assert isinstance(result["evidence"], list)
