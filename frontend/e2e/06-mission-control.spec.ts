@@ -80,6 +80,15 @@ test.describe('Mission Control v2', () => {
         created_at: new Date().toISOString(), decision_record_id: null, reflection: null,
       }),
     }))
+    // MissionControlPage sets activeRunId on submit success and immediately fetches
+    // GET /api/v2/runs/run-3 via useQuery — must be mocked or the status never renders.
+    await page.route('**/api/v2/runs/run-3', route => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        run_id: 'run-3', goal: 'Lịch sử test', district_id: 1, status: 'done',
+        tasks: [], decision: null, workflow_steps: [], timeline: [],
+        created_at: new Date().toISOString(), decision_record_id: null, reflection: null,
+      }),
+    }))
     await page.route('**/api/v2/runs', route => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
