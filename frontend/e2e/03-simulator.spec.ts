@@ -53,8 +53,26 @@ test.describe('Simulator modal', () => {
     await expect(card).toHaveClass(/border-red-500/)
   })
 
-  test('shows pipeline steps view after clicking Run (with mocked API)', async ({ page }) => {
-    // Mock the simulate endpoint so we don't need a running backend
+  test('shows the before/after comparison after clicking Run (with mocked API)', async ({ page }) => {
+    // Mock both endpoints — CommandCenterPage now runs a baseline /api/chat call
+    // before /api/simulate, and with both mocked (no real backend/pipeline), the
+    // flow can reach the final "done" comparison view before any transient
+    // pipeline-progress text is reliably observable, so this test asserts on
+    // the final Before/After content rather than the mid-flight step tracker.
+    await page.route('**/api/chat', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          prediction: { flood_risk: 'low' },
+          impact: {},
+          recommendations: ['Theo dõi thời tiết'],
+          confidence: 70,
+          explanation: ['Baseline status.'],
+          evidence: [],
+        }),
+      })
+    })
     await page.route('**/api/simulate', async route => {
       await route.fulfill({
         status: 200,
@@ -62,7 +80,7 @@ test.describe('Simulator modal', () => {
         body: JSON.stringify({
           prediction: { flood_risk: 'high' },
           impact: { traffic: 'severe' },
-          recommendations: ['Evacuate low areas'],
+          recommendations: ['Theo dõi thời tiết', 'Evacuate low areas'],
           confidence: 88,
           explanation: ['Heavy rain detected', 'Flood risk elevated'],
           evidence: [],
@@ -75,12 +93,11 @@ test.describe('Simulator modal', () => {
     await page.getByTestId('scenario-heavy_rain').click()
     await page.getByTestId('simulator-run-btn').click()
 
-    // Pipeline view should appear
     const modal = page.getByTestId('simulator-modal')
-    await expect(modal.getByText('Pipeline đang chạy')).toBeVisible()
-    // All 7 steps rendered — scope to modal to avoid strict-mode matches in SVG/KPI elsewhere
-    for (const step of ['Traffic', 'Environment', 'Event', 'Citizen', 'Knowledge', 'Decision', 'Explanation']) {
-      await expect(modal.getByText(step, { exact: true }).first()).toBeVisible()
-    }
+    await expect(modal.getByText('✓ So sánh Before/After')).toBeVisible({ timeout: 10_000 })
+    await expect(modal.getByText('70%')).toBeVisible()
+    await expect(modal.getByText('88%')).toBeVisible()
+    await expect(modal.getByText(/Evacuate low areas/)).toBeVisible()
+    await expect(modal.getByText(/\(mới\)/)).toBeVisible()
   })
 })

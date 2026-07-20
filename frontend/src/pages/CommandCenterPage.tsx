@@ -225,6 +225,8 @@ export default function CommandCenterPage() {
   const [simulatorOpen, setSimulatorOpen] = useState(false)
   const [simulatorRunning, setSimulatorRunning] = useState(false)
   const [evidenceModalOpen, setEvidenceModalOpen] = useState(false)
+  const [baselineDecision, setBaselineDecision] = useState<DecisionOut | null>(null)
+  const [simPhase, setSimPhase] = useState<'idle' | 'baseline' | 'scenario' | 'done'>('idle')
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const { data: districts = [] } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
@@ -279,11 +281,18 @@ export default function CommandCenterPage() {
 
   async function runScenario(scenario: string) {
     setSimulatorRunning(true)
+    setSimPhase('baseline')
+    setBaselineDecision(null)
     setMessages(prev => [...prev, { role: 'user', text: `[Kịch bản] ${scenario} tại ${selectedName}` }])
     setLoading(true)
     try {
+      const baseline = await api.chat('Tình trạng hiện tại của quận', selectedDistrict)
+      setBaselineDecision(baseline)
+      setSimPhase('scenario')
+
       const result = await api.simulate(scenario, selectedDistrict)
       setDecision(result)
+      setSimPhase('done')
       setMessages(prev => [...prev, {
         role: 'ai',
         text: result.explanation.at(-1) ?? 'Mô phỏng hoàn thành.',
@@ -291,6 +300,7 @@ export default function CommandCenterPage() {
       qc.invalidateQueries({ queryKey: ['scores'] })
     } catch {
       setMessages(prev => [...prev, { role: 'ai', text: 'Lỗi mô phỏng. Kiểm tra backend.' }])
+      setSimPhase('idle')
     } finally {
       setLoading(false)
       setSimulatorRunning(false)
@@ -515,6 +525,9 @@ export default function CommandCenterPage() {
           onClose={() => setSimulatorOpen(false)}
           events={agentEvents}
           running={simulatorRunning}
+          phase={simPhase}
+          beforeDecision={baselineDecision}
+          afterDecision={decision}
         />
       )}
 
