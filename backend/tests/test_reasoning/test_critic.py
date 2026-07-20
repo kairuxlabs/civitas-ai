@@ -44,3 +44,22 @@ def test_confidence_floored_at_30():
     # 3 notes expected: insufficient evidence, unsupported flood_risk, unsupported traffic_disruption
     assert len(result["critic_notes"]) == 3
     assert result["confidence"] == 30
+
+
+def test_flood_risk_requires_weather_specific_evidence():
+    # AQI-sourced sensor evidence (e.g. traffic_agent/environment_agent's usual
+    # output) must NOT be enough to back a flood_risk=high claim — only
+    # Open-Meteo (weather) evidence should satisfy it.
+    evidence = [
+        {"type": "sensor", "source": "OpenAQ"},
+        {"type": "sensor", "source": "OpenAQ"},
+    ]
+    result = review(_decision(confidence=80, flood_risk="high"), evidence)
+    assert any("flood_risk" in n.lower() for n in result["critic_notes"])
+
+    evidence_with_weather = [
+        {"type": "sensor", "source": "OpenAQ"},
+        {"type": "sensor", "source": "Open-Meteo"},
+    ]
+    result = review(_decision(confidence=80, flood_risk="high"), evidence_with_weather)
+    assert not any("flood_risk" in n.lower() for n in result["critic_notes"])

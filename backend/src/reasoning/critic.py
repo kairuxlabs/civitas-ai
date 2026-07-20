@@ -15,14 +15,15 @@ def review(decision: dict, evidence: list[dict]) -> dict:
         notes.append(f"Insufficient evidence: only {len(evidence)} item(s) support this decision.")
 
     evidence_types = {e.get("type") for e in evidence}
+    evidence_sources = {e.get("source") for e in evidence}
     prediction = decision.get("prediction", {}) or {}
     if not isinstance(prediction, dict):
         # v2 runtime decisions carry "prediction" as a free-text string, not a
         # structured dict like v1's AgentState — nothing to structurally check.
         prediction = {}
 
-    if prediction.get("flood_risk") == "high" and "sensor" not in evidence_types:
-        notes.append("Prediction flood_risk=high is not backed by any sensor evidence.")
+    if prediction.get("flood_risk") == "high" and "Open-Meteo" not in evidence_sources:
+        notes.append("Prediction flood_risk=high is not backed by any Open-Meteo (weather) evidence.")
 
     if prediction.get("traffic_disruption") == "likely" and not (evidence_types & {"sensor", "event"}):
         notes.append("Prediction traffic_disruption=likely is not backed by any sensor or event evidence.")
