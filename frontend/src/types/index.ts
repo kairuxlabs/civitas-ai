@@ -17,12 +17,23 @@ export interface CityScore {
   overall_score: number;
 }
 
+export interface EvidenceItem {
+  id: string;
+  agent: string;
+  source: string;
+  type: string;
+  content: string;
+  confidence: number;
+  time: string;
+}
+
 export interface DecisionOut {
   prediction: Record<string, string>;
   impact: Record<string, string>;
   recommendations: string[];
   confidence: number;
   explanation: string[];
+  evidence: EvidenceItem[];
 }
 
 export type SimulationScenario = 'heavy_rain' | 'air_pollution' | 'major_event' | 'heatwave' | 'earthquake' | 'flood' | 'festival';
@@ -43,6 +54,7 @@ export interface AgentDecisionOut {
   recommendations: string[] | null;
   confidence: number | null;
   explanation: string[] | null;
+  evidence: EvidenceItem[] | null;
   requires_approval: boolean;
   approved: boolean | null;
   created_at: string | null;
