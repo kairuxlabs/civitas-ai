@@ -4,9 +4,9 @@ Civitas AI has three layers of automated testing:
 
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
-| **Backend unit** | pytest + httpx | 26 tests | API routes, services, repositories, agents |
-| **Frontend unit** | Vitest + Testing Library | 51 tests | React components, hooks, API service |
-| **E2E integration** | Playwright (Chromium) | 36 tests | Full UI flows, map interaction, simulator, chat |
+| **Backend unit** | pytest + httpx | 278 tests | API routes, services, repositories, agents, runtime, reasoning (critic), AI gateway, knowledge pipeline |
+| **Frontend unit** | Vitest + Testing Library | 66 tests | React components, hooks, API service |
+| **E2E integration** | Playwright (Chromium) | 46 tests | Full UI flows, map interaction, simulator (incl. Before/After comparison), chat, evidence viewer |
 
 ---
 
@@ -64,10 +64,25 @@ backend/tests/
 ├── test_integration.py                # cross-layer integration
 ├── test_api/
 │   ├── test_districts.py             # GET /api/districts
-│   └── test_decisions.py             # POST /api/decisions/{id}/approve|reject
-├── test_agents/
-│   ├── test_knowledge_agent.py       # SOP keyword matching
+│   ├── test_decisions.py             # POST /api/decisions/{id}/approve|reject
+│   ├── test_runtime_api.py           # v2 goal/run/approval endpoints
+│   └── test_simulation_api.py        # v2 Digital Twin start/stop/status
+├── test_agents/                       # one file per v1 agent node
+│   ├── test_traffic_agent.py
+│   ├── test_environment_agent.py
+│   ├── test_event_agent.py
+│   ├── test_citizen_agent.py
+│   ├── test_knowledge_agent.py        # SOP matching, Qdrant chunks, Neo4j graph facts
+│   ├── test_decision_agent.py         # evidence collection across all 5 agents
+│   ├── test_critic_agent.py           # v1 wiring of the shared evidence critic
+│   ├── test_decision_groundedness.py  # decision-quality regression scenarios
+│   ├── test_gemini_client.py
 │   └── test_orchestrator.py          # graph.run_agent_graph (mocked Gemini)
+├── test_reasoning/
+│   └── test_critic.py                # shared, pure-function evidence critic (no LLM)
+├── test_ai/                           # AI Gateway: gateway, planner, embedding, reranker, safety
+├── test_knowledge_pipeline/           # collectors, parsers, loaders (incl. neo4j_loader), processors, bootstrap, scheduler
+├── test_runtime/                      # v2 planner, scheduler, workers, reflection, decision, workflow, event_bus, memory, state
 ├── test_pipelines/
 │   ├── test_aqi_pipeline.py
 │   └── test_weather_pipeline.py
@@ -111,16 +126,18 @@ frontend/src/__tests__/
 ├── setup.ts                          # global mocks (axios, matchMedia, ResizeObserver)
 ├── components/
 │   ├── HanoiMap.test.tsx             # SVG rendering, district nodes, legend items
-│   ├── SimulatorModal.test.tsx       # modal open/close, scenario cards, run button
+│   ├── SimulatorModal.test.tsx       # modal open/close, scenario cards, run button, Before/After comparison, evidence click
+│   ├── EvidenceModal.test.tsx        # evidence grouped by agent, confidence display, close behavior
+│   ├── DecisionPanel.test.tsx        # confidence bar, prediction, recommendations, explanation
+│   ├── ScoreGauge.test.tsx
 │   └── AgentGraph.test.tsx           # agent node rendering, status indicators
-├── pages/
-│   ├── CommandCenterPage.test.tsx    # full page render, tab switching
-│   └── DashboardPage.test.tsx
 ├── hooks/
 │   └── useWebSocket.test.ts         # connection, reconnect, message parsing
 └── services/
     └── api.test.ts                   # axios calls, base URL, error handling
 ```
+
+Note: `CommandCenterPage.tsx` and `MissionControlPage.tsx` have no dedicated unit test file — they're verified via the Playwright E2E suites below instead.
 
 **Key pattern — SVG text assertions:**
 
@@ -180,10 +197,10 @@ npm run e2e
 | File | Tests | Backend required | Description |
 |---|---|---|---|
 | `01-layout.spec.ts` | 9 | No | Header, tabs, map SVG, panels, KPI cards |
-| `02-map-interaction.spec.ts` | 12 | No | All 12 district nodes, click → info bar update |
-| `03-simulator.spec.ts` | 6 | No | Modal open/close, scenarios, Run button state |
-| `04-chat.spec.ts` | 7 | No | Chat input, Enter key, AI response, report update |
-| `05-integration.spec.ts` | 3 | Yes (auto-skip) | Real health check, real districts, real chat |
+| `02-map-interaction.spec.ts` | 15 | No | All 12 district nodes, click → info bar update |
+| `03-simulator.spec.ts` | 7 | No | Modal open/close, scenarios, Run button state, Before/After comparison |
+| `04-chat.spec.ts` | 8 | No | Chat input, Enter key, AI response, report update, evidence modal |
+| `05-integration.spec.ts` | 7 | Yes (auto-skip) | Real health check, real districts, real chat, real simulator |
 
 Suites 01–04 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable.
 

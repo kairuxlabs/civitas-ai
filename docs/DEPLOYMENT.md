@@ -87,10 +87,12 @@ In **Environment** tab, add:
 |---|---|---|
 | `DATABASE_URL` | ✅ | `postgresql+asyncpg://...` from Neon |
 | `GEMINI_API_KEY` | ✅ | Google Gemini key (planner/decision/knowledge fall back to rules without it) |
-| `NEO4J_URI` | ❌ | `neo4j+s://xxx.databases.neo4j.io` from Neo4j Aura — enables persistent decision-memory graph |
+| `OPENROUTER_API_KEY` | ❌ | Enables the AI Gateway (NVIDIA Nemotron planning/embedding/rerank/safety) and the Gemini-quota fallback path. Verify real model slugs with `python -m scripts.verify_openrouter` before depending on this for a demo |
+| `OPENROUTER_TIMEOUT_SECONDS` | ❌ | Per-request timeout for OpenRouter calls (default `10.0`) |
+| `NEO4J_URI` | ❌ | `neo4j+s://xxx.databases.neo4j.io` from Neo4j Aura — enables the knowledge graph (entity/relation storage + live `find_related()` queries from the Knowledge Agent) and persistent decision-memory |
 | `NEO4J_USER` | ❌ | Usually `neo4j` |
 | `NEO4J_PASSWORD` | ❌ | From Aura credentials file |
-| `QDRANT_URL` | ❌ | `https://xxx.cloud.qdrant.io` — enables vector SOP search |
+| `QDRANT_URL` | ❌ | `https://xxx.cloud.qdrant.io` — enables vector SOP/`city_knowledge` search |
 | `QDRANT_API_KEY` | ❌ | From Qdrant Cloud dashboard |
 
 ### Auto-deploy from GitHub
@@ -290,7 +292,7 @@ Key points:
 1. In Render dashboard: **New → Blueprint**
 2. Connect your GitHub repo
 3. Render reads `render.yaml` and creates the service
-4. Set `DATABASE_URL` and `GEMINI_API_KEY` manually in the dashboard (marked `sync: false`); add the optional `NEO4J_*` / `QDRANT_*` variables there too if used
+4. Set `DATABASE_URL` and `GEMINI_API_KEY` manually in the dashboard (marked `sync: false`); add the optional `OPENROUTER_API_KEY` / `NEO4J_*` / `QDRANT_*` variables there too if used
 
 ---
 

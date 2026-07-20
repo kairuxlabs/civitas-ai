@@ -36,13 +36,15 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 ## Features
 
 - **Goal-driven multi-agent runtime (v2)** — a Planner decomposes a goal into a dependency-aware DAG; Traffic, Environment, Emergency, Citizen, and Knowledge workers execute in parallel waves, reflect on their own confidence, and feed a Decision stage that requires human approval
+- **Evidence-backed decisions + Critic Agent** — every agent (Traffic, Environment, Event, Citizen, Knowledge) cites structured evidence (source, type, confidence, timestamp) instead of bare prose; a rule-based Critic reviews the collected evidence for sufficiency and unsupported claims, and can push a decision's confidence below the approval threshold — a demo-clickable evidence viewer lets an operator inspect exactly what backs each recommendation
+- **Knowledge graph queries** — the Neo4j entity/relation graph (previously write-only) is now queried live: the Knowledge Agent extracts keywords from a query, looks up related entities/relations, and folds them into both its reasoning context and its cited evidence
 - **RAG knowledge layer** — OpenStreetMap, Wikipedia, Wikidata, GeoJSON boundaries, and government PDFs are chunked, embedded, and indexed into **Neo4j** (entity graph) + **Qdrant** (vector search), retrieved via an embed → search → rerank pipeline
 - **NVIDIA Nemotron AI Gateway** — planning, embedding, reranking, and content-safety all route through NVIDIA Nemotron models via **OpenRouter**, behind a single gateway so the backing model can change without touching any agent; falls back to Google Gemini automatically for resilience
 - **Real-time monitoring** — Weather and AQI data fetched every 15 minutes from Open-Meteo and OpenAQ across all 12 Hanoi districts
-- **7-agent v1 pipeline** — Sequential graph (traffic → environment → event → citizen → knowledge → decision → explanation) powered by Google Gemini
+- **8-agent v1 pipeline** — Sequential graph (traffic → environment → event → citizen → knowledge → decision → critic → explanation) powered by Google Gemini
 - **Live WebSocket streaming** — Agent pipeline progress broadcast in real time; operators watch each step complete
-- **Mission Control dashboard** — SVG district map, KPI bar, AI Copilot chat, live DAG view, real-time Decision Report with Approve/Reject
-- **What-If Simulator** — Scenario testing (heavy rain, air pollution, major event, heatwave) with AI predictions
+- **Mission Control dashboard** — SVG district map, KPI bar, AI Copilot chat, live DAG view, real-time Decision Report with Approve/Reject and a click-to-inspect evidence modal
+- **What-If Simulator with Before/After comparison** — Scenario testing (heavy rain, air pollution, major event, heatwave) runs a neutral baseline analysis alongside the scenario, then shows both side by side with confidence deltas, changed predictions, and new recommendations highlighted
 - **Human-in-the-loop** — Decisions with confidence < 75% or flood risk flagged as `high` require operator approval
 - **Decision Timeline** — Persistent log of all agent decisions with confidence scores and full explanations
 
@@ -103,13 +105,13 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 
 ### Agent Pipeline
 
-Every `/api/chat` and `/api/simulate` call runs a sequential 7-step pipeline:
+Every `/api/chat` and `/api/simulate` call runs a sequential 8-step pipeline:
 
 ```
-Traffic → Environment → Event → Citizen → Knowledge → Decision → Explanation
+Traffic → Environment → Event → Citizen → Knowledge → Decision → Critic → Explanation
 ```
 
-Each agent is a sync function called via `asyncio.to_thread()`. Between steps, WebSocket events are broadcast so the UI shows live progress. The Knowledge Agent retrieves relevant SOPs from a static keyword index. The Decision Agent synthesises all analyses into a structured response. If `confidence < 75` or `flood_risk == "high"`, the decision is flagged as `requires_approval = True`.
+Each agent is a sync function called via `asyncio.to_thread()`. Between steps, WebSocket events are broadcast so the UI shows live progress. Traffic, Environment, Event, Citizen, and Knowledge each cite structured **evidence** (source, type, confidence, timestamp) alongside their analysis — the Knowledge Agent draws on a static SOP keyword index, Qdrant `city_knowledge` chunks, *and* live Neo4j knowledge-graph lookups. The Decision Agent synthesises all analyses + evidence into a structured response. The Critic Agent (`src/reasoning/critic.py`, shared with the v2 runtime) then checks the collected evidence for sufficiency and unsupported claims, reducing confidence when it finds gaps. If the resulting `confidence < 75` or `flood_risk == "high"`, the decision is flagged as `requires_approval = True` — so a Critic-driven confidence drop can itself trigger human approval.
 
 ### CityOS v2 Runtime — Multi-Agent + RAG (`backend/src/runtime/`, `src/ai/`)
 
@@ -136,6 +138,10 @@ Each agent is a sync function called via `asyncio.to_thread()`. Between steps, W
 
      Knowledge Worker retrieval path:
        Query → Embedding → Qdrant (top 20) → Nemotron Rerank → top 5 → context
+       Query → keyword extraction → Neo4j find_related() → graph facts → context
+
+     Decision → Critic (src/reasoning/critic.py, shared with v1) checks evidence
+       sufficiency and unsupported claims, adjusts confidence before human approval
 
      AI Gateway (backend/src/ai/gateway.py) — single choke point:
        Planner / Embedding / Reranker / Content-Safety
@@ -252,7 +258,7 @@ Content-Type: application/json
 
 Available scenarios: `heavy_rain` · `air_pollution` · `major_event` · `heatwave`
 
-Both endpoints run the full 7-agent pipeline and return:
+Both endpoints run the full 8-agent pipeline and return:
 
 ```json
 {
@@ -275,9 +281,31 @@ Both endpoints run the full 7-agent pipeline and return:
     "Traffic Analysis: HIGH traffic congestion risk due to heavy rain.",
     "Knowledge: Flood Emergency SOP triggered — activate drainage pumps...",
     "Confidence: 85% based on 4 data streams"
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "agent": "traffic",
+      "source": "Open-Meteo",
+      "type": "sensor",
+      "content": "Rain 45.0mm/h driving congestion risk",
+      "confidence": 0.9,
+      "time": "2026-07-21T08:00:00Z"
+    },
+    {
+      "id": "ev-4",
+      "agent": "knowledge",
+      "source": "SOP",
+      "type": "sop",
+      "content": "Flood Emergency SOP: Activate drainage pumps at all low-lying districts.",
+      "confidence": 0.9,
+      "time": "static"
+    }
   ]
 }
 ```
+
+The Mission Control UI lets an operator click any recommendation to open an evidence viewer showing this list grouped by agent.
 
 ### Human-in-the-loop
 
@@ -315,20 +343,23 @@ Connect at `ws://localhost:8000/ws`. Events:
 |---|---|---|---|
 | `DATABASE_URL` | ✅ | — | `postgresql+asyncpg://...` for prod, `sqlite+aiosqlite:///./dev.db` for local |
 | `GEMINI_API_KEY` | ✅ | `""` | Get a free key at [aistudio.google.com](https://aistudio.google.com) |
-| `CHROMADB_HOST` | ❌ | `localhost` | ChromaDB host (future vector search) |
-| `CHROMADB_PORT` | ❌ | `8001` | ChromaDB port |
+| `OPENROUTER_API_KEY` | ❌ | `""` | Enables the AI Gateway — NVIDIA Nemotron planning/embedding/rerank/safety, and the Gemini-quota fallback path. Every AI Gateway function degrades to `None`/passthrough when unset |
+| `OPENROUTER_TIMEOUT_SECONDS` | ❌ | `10.0` | Per-request timeout for OpenRouter calls |
+| `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` | ❌ | `""` | Enables the knowledge graph (entity/relation storage + live `find_related()` queries) and decision-chain memory. Falls back to in-memory/no-op behavior when unset |
+| `QDRANT_URL` / `QDRANT_API_KEY` | ❌ | `""` | Enables the `city_knowledge` vector collection and SOP semantic search. Falls back to static keyword search when unset |
+| `CHROMADB_HOST` / `CHROMADB_PORT` | ❌ | `localhost` / `8001` | Declared in config but unused — superseded by Qdrant. Safe to leave unset |
 
 ---
 
 ## Testing
 
-Three automated test layers totalling 113 tests.
+Three automated test layers totalling 390 tests.
 
 ### Backend (pytest)
 
 ```bash
 cd backend
-pytest                          # all 26 tests
+pytest                          # all 278 tests
 pytest -v tests/test_health.py  # single file
 ```
 
@@ -338,7 +369,7 @@ Uses SQLite in-memory — no external services required. See [docs/TESTING.md](d
 
 ```bash
 cd frontend
-npm test            # 51 tests, single pass
+npm test            # 66 tests, single pass
 npm run test:watch  # watch mode
 ```
 
@@ -346,7 +377,7 @@ npm run test:watch  # watch mode
 
 ```bash
 cd frontend
-npm run e2e          # 36 tests, Chromium headless
+npm run e2e          # 46 tests, Chromium headless
 npm run e2e:headed   # watch the browser
 npm run e2e:ui       # interactive UI explorer
 ```
@@ -365,8 +396,14 @@ civitas-ai/
 │
 ├── backend/
 │   ├── src/
-│   │   ├── agents/         # 7 agent node functions (sync, called via asyncio.to_thread)
-│   │   ├── api/routes/     # FastAPI routers: districts, scores, chat, simulate, decisions, timeline, ws
+│   │   ├── agents/         # 8 agent node functions (sync, called via asyncio.to_thread)
+│   │   ├── reasoning/
+│   │   │   └── critic.py   # shared rule-based critic (evidence sufficiency, unsupported claims) — used by both v1 and v2
+│   │   ├── runtime/        # v2 event-driven runtime: planner, scheduler, workers, reflection, decision, workflow, event_bus, memory
+│   │   ├── ai/              # AI Gateway: gateway.py (OpenRouter/Nemotron choke point), planner, embedding, reranker, safety
+│   │   ├── knowledge_pipeline/  # RAG ingestion: bootstrap, weekly refresh scheduler, collectors, loaders (incl. Neo4j find_related), processors
+│   │   ├── simulation/     # v2 Digital Twin: continuous scenario-driven synthetic data engine + auto-goal trigger
+│   │   ├── api/routes/     # FastAPI routers: districts, scores, chat, simulator, decisions, timeline, aqi, runtime, simulation_v2, ws
 │   │   ├── orchestrator/
 │   │   │   └── graph.py    # sequential pipeline runner + WebSocket broadcasting
 │   │   ├── pipelines/      # WeatherPipeline, AQIPipeline, FeedbackPipeline
@@ -378,18 +415,23 @@ civitas-ai/
 │   │   ├── ws/             # WebSocket connection manager
 │   │   └── utils/          # pydantic-settings config, logger
 │   ├── scripts/
-│   │   └── migrate_neon.py # one-time Neon.tech migration + district seed
-│   ├── tests/              # 26 async pytest tests
+│   │   ├── migrate_neon.py        # one-time Neon.tech migration + district seed
+│   │   └── verify_openrouter.py   # manual live-verification of OpenRouter model slugs
+│   ├── tests/              # 278 async pytest tests
 │   ├── Dockerfile.prod     # production Docker image (2 Uvicorn workers)
 │   └── requirements.txt
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/CommandCenterPage.tsx  # main Mission Control layout
+│   │   ├── pages/
+│   │   │   ├── CommandCenterPage.tsx   # v1 Mission Control layout — map, AI Copilot chat, Decision Report
+│   │   │   └── MissionControlPage.tsx  # v2 runtime UI — goal input, DAG view, Digital Twin panel
 │   │   ├── components/
 │   │   │   ├── HanoiMap.tsx            # SVG district map with click handlers
-│   │   │   ├── SimulatorModal.tsx      # scenario selector modal
-│   │   │   └── AgentGraph.tsx          # live pipeline progress SVG
+│   │   │   ├── SimulatorModal.tsx      # scenario selector + Before/After comparison modal
+│   │   │   ├── EvidenceModal.tsx       # click-to-inspect evidence viewer, grouped by agent
+│   │   │   ├── AgentGraph.tsx          # live pipeline progress SVG
+│   │   │   └── SimulationPanel.tsx     # v2 Digital Twin controls + crawl trigger
 │   │   ├── hooks/useWebSocket.ts       # auto-reconnecting WebSocket hook
 │   │   ├── services/api.ts             # Axios client
 │   │   └── types/index.ts             # shared TypeScript interfaces
@@ -455,7 +497,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide
 
 ### Knowledge Pipeline
 
-**v1 (current)** — manual bootstrap via `python -m src.knowledge_pipeline.bootstrap`:
+**v1 (bootstrap)** — one-shot ingestion via `python -m src.knowledge_pipeline.bootstrap`:
 - ✅ OpenStreetMap (hospitals, schools, police, fire stations, roads, bus stops, parks, rivers, buildings)
 - ✅ Wikipedia (8 topics: Hanoi, Flood, Natural disaster, Transportation, Public health, Air pollution, Climate change, Emergency management)
 - ✅ GeoJSON district boundaries (derived from OSM admin boundaries)
@@ -463,11 +505,12 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide
 - ✅ Government PDF (fully functional, ships with an empty `config/pdf_sources.yaml` — add entries to activate)
 - ✅ Neo4j city entity graph + Qdrant `city_knowledge` collection
 
-**v2 (planned)**:
-- `scheduler.py`: weekly automated Wikipedia refresh (stubbed in v1 — see `src/knowledge_pipeline/scheduler.py`)
-- Incremental updates, RSS/news source integration, automated PDF discovery
+**v2 (shipped)**:
+- ✅ `scheduler.py`: weekly automated Wikipedia refresh, registered on the same APScheduler instance the 15-min pipelines use (gated behind a configured Gemini or OpenRouter key)
+- ✅ `Neo4jLoader.find_related()`: the knowledge graph is no longer write-only — the Knowledge Agent queries it live for entities/relations matching keywords in the user's question
 
-**v3 (future)**:
+**v3 (planned)**:
+- Incremental updates, RSS/news source integration, automated PDF discovery
 - Streaming ingestion (Kafka or equivalent), real-time knowledge updates
 
 ### Vision
@@ -492,7 +535,7 @@ Centralizes all OpenRouter/Nemotron calls behind one gateway so no agent talks t
 
 Wired into `KnowledgeMemory._qdrant_search` (`src/runtime/memory.py`) as an optional post-processing step: widens the Qdrant candidate set and reranks it before truncating to `k`.
 
-**Gemini quota fallback:** `call_gemini()` (`src/agents/gemini_client.py`) — used by all 7 agents and the knowledge pipeline's entity extractor — now falls back to `planner.complete()` (OpenRouter/Nemotron) whenever the Gemini call fails, e.g. on free-tier `429 RESOURCE_EXHAUSTED`. This runs automatically once `OPENROUTER_API_KEY` is set; unaffected (same as before) when unset.
+**Gemini quota fallback:** `call_gemini()` (`src/agents/gemini_client.py`) — used by the Knowledge, Decision, and Explanation agents (Traffic/Environment/Event/Citizen/Critic are pure rule-based, no LLM call) and the knowledge pipeline's entity extractor — now falls back to `planner.complete()` (OpenRouter/Nemotron) whenever the Gemini call fails, e.g. on free-tier `429 RESOURCE_EXHAUSTED`. This runs automatically once `OPENROUTER_API_KEY` is set; unaffected (same as before) when unset.
 
 **Model slugs — live-verified 2026-07-05:** the planner model was live-tested against the real OpenRouter API and found wrong (`nvidia/nemotron-3-ultra:free` → HTTP 400); fixed to `nvidia/nemotron-3-ultra-550b-a55b:free` (confirmed HTTP 200) in `src/ai/planner.py`. `openrouter/free` (fallback) confirmed to be a real OpenRouter free-model router. The `safety`/`embedding`/`reranker` model slugs were cross-checked against OpenRouter's public NVIDIA model catalog (all matched) but not live-tested end-to-end — do one live call per function before depending on them for a demo.
 
