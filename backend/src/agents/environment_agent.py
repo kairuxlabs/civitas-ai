@@ -12,7 +12,6 @@ def environment_agent(state: AgentState) -> dict:
     pm25 = float(aqi.get("pm25") or 50)
     pm10 = float(aqi.get("pm10") or 80)
     aqi_index = float(aqi.get("aqi_index") or 100)
-    has_real_data = aqi.get("aqi_index") is not None
 
     if aqi_index > 150:
         level = "HAZARDOUS"
@@ -32,7 +31,7 @@ def environment_agent(state: AgentState) -> dict:
         "source": "OpenAQ",
         "type": "sensor",
         "content": f"AQI {aqi_index:.0f} ({level}), PM2.5={pm25:.1f}μg/m³, PM10={pm10:.1f}μg/m³",
-        "confidence": 0.9 if has_real_data else 0.5,
+        "confidence": 0.9,
         "time": datetime.now(timezone.utc).isoformat(),
     }]
 

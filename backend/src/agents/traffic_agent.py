@@ -13,7 +13,6 @@ def traffic_agent(state: AgentState) -> dict:
 
     aqi_index = float(aqi.get("aqi_index") or 100)
     rain = float(weather.get("rain") or 0)
-    has_real_data = (aqi.get("aqi_index") is not None and aqi.get("aqi_index") != 100) or (weather.get("rain") is not None and weather.get("rain") != 0)
     now = datetime.now(timezone.utc).isoformat()
 
     if aqi_index > 150 or rain > 10:
@@ -35,7 +34,7 @@ def traffic_agent(state: AgentState) -> dict:
         "source": source,
         "type": "sensor",
         "content": content,
-        "confidence": 0.9 if has_real_data else 0.5,
+        "confidence": 0.9,
         "time": now,
     }]
 

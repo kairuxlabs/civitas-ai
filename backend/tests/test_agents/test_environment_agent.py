@@ -22,3 +22,11 @@ def test_environment_evidence_cites_openaq():
     assert ev[0]["type"] == "sensor"
     assert ev[0]["agent"] == "environment"
     assert "160" in ev[0]["content"]
+
+
+def test_confidence_always_09_regardless_of_aqi_value():
+    # Test with default aqi (100)
+    result = environment_agent(_state(aqi=100))
+    ev = result["environment_evidence"]
+    assert len(ev) == 1
+    assert ev[0]["confidence"] == 0.9

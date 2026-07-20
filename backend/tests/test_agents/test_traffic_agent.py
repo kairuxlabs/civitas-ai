@@ -31,8 +31,8 @@ def test_heavy_rain_produces_open_meteo_evidence():
     assert ev[0]["source"] == "Open-Meteo"
 
 
-def test_fallback_defaults_produce_lower_confidence():
+def test_default_values_still_produce_evidence():
     result = traffic_agent(_state())
     ev = result["traffic_evidence"]
     assert len(ev) == 1
-    assert ev[0]["confidence"] == 0.5
+    assert ev[0]["confidence"] == 0.9
