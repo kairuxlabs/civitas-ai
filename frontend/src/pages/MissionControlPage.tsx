@@ -156,12 +156,15 @@ function DecisionCard({ run, onResolve, resolving }: {
         </div>
         <span className="text-xs text-slate-400 tabular-nums">{Math.round(d.confidence)}%</span>
       </div>
-      {d.evidence.length > 0 && (
+      {(d.evidence ?? []).length > 0 && (
         <details className="text-xs text-slate-500">
-          <summary className="cursor-pointer hover:text-slate-300">Bằng chứng ({d.evidence.length})</summary>
+          <summary className="cursor-pointer hover:text-slate-300">Bằng chứng ({(d.evidence ?? []).length})</summary>
           <ul className="mt-1 space-y-0.5 pl-3">
-            {d.evidence.map((e, i) => (
-              <li key={i}><span className="text-slate-400">{e.agent}</span>: {e.summary}</li>
+            {(d.evidence ?? []).map((e, i) => (
+              <li key={i}>
+                <span className="text-slate-400">{e.agent}</span>
+                {e.source && <span className="text-slate-600"> ({e.source})</span>}: {e.content ?? e.summary}
+              </li>
             ))}
           </ul>
         </details>

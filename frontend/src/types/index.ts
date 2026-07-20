@@ -92,10 +92,14 @@ export interface RuntimeTask {
 }
 
 export interface RuntimeEvidence {
-  task: string;
+  task?: string;
   agent: string;
-  summary: string;
+  summary?: string;
+  source?: string;
+  type?: string;
+  content?: string;
   confidence: number | null;
+  time?: string;
 }
 
 export interface RuntimeDecision {
