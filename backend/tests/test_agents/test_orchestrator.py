@@ -187,3 +187,34 @@ async def test_critic_low_confidence_triggers_requires_approval(db_session):
         select(AgentDecision).where(AgentDecision.district_id == district.id)
     )).scalar_one()
     assert row.requires_approval is True
+
+
+async def test_agent_graph_decision_out_includes_evidence(db_session):
+    district = District(city_id="hanoi", name="EvidenceTest")
+    db_session.add(district)
+    await db_session.flush()
+
+    now = datetime.now(timezone.utc)
+    db_session.add(Weather(
+        city_id="hanoi", district_id=district.id, timestamp=now,
+        temperature=33.0, humidity=80.0, rain=5.0, wind_speed=8.0
+    ))
+    db_session.add(AQI(
+        city_id="hanoi", district_id=district.id, timestamp=now,
+        pm25=75.0, pm10=110.0, co=1.5, no2=55.0, aqi_index=130
+    ))
+    await db_session.flush()
+
+    result = await run_agent_graph(
+        query="What is the current urban situation?",
+        district_id=district.id,
+        session=db_session,
+    )
+
+    assert isinstance(result.evidence, list)
+    assert len(result.evidence) >= 2  # traffic + environment always contribute at least 1 each
+
+    row = (await db_session.execute(
+        select(AgentDecision).where(AgentDecision.district_id == district.id)
+    )).scalar_one()
+    assert row.evidence == result.evidence

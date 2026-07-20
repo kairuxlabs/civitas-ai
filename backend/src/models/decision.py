@@ -15,6 +15,7 @@ class AgentDecision(Base):
     recommendations: Mapped[list | None] = mapped_column(JSON, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     explanation: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    evidence: Mapped[list | None] = mapped_column(JSON, nullable=True)
     requires_approval: Mapped[bool] = mapped_column(Boolean, default=False)
     approved: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

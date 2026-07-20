@@ -128,6 +128,7 @@ async def run_agent_graph(
         recommendations=dec.get("recommendations", []),
         confidence=confidence,
         explanation=state.get("explanation", []),
+        evidence=state.get("evidence", []),
     )
 
     await _broadcast("pipeline_done", "Supervisor", "done", f"Confidence: {confidence:.0f}%")
@@ -141,6 +142,7 @@ async def run_agent_graph(
         recommendations=out.recommendations,
         confidence=out.confidence,
         explanation=out.explanation,
+        evidence=out.evidence,
         requires_approval=requires_approval,
         approved=None,
         created_at=datetime.now(timezone.utc),

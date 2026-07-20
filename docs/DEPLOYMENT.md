@@ -57,6 +57,12 @@ CREATE INDEX IF NOT EXISTS idx_events_district_start ON events(district_id, star
 CREATE INDEX IF NOT EXISTS idx_citizen_feedback_district_created ON citizen_feedback(district_id, created_at DESC);
 ```
 
+**If your Neon database was provisioned before 2026-07-20**, it is also missing the `evidence` column on `agent_decisions`. Add it once via `psql` or the Neon SQL editor:
+
+```sql
+ALTER TABLE agent_decisions ADD COLUMN IF NOT EXISTS evidence JSONB;
+```
+
 ---
 
 ## 2. Render (Backend)
