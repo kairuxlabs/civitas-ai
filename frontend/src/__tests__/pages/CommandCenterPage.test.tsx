@@ -3,11 +3,6 @@ import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { renderWithQueryClient } from '../test-utils'
 import type { AgentEvent } from '../../types'
 
-// jsdom does not implement scrollIntoView; CommandCenterPage calls it in a
-// useEffect on every `messages` change, which would otherwise throw and
-// abort rendering in every test below.
-Element.prototype.scrollIntoView = vi.fn()
-
 const mockHttp = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),

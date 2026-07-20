@@ -40,6 +40,9 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 }
 
+// Stub Element.prototype.scrollIntoView (not implemented in jsdom)
+Element.prototype.scrollIntoView = vi.fn()
+
 // Silence known jsdom SVG warnings
 const originalError = console.error
 beforeAll(() => {
