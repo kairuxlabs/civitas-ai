@@ -109,3 +109,79 @@ class DecisionSessionService:
         if record is not None:
             record.status = "rejected"
             await session.commit()
+
+    @staticmethod
+    async def mark_approved(session: AsyncSession, run_id: str) -> DecisionSession | None:
+        """Captures the baseline CityScore + weather/AQI context, and moves
+        straight to "observing". Does NOT schedule the follow-up job — the
+        caller owns the scheduler (see src/runtime/workflow.py's integration
+        in Task 5)."""
+        record = await DecisionSessionService._get_by_run_id(session, run_id)
+        if record is None or record.district_id is None:
+            return None
+        score = await CityScoreService.calculate_and_save(session, record.district_id)
+        record.status = "observing"
+        record.baseline_scores = _score_dict(score)
+        record.context_snapshot = await DecisionSessionService._context_snapshot(session, record.district_id)
+        record.approved_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(record)
+        return record
+
+    @staticmethod
+    async def _context_snapshot(session: AsyncSession, district_id: int) -> dict:
+        from src.repositories.aqi_repo import AQIRepo
+        from src.repositories.weather_repo import WeatherRepo
+        weather = await WeatherRepo.get_latest(session, district_id)
+        aqi = await AQIRepo.get_latest(session, district_id)
+        return {
+            "rain": weather.rain if weather else None,
+            "aqi_index": aqi.aqi_index if aqi else None,
+            "pm25": aqi.pm25 if aqi else None,
+        }
+
+    @staticmethod
+    async def _outcome_confidence(session: AsyncSession, district_id: int) -> int:
+        """90 if the AQI reading behind the outcome score is < 20 min old,
+        else 60 — Decision Session spec §5.2's freshness heuristic."""
+        from src.repositories.aqi_repo import AQIRepo
+        aqi = await AQIRepo.get_latest(session, district_id)
+        if aqi is None:
+            return 60
+        # SQLite round-trips DateTime(timezone=True) as naive under aiosqlite —
+        # values are always written via datetime.now(timezone.utc), so a naive
+        # read-back is safely assumed to already be UTC.
+        aqi_ts = aqi.timestamp if aqi.timestamp.tzinfo else aqi.timestamp.replace(tzinfo=timezone.utc)
+        age_minutes = (datetime.now(timezone.utc) - aqi_ts).total_seconds() / 60
+        return 90 if age_minutes < 20 else 60
+
+    @staticmethod
+    async def observe(session: AsyncSession, session_id: int) -> DecisionSession | None:
+        result = await session.execute(select(DecisionSession).where(DecisionSession.id == session_id))
+        record = result.scalar_one_or_none()
+        if record is None or record.status != "observing" or record.district_id is None:
+            return None
+
+        score = await CityScoreService.calculate_and_save(session, record.district_id)
+        observed = _score_dict(score)
+        delta, success_rate, status = evaluate_outcome(
+            record.baseline_scores or {}, observed, record.expected_outcome,
+        )
+        confidence = await DecisionSessionService._outcome_confidence(session, record.district_id)
+
+        now = datetime.now(timezone.utc)
+        record.observed_scores = observed
+        record.outcome_delta = delta
+        record.success_rate = success_rate
+        record.outcome_status = status
+        record.outcome_evidence = [
+            {"source": "CityScoreService", "type": "sensor_derived", "metric": key,
+             "value": value, "confidence": confidence, "timestamp": now.isoformat()}
+            for key, value in observed.items()
+        ]
+        record.observed_at = now
+        record.evaluated_at = now
+        record.status = "evaluated"
+        await session.commit()
+        await session.refresh(record)
+        return record

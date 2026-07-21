@@ -104,3 +104,97 @@ async def test_mark_rejected(db_session):
     from sqlalchemy import select
     result = await db_session.execute(select(DecisionSession).where(DecisionSession.run_id == "run-4"))
     assert result.scalar_one().status == "rejected"
+
+
+from src.models.district import District
+from src.models.aqi import AQI
+from src.models.weather import Weather
+
+
+async def _seed_district_with_readings(db_session, aqi_index=100, pm25=50.0, rain=0.0):
+    district = District(city_id="hanoi", name="Test District")
+    db_session.add(district)
+    await db_session.flush()
+    now = datetime.now(timezone.utc)
+    db_session.add(AQI(city_id="hanoi", district_id=district.id, timestamp=now,
+                        pm25=pm25, pm10=80.0, co=1.0, no2=40.0, aqi_index=aqi_index))
+    db_session.add(Weather(city_id="hanoi", district_id=district.id, timestamp=now,
+                            temperature=30.0, humidity=70.0, rain=rain, wind_speed=10.0))
+    await db_session.flush()
+    return district
+
+
+async def test_mark_approved_captures_baseline_and_moves_to_observing(db_session):
+    district = await _seed_district_with_readings(db_session, aqi_index=120, pm25=55.0, rain=3.0)
+    await DecisionSessionService.create(db_session, "run-5", "goal", district.id)
+
+    record = await DecisionSessionService.mark_approved(db_session, "run-5")
+
+    assert record.status == "observing"
+    assert record.baseline_scores is not None
+    assert "overall_score" in record.baseline_scores
+    assert record.approved_at is not None
+    assert record.context_snapshot == {"rain": 3.0, "aqi_index": 120, "pm25": 55.0}
+
+
+async def test_mark_approved_unknown_run_id_returns_none(db_session):
+    assert await DecisionSessionService.mark_approved(db_session, "nope") is None
+
+
+async def test_observe_computes_outcome_and_finalizes(db_session):
+    district = await _seed_district_with_readings(db_session, aqi_index=200)  # bad baseline
+    await DecisionSessionService.create(db_session, "run-6", "goal", district.id)
+    approved = await DecisionSessionService.mark_approved(db_session, "run-6")
+
+    # Improve conditions before observing, simulating a real pipeline tick
+    db_session.add(AQI(city_id="hanoi", district_id=district.id, timestamp=datetime.now(timezone.utc),
+                        pm25=10.0, pm10=20.0, co=0.5, no2=10.0, aqi_index=40))
+    db_session.add(Weather(city_id="hanoi", district_id=district.id, timestamp=datetime.now(timezone.utc),
+                            temperature=28.0, humidity=60.0, rain=0.0, wind_speed=5.0))
+    await db_session.flush()
+
+    result = await DecisionSessionService.observe(db_session, approved.id)
+
+    assert result.status == "evaluated"
+    assert result.observed_scores is not None
+    assert result.outcome_delta is not None
+    assert result.outcome_status in ("improved", "worse", "no_change")
+    assert result.outcome_status == "improved"  # AQI 200 -> 40 must read as improved
+    assert len(result.outcome_evidence) == 5  # one per score field
+    assert all(e["source"] == "CityScoreService" for e in result.outcome_evidence)
+    # the AQI row just inserted is fresh (< 20 min old) -> confidence 90
+    assert all(e["confidence"] == 90 for e in result.outcome_evidence)
+    assert result.evaluated_at is not None
+
+
+async def test_observe_uses_lower_confidence_for_stale_reading(db_session):
+    from datetime import timedelta
+    district = await _seed_district_with_readings(db_session, aqi_index=100)
+    await DecisionSessionService.create(db_session, "run-6b", "goal", district.id)
+    approved = await DecisionSessionService.mark_approved(db_session, "run-6b")
+
+    # Replace the fixture's fresh reading with an older one (25 min ago) so
+    # it's still the latest row by timestamp, but stale by the confidence check
+    from sqlalchemy import delete
+    await db_session.execute(delete(AQI).where(AQI.district_id == district.id))
+    await db_session.execute(delete(Weather).where(Weather.district_id == district.id))
+    stale_ts = datetime.now(timezone.utc) - timedelta(minutes=25)
+    db_session.add(AQI(city_id="hanoi", district_id=district.id, timestamp=stale_ts,
+                        pm25=45.0, pm10=70.0, co=0.8, no2=30.0, aqi_index=90))
+    db_session.add(Weather(city_id="hanoi", district_id=district.id, timestamp=stale_ts,
+                            temperature=29.0, humidity=65.0, rain=0.0, wind_speed=8.0))
+    await db_session.flush()
+
+    result = await DecisionSessionService.observe(db_session, approved.id)
+    assert all(e["confidence"] == 60 for e in result.outcome_evidence)
+
+
+async def test_observe_returns_none_when_not_observing(db_session):
+    district = await _seed_district_with_readings(db_session)
+    record = await DecisionSessionService.create(db_session, "run-7", "goal", district.id)
+    # still "collecting" — never approved
+    assert await DecisionSessionService.observe(db_session, record.id) is None
+
+
+async def test_observe_unknown_session_id_returns_none(db_session):
+    assert await DecisionSessionService.observe(db_session, 999999) is None
