@@ -38,6 +38,22 @@ def test_evaluate_outcome_no_expected_uses_fallback_thresholds():
     assert status_flat == "no_change"
 
 
+def test_evaluate_outcome_no_expected_boundary_worse():
+    """Regression: raw delta -2.04 rounds to -2.0; must use raw value for threshold comparison."""
+    baseline = {"overall_score": 50.0}
+    observed = {"overall_score": 47.96}
+    _, _, status = evaluate_outcome(baseline, observed, None)
+    assert status == "worse"
+
+
+def test_evaluate_outcome_no_expected_boundary_improved():
+    """Regression: raw delta 2.04 rounds to 2.0; must use raw value for threshold comparison."""
+    baseline = {"overall_score": 50.0}
+    observed = {"overall_score": 52.04}
+    _, _, status = evaluate_outcome(baseline, observed, None)
+    assert status == "improved"
+
+
 async def test_create_sets_collecting_status(db_session):
     record = await DecisionSessionService.create(db_session, "run-1", "Reduce congestion", 1)
     assert record.status == "collecting"
@@ -59,6 +75,15 @@ async def test_mark_analyzing_unknown_run_id_is_a_noop(db_session):
     from sqlalchemy import select
     result = await db_session.execute(select(DecisionSession))
     assert result.scalars().all() == []  # confirms no row was created or touched
+
+
+async def test_mark_recommend_updates_existing_session(db_session):
+    await DecisionSessionService.create(db_session, "run-rec", "goal", 1)
+    await DecisionSessionService.mark_recommend(db_session, "run-rec")
+
+    from sqlalchemy import select
+    result = await db_session.execute(select(DecisionSession).where(DecisionSession.run_id == "run-rec"))
+    assert result.scalar_one().status == "recommend"
 
 
 async def test_mark_awaiting_approval_sets_decision_id(db_session):

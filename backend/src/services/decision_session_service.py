@@ -35,17 +35,20 @@ def evaluate_outcome(
 ) -> tuple[dict, float | None, str]:
     """Decision Session spec §7. Only overall_score drives success_rate/status;
     other fields are carried in `delta` for display only."""
+    # Compute raw deltas (unrounded) for threshold comparisons.
+    observed_raw_delta = observed.get("overall_score", 0.0) - baseline.get("overall_score", 0.0)
+
+    # Build rounded delta dict for display.
     delta = {k: round(observed[k] - baseline[k], 1) for k in observed if k in baseline}
-    observed_delta = delta.get("overall_score", 0.0)
 
     if expected and "overall_score" in expected:
-        expected_delta = expected["overall_score"] - baseline.get("overall_score", 0.0)
-        if expected_delta == 0:
-            success_rate = 100.0 if observed_delta >= 0 else 0.0
-        elif (observed_delta >= 0) != (expected_delta >= 0):
+        expected_raw_delta = expected["overall_score"] - baseline.get("overall_score", 0.0)
+        if expected_raw_delta == 0:
+            success_rate = 100.0 if observed_raw_delta >= 0 else 0.0
+        elif (observed_raw_delta >= 0) != (expected_raw_delta >= 0):
             success_rate = 0.0
         else:
-            success_rate = max(0.0, min(1.0, observed_delta / expected_delta)) * 100
+            success_rate = max(0.0, min(1.0, observed_raw_delta / expected_raw_delta)) * 100
         status = (
             "improved" if success_rate >= SUCCESS_RATE_IMPROVED
             else "worse" if success_rate < SUCCESS_RATE_WORSE
@@ -54,8 +57,8 @@ def evaluate_outcome(
         return delta, round(success_rate, 1), status
 
     status = (
-        "improved" if observed_delta > NO_EXPECTED_IMPROVED_DELTA
-        else "worse" if observed_delta < NO_EXPECTED_WORSE_DELTA
+        "improved" if observed_raw_delta > NO_EXPECTED_IMPROVED_DELTA
+        else "worse" if observed_raw_delta < NO_EXPECTED_WORSE_DELTA
         else "no_change"
     )
     return delta, None, status
