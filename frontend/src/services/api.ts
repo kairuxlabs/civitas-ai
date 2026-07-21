@@ -3,6 +3,7 @@ import type {
   District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint,
   RuntimeRun, RuntimeRunSummary, RuntimeMonitor,
   SimulationStatus, ScenarioInfo, CrawlResults,
+  DecisionSession, DecisionSessionAnalytics,
 } from '../types'
 
 const stripBOM = (s: string) => s.replace(/^﻿/, '').trim()
@@ -43,6 +44,17 @@ export const api = {
     http.get<{ scenarios: ScenarioInfo[] }>('/api/v2/simulation/scenarios').then(r => r.data.scenarios),
   runCrawl: (sources?: string[]) =>
     http.post<{ results: CrawlResults }>('/api/v2/crawl', { sources }).then(r => r.data.results),
+
+  // Decision Session lifecycle
+  getDecisionSessions: (status?: string) =>
+    http.get<DecisionSession[]>('/api/decision-sessions', { params: status ? { status } : undefined })
+      .then(r => r.data),
+  getDecisionSession: (id: number) =>
+    http.get<DecisionSession>(`/api/decision-sessions/${id}`).then(r => r.data),
+  observeDecisionSession: (id: number) =>
+    http.post<DecisionSession>(`/api/decision-sessions/${id}/observe`).then(r => r.data),
+  getDecisionSessionAnalytics: () =>
+    http.get<DecisionSessionAnalytics>('/api/decision-sessions/analytics').then(r => r.data),
 }
 
 export function createWebSocket(): WebSocket {

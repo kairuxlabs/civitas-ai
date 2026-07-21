@@ -175,3 +175,56 @@ export interface RuntimeMonitor {
   active_runs: number;
   total_runs: number;
 }
+
+// ── Decision Session ──────────────────────────────────────────────────
+
+export type DecisionSessionStatus =
+  | 'collecting' | 'analyzing' | 'recommend' | 'awaiting_approval'
+  | 'approved' | 'rejected' | 'observing' | 'evaluated';
+
+export interface DecisionSessionScores {
+  traffic_score: number;
+  environment_score: number;
+  citizen_score: number;
+  risk_score: number;
+  overall_score: number;
+}
+
+export interface DecisionSessionOutcomeEvidence {
+  source: string;
+  type: string;
+  metric: string;
+  value: number;
+  confidence: number;
+  timestamp: string;
+}
+
+export interface DecisionSession {
+  id: number;
+  run_id: string;
+  goal: string;
+  district_id: number | null;
+  status: DecisionSessionStatus;
+  decision_id: number | null;
+  baseline_scores: DecisionSessionScores | null;
+  expected_outcome: DecisionSessionScores | null;
+  observed_scores: DecisionSessionScores | null;
+  outcome_delta: Partial<DecisionSessionScores> | null;
+  success_rate: number | null;
+  outcome_status: 'improved' | 'no_change' | 'worse' | null;
+  context_snapshot: Record<string, unknown> | null;
+  outcome_evidence: DecisionSessionOutcomeEvidence[] | null;
+  created_at: string | null;
+  approved_at: string | null;
+  observed_at: string | null;
+  evaluated_at: string | null;
+}
+
+export interface DecisionSessionAnalytics {
+  total_sessions: number;
+  approval_rate: number | null;
+  evaluated_count: number;
+  improved_rate: number | null;
+  avg_improvement: number | null;
+  avg_decision_latency_minutes: number | null;
+}
