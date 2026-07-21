@@ -20,6 +20,10 @@ function confidenceBarColor(confidence: number): string {
   return 'bg-red-500'
 }
 
+function isFreshTimestamp(time: string): boolean {
+  return time !== 'static' && !Number.isNaN(Date.parse(time))
+}
+
 function groupByAgent(evidence: EvidenceItem[]): [string, EvidenceItem[]][] {
   const groups = new Map<string, EvidenceItem[]>()
   for (const item of evidence) {
@@ -61,11 +65,21 @@ export default function EvidenceModal({ evidence, onClose }: Props) {
                       <span className="text-[10px] bg-slate-700 border border-slate-600 text-slate-300 rounded-full px-2 py-0.5">
                         {item.source}
                       </span>
+                      {item.type === 'gap' && (
+                        <span data-testid="evidence-gap-badge" className="text-[10px] bg-amber-900 border border-amber-700 text-amber-300 rounded-full px-2 py-0.5">
+                          Knowledge Gap
+                        </span>
+                      )}
                       <span className={`text-xs font-mono font-bold ${confidenceColor(item.confidence)}`}>
                         {Math.round(item.confidence * 100)}%
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">{item.content}</p>
+                    {isFreshTimestamp(item.time) && (
+                      <p data-testid="evidence-freshness" className="text-[10px] text-slate-500 mt-1">
+                        {new Date(item.time).toLocaleString('vi-VN')}
+                      </p>
+                    )}
                     <div className="h-1 bg-slate-700 rounded-full mt-2">
                       <div
                         className={`h-1 rounded-full ${confidenceBarColor(item.confidence)}`}

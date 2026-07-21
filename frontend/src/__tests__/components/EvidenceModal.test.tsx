@@ -57,3 +57,34 @@ describe('EvidenceModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 })
+
+describe('EvidenceModal — Knowledge Quality Layer', () => {
+  it('renders a distinct gap badge for type: "gap" evidence', () => {
+    const evidence: EvidenceItem[] = [{
+      id: 'ev-1', agent: 'knowledge', source: 'Knowledge Retrieval', type: 'gap',
+      content: 'No SOP, city knowledge, or graph facts matched this query.',
+      confidence: 0, time: '2026-07-21T09:00:00Z',
+    }]
+    render(<EvidenceModal evidence={evidence} onClose={() => {}} />)
+    expect(screen.getByTestId('evidence-gap-badge')).toBeInTheDocument()
+  })
+
+  it('renders a freshness label for a real ISO timestamp', () => {
+    const evidence: EvidenceItem[] = [{
+      id: 'ev-2', agent: 'knowledge', source: 'Wikipedia', type: 'knowledge',
+      content: 'Ho Hoan Kiem la ho trung tam.', confidence: 0.7,
+      time: '2026-07-21T09:00:00Z',
+    }]
+    render(<EvidenceModal evidence={evidence} onClose={() => {}} />)
+    expect(screen.getByTestId('evidence-freshness')).toBeInTheDocument()
+  })
+
+  it('renders "static" items without a freshness label', () => {
+    const evidence: EvidenceItem[] = [{
+      id: 'ev-3', agent: 'knowledge', source: 'SOP', type: 'sop',
+      content: 'Flood SOP.', confidence: 0.9, time: 'static',
+    }]
+    render(<EvidenceModal evidence={evidence} onClose={() => {}} />)
+    expect(screen.queryByTestId('evidence-freshness')).not.toBeInTheDocument()
+  })
+})
