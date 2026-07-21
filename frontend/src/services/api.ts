@@ -13,6 +13,7 @@ const http = axios.create({ baseURL })
 export const api = {
   getDistricts: () => http.get<District[]>('/api/districts').then(r => r.data),
   getScores: () => http.get<CityScore[]>('/api/scores').then(r => r.data),
+  getHealth: () => http.get<{ status: string }>('/health').then(r => r.data),
   getDistrictScore: (id: number) => http.get<CityScore>(`/api/scores/${id}`).then(r => r.data),
   chat: (query: string, districtId: number) =>
     http.post<DecisionOut>('/api/chat', { query, district_id: districtId }).then(r => r.data),

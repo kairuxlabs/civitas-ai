@@ -1,0 +1,37 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { renderWithQueryClient } from '../test-utils'
+import OverviewPage from '../../pages/stitch/OverviewPage'
+import { api } from '../../services/api'
+
+vi.mock('../../services/api')
+
+beforeEach(() => {
+  vi.mocked(api.getHealth).mockResolvedValue({ status: 'ok' })
+  vi.mocked(api.getDistricts).mockResolvedValue([
+    { id: 1, city_id: 'hanoi', name: 'Hoan Kiem' },
+  ])
+  vi.mocked(api.getScores).mockResolvedValue([
+    {
+      id: 1, city_id: 'hanoi', district_id: 1, timestamp: '2026-07-21T09:00:00Z',
+      traffic_score: 70, environment_score: 65, citizen_score: 80, risk_score: 20, overall_score: 74,
+    },
+  ])
+  vi.mocked(api.getDecisionSessionAnalytics).mockResolvedValue({
+    total_sessions: 3, approval_rate: 50, evaluated_count: 1,
+    improved_rate: 100, avg_improvement: 5, avg_decision_latency_minutes: 4,
+  })
+})
+
+describe('OverviewPage', () => {
+  it('renders city score KPI from scores API', async () => {
+    renderWithQueryClient(
+      <MemoryRouter>
+        <OverviewPage />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(screen.getByTestId('overview-page')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('overview-overall-score')).toHaveTextContent('74'))
+  })
+})
