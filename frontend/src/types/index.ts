@@ -180,7 +180,7 @@ export interface RuntimeMonitor {
 
 export type DecisionSessionStatus =
   | 'collecting' | 'analyzing' | 'recommend' | 'awaiting_approval'
-  | 'approved' | 'rejected' | 'observing' | 'evaluated';
+  | 'rejected' | 'observing' | 'evaluated';
 
 export interface DecisionSessionScores {
   traffic_score: number;
