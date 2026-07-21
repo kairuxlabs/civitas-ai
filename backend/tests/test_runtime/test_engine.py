@@ -81,6 +81,7 @@ async def test_submit_goal_creates_decision_session(engine, monkeypatch):
     monkeypatch.setattr(DecisionSessionService, "create", create_mock)
 
     run = await engine.submit_goal("Reduce congestion", district_id=3)
+    await engine.wait_for(run.run_id)
 
     create_mock.assert_awaited_once()
     _, call_args = create_mock.await_args
