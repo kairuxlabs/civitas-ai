@@ -55,12 +55,6 @@ function mockGet(overrides: { runs?: RuntimeRunSummary[]; run?: RuntimeRun } = {
         data: { running: false, scenario: 'normal', scenario_label: 'Bình thường', interval_s: 30, auto_goal: true, tick: 0, values: { rain: 0, aqi: 90, temperature: 30, humidity: 70, wind_speed: 10 }, last_auto_goal: null },
       })
     }
-    if (url === '/api/decision-sessions') return Promise.resolve({ data: [] })
-    if (url === '/api/decision-sessions/analytics') {
-      return Promise.resolve({
-        data: { total_sessions: 0, approval_rate: null, evaluated_count: 0, improved_rate: null, avg_improvement: null, avg_decision_latency_minutes: null },
-      })
-    }
     if (url.startsWith('/api/v2/runs/') && overrides.run) return Promise.resolve({ data: overrides.run })
     return Promise.reject(new Error(`unexpected GET ${url}`))
   })
@@ -158,11 +152,5 @@ describe('MissionControlPage', () => {
     mockGet()
     renderWithQueryClient(<MissionControlPage />)
     expect(screen.getByText('Digital Twin & Data')).toBeTruthy()
-  })
-
-  it('renders the Decision Sessions panel', () => {
-    mockGet()
-    renderWithQueryClient(<MissionControlPage />)
-    expect(screen.getByText('Decision Sessions')).toBeTruthy()
   })
 })

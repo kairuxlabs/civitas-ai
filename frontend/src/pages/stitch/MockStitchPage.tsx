@@ -3,8 +3,13 @@ export default function MockStitchPage({ title, blurb }: { title: string; blurb:
     <div className="p-margin-desktop space-y-4" data-testid="mock-stitch-page">
       <h1 className="text-2xl font-bold text-on-surface">{title}</h1>
       <p className="text-sm text-on-surface-variant max-w-2xl">{blurb}</p>
-      <div className="glass-panel rounded-xl p-6 text-sm text-on-surface-variant">
-        Layout preview — live data wiring comes in a later phase.
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+        {['Signals', 'Coverage', 'Notes'].map(label => (
+          <div key={label} className="glass-panel rounded-xl p-4">
+            <p className="text-xs text-on-surface-variant mb-2">{label}</p>
+            <p className="text-sm text-on-surface">Mock content for phase 1 layout.</p>
+          </div>
+        ))}
       </div>
     </div>
   )

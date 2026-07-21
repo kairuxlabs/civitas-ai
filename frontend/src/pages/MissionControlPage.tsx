@@ -5,7 +5,6 @@ import {
 } from 'lucide-react'
 import { api } from '../services/api'
 import SimulationPanel from '../components/SimulationPanel'
-import DecisionSessionsPanel from '../components/DecisionSessionsPanel'
 import type { RuntimeRun, RuntimeTask } from '../types'
 
 // ─── Presets ──────────────────────────────────────────────────────────────────
@@ -383,8 +382,6 @@ export default function MissionControlPage() {
                 )}
               </ul>
             </div>
-
-            <DecisionSessionsPanel />
           </div>
         </div>
       </div>
