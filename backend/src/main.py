@@ -2,7 +2,6 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.api.routes import districts, scores, chat, simulator, timeline, aqi
 from src.api.routes import decisions
@@ -17,8 +16,10 @@ import src.models.city_score # noqa: F401
 import src.models.decision  # noqa: F401
 import src.models.event     # noqa: F401
 import src.models.feedback  # noqa: F401
+import src.models.decision_session  # noqa: F401
 from src.utils.config import settings
 from src.scheduler.main import run_all
+from src.scheduler.registry import scheduler
 from src.knowledge_pipeline import scheduler as knowledge_scheduler
 
 
@@ -46,9 +47,8 @@ async def lifespan(app: FastAPI):
     
     async with AsyncSessionLocal() as session:
         await _seed_districts(session)
-    
+
     # Khởi chạy Scheduler ngay trong tiến trình FastAPI
-    scheduler = AsyncIOScheduler()
     scheduler.add_job(run_all, "interval", minutes=15, id="full_pipeline")
     knowledge_scheduler.register(scheduler)
     scheduler.start()
