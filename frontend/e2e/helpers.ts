@@ -72,6 +72,18 @@ export async function switchToMissionControl(page: Page) {
       }),
     })
   )
+  await page.route('**/api/decision-sessions', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+  )
+  await page.route('**/api/decision-sessions/analytics', route =>
+    route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        total_sessions: 0, approval_rate: null, evaluated_count: 0,
+        improved_rate: null, avg_improvement: null, avg_decision_latency_minutes: null,
+      }),
+    })
+  )
   await page.getByRole('button', { name: 'Mission Control v2' }).click()
   await expect(page.getByPlaceholder(/Chuẩn bị thành phố/)).toBeVisible()
 }

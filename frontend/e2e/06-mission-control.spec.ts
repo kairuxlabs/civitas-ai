@@ -119,4 +119,35 @@ test.describe('Mission Control v2', () => {
 
     await expect(page.getByRole('button', { name: /Dừng/ })).toBeVisible({ timeout: 8_000 })
   })
+
+  test('Decision Sessions panel renders a session card from the API', async ({ page }) => {
+    await waitForApp(page)
+    await switchToMissionControl(page)
+
+    // Overrides the empty-array default registered by switchToMissionControl.
+    await page.route('**/api/decision-sessions', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 1, run_id: 'run-9', goal: 'Giảm ùn tắc Hoàn Kiếm', district_id: 1,
+          status: 'observing', decision_id: 5,
+          baseline_scores: { traffic_score: 60, environment_score: 70, citizen_score: 65, risk_score: 20, overall_score: 68 },
+          expected_outcome: null, observed_scores: null, outcome_delta: null,
+          success_rate: null, outcome_status: null, context_snapshot: null, outcome_evidence: null,
+          created_at: new Date().toISOString(), approved_at: new Date().toISOString(),
+          observed_at: null, evaluated_at: null,
+        },
+      ]),
+    }))
+    await page.route('**/api/decision-sessions/analytics', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        total_sessions: 1, approval_rate: 100, evaluated_count: 0,
+        improved_rate: null, avg_improvement: null, avg_decision_latency_minutes: 4,
+      }),
+    }))
+
+    await expect(page.getByTestId('decision-session-card')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByText('Giảm ùn tắc Hoàn Kiếm')).toBeVisible()
+  })
 })
