@@ -29,21 +29,23 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 |---|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Live deployment** | Frontend: [frontend-eta-six-46.vercel.app](https://frontend-eta-six-46.vercel.app) · Backend: [civitas-ai-backend.onrender.com](https://civitas-ai-backend.onrender.com)                                           |
 | **Demo video (3 min)** | [CityOS](https://youtu.be/nCoEuoMoRss) *(`docs/demo/cityos_demo_recording.webm` for a raw, unnarrated Playwright screen capture of the live app to use as B-roll/reference)*        |
-| **Scenario shown** | Heavy rain triggers flash-flood risk in Hanoi → Planner dispatches Traffic + Emergency + Knowledge agents in parallel → Decision recommends road closures + shelter alerts → operator approves from Mission Control |
+| **Scenario shown** | Heavy rain triggers flash-flood risk in Hanoi → Planner dispatches Traffic + Emergency + Knowledge agents in parallel → Decision recommends road closures + shelter alerts → operator approves from Mission Control → Decision Session captures baseline CityScores and can **Check Outcome Now** |
 
 ---
 
 ## Features
 
 - **Goal-driven multi-agent runtime (v2)** — a Planner decomposes a goal into a dependency-aware DAG; Traffic, Environment, Emergency, Citizen, and Knowledge workers execute in parallel waves, reflect on their own confidence, and feed a Decision stage that requires human approval
-- **Evidence-backed decisions + Critic Agent** — every agent (Traffic, Environment, Event, Citizen, Knowledge) cites structured evidence (source, type, confidence, timestamp) instead of bare prose; a rule-based Critic reviews the collected evidence for sufficiency and unsupported claims, and can push a decision's confidence below the approval threshold — a demo-clickable evidence viewer lets an operator inspect exactly what backs each recommendation
-- **Knowledge graph queries** — the Neo4j entity/relation graph (previously write-only) is now queried live: the Knowledge Agent extracts keywords from a query, looks up related entities/relations, and folds them into both its reasoning context and its cited evidence
+- **Decision Session lifecycle** — every v2 goal persists a `DecisionSession` (collecting → analyzing → recommend → awaiting_approval → observing → evaluated); at approval, a real `CityScoreService` baseline is captured; after a delay (or via **Check Outcome Now**) observed scores are compared and shown in Mission Control with KPI analytics
+- **Evidence-backed decisions + Critic Agent** — every agent cites structured evidence (source, type, confidence, timestamp); the Critic reviews sufficiency and unsupported claims, and treats Knowledge **gap** evidence as a confidence penalty that can push a decision into human approval
+- **Knowledge Quality Layer** — Qdrant chunks carry `ingested_at` freshness; Wikidata enrichment uses `enriched_by`/`enriched_at` without overwriting OSM provenance; Neo4j relationships store source/confidence/created_at; the Knowledge Agent emits gap evidence when nothing matched and surfaces real graph provenance in citations
+- **Knowledge graph queries** — the Neo4j entity/relation graph is queried live: the Knowledge Agent extracts keywords, looks up related entities/relations (with edge metadata), and folds them into reasoning context and cited evidence
 - **RAG knowledge layer** — OpenStreetMap, Wikipedia, Wikidata, GeoJSON boundaries, and government PDFs are chunked, embedded, and indexed into **Neo4j** (entity graph) + **Qdrant** (vector search), retrieved via an embed → search → rerank pipeline
 - **NVIDIA Nemotron AI Gateway** — planning, embedding, reranking, and content-safety all route through NVIDIA Nemotron models via **OpenRouter**, behind a single gateway so the backing model can change without touching any agent; falls back to Google Gemini automatically for resilience
 - **Real-time monitoring** — Weather and AQI data fetched every 15 minutes from Open-Meteo and OpenAQ across all 12 Hanoi districts
 - **8-agent v1 pipeline** — Sequential graph (traffic → environment → event → citizen → knowledge → decision → critic → explanation) powered by Google Gemini
 - **Live WebSocket streaming** — Agent pipeline progress broadcast in real time; operators watch each step complete
-- **Mission Control dashboard** — SVG district map, KPI bar, AI Copilot chat, live DAG view, real-time Decision Report with Approve/Reject and a click-to-inspect evidence modal
+- **Mission Control dashboard** — SVG district map, KPI bar, AI Copilot chat, live DAG view, Decision Sessions panel, real-time Decision Report with Approve/Reject and a click-to-inspect evidence modal (gap badge + freshness)
 - **What-If Simulator with Before/After comparison** — Scenario testing (heavy rain, air pollution, major event, heatwave) runs a neutral baseline analysis alongside the scenario, then shows both side by side with confidence deltas, changed predictions, and new recommendations highlighted
 - **Human-in-the-loop** — Decisions with confidence < 75% or flood risk flagged as `high` require operator approval
 - **Decision Timeline** — Persistent log of all agent decisions with confidence scores and full explanations
@@ -61,7 +63,7 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 | **Knowledge Graph** | **Neo4j** (entity/relation graph), **Qdrant** (vector search + RAG rerank) |
 | **Knowledge Sources** | OpenStreetMap, Wikipedia, Wikidata, GeoJSON, government PDFs (`src/knowledge_pipeline/`) |
 | **Database** | PostgreSQL 15 (production via Neon.tech), SQLite (local dev) |
-| **Scheduler** | APScheduler — triggers full data pipeline every 15 minutes |
+| **Scheduler** | APScheduler — 15-min data pipelines + one-shot Decision Session outcome jobs |
 | **Data Sources** | [Open-Meteo](https://open-meteo.com) (weather), [OpenAQ](https://openaq.org) (air quality) |
 | **Testing** | pytest + httpx (backend), Vitest + Testing Library (frontend), Playwright (E2E) |
 | **CI/CD** | GitHub Actions → Render (backend) + Vercel (frontend) + Neon.tech (database) |
@@ -79,6 +81,7 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 ┌────────────────────▼────────────────────────▼───────────────────┐
 │                    FastAPI Backend (:8000)                        │
 │  GET /api/districts   GET /api/scores   GET /api/timeline        │
+│  GET /api/decision-sessions   POST .../{id}/observe              │
 │  POST /api/chat       POST /api/simulate                         │
 │  POST /api/decisions/{id}/approve|reject                         │
 └───────┬─────────────────────────────┬────────────────────────────┘
@@ -88,11 +91,12 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 │                  │    │                                          │
 │  districts       │    │  traffic → environment → event           │
 │  weather         │◄───┤  → citizen → knowledge → decision        │
-│  aqi             │    │  → explanation                           │
+│  aqi             │    │  → critic → explanation                  │
 │  city_score      │    │                                          │
 │  agent_decisions │    │  Each step broadcasts WebSocket events   │
-└───────────────────┘   │  Decisions saved to DB + returned        │
-        ▲               └──────────────────────────────────────────┘
+│  decision_sessions│   │  Decisions + sessions saved to DB        │
+└───────────────────┘   └──────────────────────────────────────────┘
+        ▲
         │
 ┌───────┴──────────────┐
 │  APScheduler (15min)  │
@@ -100,9 +104,9 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 │  AQIPipeline          │  ← OpenAQ API
 │  FeedbackPipeline     │  ← synthetic citizen reports
 │  CityScoreService     │  ← derives scores from sensor data
+│  DecisionSession jobs │  ← one-shot outcome observation after approval
 └───────────────────────┘
 ```
-
 ### Agent Pipeline
 
 Every `/api/chat` and `/api/simulate` call runs a sequential 8-step pipeline:
@@ -111,7 +115,7 @@ Every `/api/chat` and `/api/simulate` call runs a sequential 8-step pipeline:
 Traffic → Environment → Event → Citizen → Knowledge → Decision → Critic → Explanation
 ```
 
-Each agent is a sync function called via `asyncio.to_thread()`. Between steps, WebSocket events are broadcast so the UI shows live progress. Traffic, Environment, Event, Citizen, and Knowledge each cite structured **evidence** (source, type, confidence, timestamp) alongside their analysis — the Knowledge Agent draws on a static SOP keyword index, Qdrant `city_knowledge` chunks, *and* live Neo4j knowledge-graph lookups. The Decision Agent synthesises all analyses + evidence into a structured response. The Critic Agent (`src/reasoning/critic.py`, shared with the v2 runtime) then checks the collected evidence for sufficiency and unsupported claims, reducing confidence when it finds gaps. If the resulting `confidence < 75` or `flood_risk == "high"`, the decision is flagged as `requires_approval = True` — so a Critic-driven confidence drop can itself trigger human approval.
+Each agent is a sync function called via `asyncio.to_thread()`. Between steps, WebSocket events are broadcast so the UI shows live progress. Traffic, Environment, Event, Citizen, and Knowledge each cite structured **evidence** (source, type, confidence, timestamp) alongside their analysis — the Knowledge Agent draws on a static SOP keyword index, Qdrant `city_knowledge` chunks (with `ingested_at` freshness), *and* live Neo4j lookups that carry relationship provenance. When nothing matches, Knowledge emits a `type: "gap"` evidence item. The Decision Agent synthesises all analyses + evidence into a structured response. The Critic Agent (`src/reasoning/critic.py`, shared with the v2 runtime) then checks evidence sufficiency — including knowledge gaps — reducing confidence when it finds problems. If the resulting `confidence < 75` or `flood_risk == "high"`, the decision is flagged as `requires_approval = True`.
 
 ### CityOS v2 Runtime — Multi-Agent + RAG (`backend/src/runtime/`, `src/ai/`)
 
@@ -135,13 +139,15 @@ Each agent is a sync function called via `asyncio.to_thread()`. Between steps, W
                                   │
                                   ▼
                               Workflow
+                    + DecisionSession (baseline → observe)
 
      Knowledge Worker retrieval path:
        Query → Embedding → Qdrant (top 20) → Nemotron Rerank → top 5 → context
        Query → keyword extraction → Neo4j find_related() → graph facts → context
+       (gap evidence when SOP + chunks + graph facts are all empty)
 
      Decision → Critic (src/reasoning/critic.py, shared with v1) checks evidence
-       sufficiency and unsupported claims, adjusts confidence before human approval
+       sufficiency, unsupported claims, and knowledge gaps before human approval
 
      AI Gateway (backend/src/ai/gateway.py) — single choke point:
        Planner / Embedding / Reranker / Content-Safety
@@ -150,10 +156,11 @@ Each agent is a sync function called via `asyncio.to_thread()`. Between steps, W
                           │
               (falls back to Google Gemini on failure)
 
-     Knowledge Graph:
+     Knowledge Graph + Quality Layer:
        OSM + Wikipedia + Wikidata + GeoJSON + Gov PDFs
                           │
-                 Neo4j (entities/relations) + Qdrant (vectors)
+       Neo4j (entities/relations + edge source/confidence/created_at)
+       Qdrant (vectors + ingested_at freshness)
 ```
 
 Every event (`plan_created`, `worker_started`, `reflection`, `decision_ready`, `approval_needed`, ...) is published on an async `event_bus.py` and bridged to the frontend as `runtime_event` over the same WebSocket used by the v1 pipeline, driving the live DAG view in Mission Control.
@@ -314,7 +321,19 @@ POST /api/decisions/{id}/approve
 POST /api/decisions/{id}/reject
 ```
 
-Approving or rejecting a decision broadcasts a `approval_result` WebSocket event to all connected clients.
+Approving or rejecting a decision broadcasts a `approval_result` WebSocket event to all connected clients. On the v2 runtime path, approval also captures a Decision Session baseline and schedules outcome observation.
+
+### Decision Sessions (v2)
+
+```http
+GET /api/decision-sessions
+GET /api/decision-sessions?status=observing
+GET /api/decision-sessions/analytics
+GET /api/decision-sessions/{id}
+POST /api/decision-sessions/{id}/observe
+```
+
+List/detail return persisted session lifecycle records (baseline vs observed CityScores, outcome status, evidence). `POST .../observe` is the demo **Check Outcome Now** path — runs the same outcome logic as the scheduled job when the session is in `observing` status (409 otherwise). Analytics returns approval/improved rates and average decision latency.
 
 ### Timeline
 
@@ -353,13 +372,13 @@ Connect at `ws://localhost:8000/ws`. Events:
 
 ## Testing
 
-Three automated test layers totalling 390 tests.
+Three automated test layers totalling **465** tests (322 backend + 91 frontend unit + 52 E2E).
 
 ### Backend (pytest)
 
 ```bash
 cd backend
-pytest                          # all 278 tests
+pytest                          # all 322 tests
 pytest -v tests/test_health.py  # single file
 ```
 
@@ -369,7 +388,7 @@ Uses SQLite in-memory — no external services required. See [docs/TESTING.md](d
 
 ```bash
 cd frontend
-npm test            # 66 tests, single pass
+npm test            # 91 tests, single pass
 npm run test:watch  # watch mode
 ```
 
@@ -377,12 +396,12 @@ npm run test:watch  # watch mode
 
 ```bash
 cd frontend
-npm run e2e          # 46 tests, Chromium headless
+npm run e2e          # 52 tests across suites 01-06, Chromium headless
 npm run e2e:headed   # watch the browser
 npm run e2e:ui       # interactive UI explorer
 ```
 
-Suites 01–04 mock all API calls and run without a backend. Suite 05 is a full-stack integration test that auto-skips if the backend is unreachable.
+Suites 01–04 and 06 mock all API calls and run without a backend. Suite 05 is a full-stack integration test that auto-skips if the backend is unreachable.
 
 ---
 
@@ -398,26 +417,26 @@ civitas-ai/
 │   ├── src/
 │   │   ├── agents/         # 8 agent node functions (sync, called via asyncio.to_thread)
 │   │   ├── reasoning/
-│   │   │   └── critic.py   # shared rule-based critic (evidence sufficiency, unsupported claims) — used by both v1 and v2
+│   │   │   └── critic.py   # shared critic (evidence sufficiency, unsupported claims, knowledge gaps)
 │   │   ├── runtime/        # v2 event-driven runtime: planner, scheduler, workers, reflection, decision, workflow, event_bus, memory
 │   │   ├── ai/              # AI Gateway: gateway.py (OpenRouter/Nemotron choke point), planner, embedding, reranker, safety
-│   │   ├── knowledge_pipeline/  # RAG ingestion: bootstrap, weekly refresh scheduler, collectors, loaders (incl. Neo4j find_related), processors
+│   │   ├── knowledge_pipeline/  # RAG ingestion + quality metadata (ingested_at, Wikidata enriched_by, Neo4j edge props)
 │   │   ├── simulation/     # v2 Digital Twin: continuous scenario-driven synthetic data engine + auto-goal trigger
-│   │   ├── api/routes/     # FastAPI routers: districts, scores, chat, simulator, decisions, timeline, aqi, runtime, simulation_v2, ws
+│   │   ├── api/routes/     # districts, scores, chat, simulator, decisions, decision_sessions, timeline, aqi, runtime, simulation_v2, ws
 │   │   ├── orchestrator/
 │   │   │   └── graph.py    # sequential pipeline runner + WebSocket broadcasting
 │   │   ├── pipelines/      # WeatherPipeline, AQIPipeline, FeedbackPipeline
 │   │   ├── repositories/   # async SQLAlchemy query helpers
-│   │   ├── services/       # CityScoreService
-│   │   ├── scheduler/      # APScheduler entry point
-│   │   ├── models/         # SQLAlchemy ORM models
+│   │   ├── services/       # CityScoreService, DecisionSessionService
+│   │   ├── scheduler/      # APScheduler entry + shared registry (decision observe jobs)
+│   │   ├── models/         # SQLAlchemy ORM models (incl. DecisionSession)
 │   │   ├── schemas/        # Pydantic v2 schemas
 │   │   ├── ws/             # WebSocket connection manager
 │   │   └── utils/          # pydantic-settings config, logger
 │   ├── scripts/
 │   │   ├── migrate_neon.py        # one-time Neon.tech migration + district seed
 │   │   └── verify_openrouter.py   # manual live-verification of OpenRouter model slugs
-│   ├── tests/              # 278 async pytest tests
+│   ├── tests/              # 322 async pytest tests
 │   ├── Dockerfile.prod     # production Docker image (2 Uvicorn workers)
 │   └── requirements.txt
 │
@@ -425,17 +444,18 @@ civitas-ai/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── CommandCenterPage.tsx   # v1 Mission Control layout — map, AI Copilot chat, Decision Report
-│   │   │   └── MissionControlPage.tsx  # v2 runtime UI — goal input, DAG view, Digital Twin panel
+│   │   │   └── MissionControlPage.tsx  # v2 runtime UI — goal input, DAG view, Digital Twin, Decision Sessions
 │   │   ├── components/
 │   │   │   ├── HanoiMap.tsx            # SVG district map with click handlers
 │   │   │   ├── SimulatorModal.tsx      # scenario selector + Before/After comparison modal
-│   │   │   ├── EvidenceModal.tsx       # click-to-inspect evidence viewer, grouped by agent
+│   │   │   ├── EvidenceModal.tsx       # evidence viewer (gap badge + freshness)
+│   │   │   ├── DecisionSessionsPanel.tsx # session KPI tiles, timeline, Check Outcome Now
 │   │   │   ├── AgentGraph.tsx          # live pipeline progress SVG
 │   │   │   └── SimulationPanel.tsx     # v2 Digital Twin controls + crawl trigger
 │   │   ├── hooks/useWebSocket.ts       # auto-reconnecting WebSocket hook
 │   │   ├── services/api.ts             # Axios client
 │   │   └── types/index.ts             # shared TypeScript interfaces
-│   ├── e2e/                            # Playwright test suites (01-05)
+│   ├── e2e/                            # Playwright suites 01-06
 │   ├── playwright.config.ts
 │   └── vercel.json                     # SPA rewrite + build config
 │
@@ -443,7 +463,8 @@ civitas-ai/
 ├── docker-compose.yml      # local full-stack dev
 └── docs/
     ├── DEPLOYMENT.md       # step-by-step Neon + Render + Vercel setup
-    └── TESTING.md          # test layer details + Playwright guide
+    ├── TESTING.md          # test layer details + data-testid reference
+    └── superpowers/        # design specs + implementation plans
 ```
 
 ---
@@ -459,8 +480,9 @@ civitas-ai/
 | `citizen_feedback` | Citizen reports with sentiment |
 | `city_score` | Derived scores: traffic, environment, citizen, risk, overall |
 | `agent_decisions` | Full pipeline output: prediction, impact, recommendations, confidence, explanation, approval status |
+| `decision_sessions` | v2 goal lifecycle: baseline/observed CityScores, outcome status, context snapshot, outcome evidence |
 
-All tables carry a `city_id` column (default `'hanoi'`) for future multi-city support.
+All tables carry a `city_id` column (default `'hanoi'`) for future multi-city support (`decision_sessions` scopes by `district_id` + `run_id` instead).
 
 ---
 
@@ -508,6 +530,12 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete step-by-step guide
 **v2 (shipped)**:
 - ✅ `scheduler.py`: weekly automated Wikipedia refresh, registered on the same APScheduler instance the 15-min pipelines use (gated behind a configured Gemini or OpenRouter key)
 - ✅ `Neo4jLoader.find_related()`: the knowledge graph is no longer write-only — the Knowledge Agent queries it live for entities/relations matching keywords in the user's question
+- ✅ Knowledge Quality Layer: Qdrant `ingested_at`, Wikidata `enriched_by`/`enriched_at`, Neo4j relationship source/confidence/created_at, Knowledge gap evidence, Critic gap penalty, EvidenceModal gap badge + freshness
+
+**v2.1–v2.3 (planned — not in current scope)**:
+- Knowledge Acquisition (external search / crawler to resolve gaps)
+- Multi-source Consensus / conflict detection
+- Autonomous Knowledge Evolution closed-loop with Decision Session outcomes
 
 **v3 (planned)**:
 - Incremental updates, RSS/news source integration, automated PDF discovery

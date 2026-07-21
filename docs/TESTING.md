@@ -4,9 +4,9 @@ Civitas AI has three layers of automated testing:
 
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
-| **Backend unit** | pytest + httpx | 278 tests | API routes, services, repositories, agents, runtime, reasoning (critic), AI gateway, knowledge pipeline |
-| **Frontend unit** | Vitest + Testing Library | 66 tests | React components, hooks, API service |
-| **E2E integration** | Playwright (Chromium) | 46 tests | Full UI flows, map interaction, simulator (incl. Before/After comparison), chat, evidence viewer |
+| **Backend unit** | pytest + httpx | 322 tests | API routes, services (incl. Decision Session), repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline |
+| **Frontend unit** | Vitest + Testing Library | 91 tests | React components (incl. DecisionSessionsPanel, EvidenceModal gap/freshness), hooks, API service |
+| **E2E integration** | Playwright (Chromium) | 52 tests | Full UI flows, map, simulator, chat, evidence viewer, Mission Control v2 + Decision Sessions panel |
 
 ---
 
@@ -60,29 +60,33 @@ DATABASE_URL=sqlite+aiosqlite:///./test.db GEMINI_API_KEY=dummy pytest
 backend/tests/
 ├── conftest.py                        # shared fixtures: db_session, client
 ├── test_health.py                     # GET /health
-├── test_models.py                     # SQLAlchemy model validation
 ├── test_integration.py                # cross-layer integration
 ├── test_api/
 │   ├── test_districts.py             # GET /api/districts
 │   ├── test_decisions.py             # POST /api/decisions/{id}/approve|reject
+│   ├── test_decision_sessions.py     # Decision Session list/detail/observe/analytics
 │   ├── test_runtime_api.py           # v2 goal/run/approval endpoints
 │   └── test_simulation_api.py        # v2 Digital Twin start/stop/status
+├── test_models/
+│   ├── test_core_models.py           # SQLAlchemy model validation
+│   └── test_decision_session.py      # DecisionSession.to_dict()
 ├── test_agents/                       # one file per v1 agent node
 │   ├── test_traffic_agent.py
 │   ├── test_environment_agent.py
 │   ├── test_event_agent.py
 │   ├── test_citizen_agent.py
-│   ├── test_knowledge_agent.py        # SOP matching, Qdrant chunks, Neo4j graph facts
+│   ├── test_knowledge_agent.py        # SOP/Qdrant/Neo4j; gap evidence + graph provenance
 │   ├── test_decision_agent.py         # evidence collection across all 5 agents
-│   ├── test_critic_agent.py           # v1 wiring of the shared evidence critic
+│   ├── test_critic_agent.py           # v1 wiring of the shared evidence critic (incl. gap)
 │   ├── test_decision_groundedness.py  # decision-quality regression scenarios
 │   ├── test_gemini_client.py
 │   └── test_orchestrator.py          # graph.run_agent_graph (mocked Gemini)
 ├── test_reasoning/
-│   └── test_critic.py                # shared, pure-function evidence critic (no LLM)
+│   └── test_critic.py                # shared critic + knowledge-gap penalty
 ├── test_ai/                           # AI Gateway: gateway, planner, embedding, reranker, safety
-├── test_knowledge_pipeline/           # collectors, parsers, loaders (incl. neo4j_loader), processors, bootstrap, scheduler
-├── test_runtime/                      # v2 planner, scheduler, workers, reflection, decision, workflow, event_bus, memory, state
+├── test_knowledge_pipeline/           # collectors, parsers, loaders, processors (ingested_at,
+│                                      # Wikidata enriched_by, Neo4j edge metadata), bootstrap
+├── test_runtime/                      # v2 planner/workers/workflow + DecisionSession wiring
 ├── test_pipelines/
 │   ├── test_aqi_pipeline.py
 │   └── test_weather_pipeline.py
@@ -90,7 +94,8 @@ backend/tests/
 │   ├── test_base_repos.py            # district, score, weather, aqi repos
 │   └── test_event_feedback_repos.py
 └── test_services/
-    └── test_city_score_service.py    # score arithmetic
+    ├── test_city_score_service.py    # score arithmetic
+    └── test_decision_session_service.py  # lifecycle, outcome formula, analytics
 ```
 
 ---
@@ -126,18 +131,22 @@ frontend/src/__tests__/
 ├── setup.ts                          # global mocks (axios, matchMedia, ResizeObserver)
 ├── components/
 │   ├── HanoiMap.test.tsx             # SVG rendering, district nodes, legend items
-│   ├── SimulatorModal.test.tsx       # modal open/close, scenario cards, run button, Before/After comparison, evidence click
-│   ├── EvidenceModal.test.tsx        # evidence grouped by agent, confidence display, close behavior
+│   ├── SimulatorModal.test.tsx       # modal open/close, scenarios, Before/After, evidence click
+│   ├── EvidenceModal.test.tsx        # grouped evidence, confidence, gap badge, freshness label
+│   ├── DecisionSessionsPanel.test.tsx # KPI tiles, session cards, timeline, Check Outcome Now
 │   ├── DecisionPanel.test.tsx        # confidence bar, prediction, recommendations, explanation
 │   ├── ScoreGauge.test.tsx
 │   └── AgentGraph.test.tsx           # agent node rendering, status indicators
+├── pages/
+│   ├── CommandCenterPage.test.tsx    # v1 layout smoke (E2E remains primary coverage)
+│   └── MissionControlPage.test.tsx   # v2 goal/DAG smoke + Decision Sessions panel mount
 ├── hooks/
 │   └── useWebSocket.test.ts         # connection, reconnect, message parsing
 └── services/
     └── api.test.ts                   # axios calls, base URL, error handling
 ```
 
-Note: `CommandCenterPage.tsx` and `MissionControlPage.tsx` have no dedicated unit test file — they're verified via the Playwright E2E suites below instead.
+Primary coverage for full page flows stays in Playwright E2E (suites below). Page-level Vitest files are smoke/wiring only.
 
 **Key pattern — SVG text assertions:**
 
@@ -201,8 +210,9 @@ npm run e2e
 | `03-simulator.spec.ts` | 7 | No | Modal open/close, scenarios, Run button state, Before/After comparison |
 | `04-chat.spec.ts` | 8 | No | Chat input, Enter key, AI response, report update, evidence modal |
 | `05-integration.spec.ts` | 7 | Yes (auto-skip) | Real health check, real districts, real chat, real simulator |
+| `06-mission-control.spec.ts` | 6 | No | v2 goal submit, approval, Digital Twin, Decision Sessions panel |
 
-Suites 01–04 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable.
+Suites 01–04 and 06 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable. `waitForApp` / Mission Control helpers also stub `**/api/decision-sessions` and `**/api/decision-sessions/analytics`.
 
 ### API mocking pattern
 
@@ -240,6 +250,13 @@ All testable elements have `data-testid` attributes:
 | Scenario card | `scenario-{key}` (e.g. `scenario-heavy_rain`) |
 | Simulator run button | `simulator-run-btn` |
 | District node (map) | `district-{id}` (e.g. `district-1`) |
+| Evidence modal | `evidence-modal` |
+| Evidence gap badge | `evidence-gap-badge` |
+| Evidence freshness label | `evidence-freshness` |
+| Decision Sessions KPI strip | `decision-analytics` |
+| Decision Session card | `decision-session-card` |
+| Decision Session timeline | `decision-session-timeline` |
+| Check Outcome Now button | `check-outcome-now-button` |
 
 ### Playwright config highlights
 
@@ -270,7 +287,7 @@ In GitHub Actions, all three test layers run in parallel on every push:
 jobs:
   backend:          # pytest --tb=short
   frontend-unit:    # vitest run
-  frontend-e2e:     # playwright test (suites 01-04, no backend)
+  frontend-e2e:     # playwright test (suites 01-04 + 06, no backend)
   frontend-build:   # npm run build (TypeScript + Vite)
 ```
 
