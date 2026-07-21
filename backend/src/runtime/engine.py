@@ -61,6 +61,7 @@ class RuntimeEngine:
         }
         run_store.add(run)
         run.log(f"Goal received: {goal}", actor="user")
+        await self._create_decision_session(run)
         await self.bus.publish(Event(
             type=EventTypes.GOAL_RECEIVED, payload={"goal": goal, "district_id": district_id},
             run_id=run.run_id, source="api",
@@ -84,6 +85,7 @@ class RuntimeEngine:
                 payload={"tasks": [{"id": s.id, "agent": s.agent, "depends_on": s.depends_on} for s in specs]},
                 run_id=run.run_id, source="planner",
             ))
+            await self._mark_session_analyzing(run)
 
             run.status = RunStatus.RUNNING
             await self.scheduler.execute(run, WORKERS)
@@ -96,6 +98,7 @@ class RuntimeEngine:
 
             run.status = RunStatus.DECIDING
             run.decision = await make_decision(run, self.bus)
+            await self._mark_session_recommend(run)
 
             await self.workflow.start(run)
         except Exception as e:
@@ -113,6 +116,35 @@ class RuntimeEngine:
             return None
         await self.workflow.resolve(run, approved)
         return run
+
+    async def _create_decision_session(self, run: RunState) -> None:
+        try:
+            from src.database.connection import AsyncSessionLocal
+            from src.services.decision_session_service import DecisionSessionService
+            async with AsyncSessionLocal() as session:
+                await DecisionSessionService.create(
+                    session, run_id=run.run_id, goal=run.goal, district_id=run.district_id,
+                )
+        except Exception as e:
+            logger.warning(f"DecisionSession create skipped for {run.run_id}: {e}")
+
+    async def _mark_session_analyzing(self, run: RunState) -> None:
+        try:
+            from src.database.connection import AsyncSessionLocal
+            from src.services.decision_session_service import DecisionSessionService
+            async with AsyncSessionLocal() as session:
+                await DecisionSessionService.mark_analyzing(session, run_id=run.run_id)
+        except Exception as e:
+            logger.warning(f"DecisionSession mark_analyzing skipped for {run.run_id}: {e}")
+
+    async def _mark_session_recommend(self, run: RunState) -> None:
+        try:
+            from src.database.connection import AsyncSessionLocal
+            from src.services.decision_session_service import DecisionSessionService
+            async with AsyncSessionLocal() as session:
+                await DecisionSessionService.mark_recommend(session, run_id=run.run_id)
+        except Exception as e:
+            logger.warning(f"DecisionSession mark_recommend skipped for {run.run_id}: {e}")
 
 
 engine = RuntimeEngine()

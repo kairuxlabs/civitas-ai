@@ -69,3 +69,47 @@ async def test_context_overrides_reach_workers(engine):
     await engine.wait_for(run.run_id)
     assert run.context["flood_risk"] == "high"
     assert run.decision["risk"] == "high"
+
+
+from unittest.mock import AsyncMock
+from src.services.decision_session_service import DecisionSessionService
+
+
+@pytest.mark.asyncio
+async def test_submit_goal_creates_decision_session(engine, monkeypatch):
+    create_mock = AsyncMock()
+    monkeypatch.setattr(DecisionSessionService, "create", create_mock)
+
+    run = await engine.submit_goal("Reduce congestion", district_id=3)
+
+    create_mock.assert_awaited_once()
+    _, call_args = create_mock.await_args
+    assert call_args["run_id"] == run.run_id
+    assert call_args["goal"] == "Reduce congestion"
+    assert call_args["district_id"] == 3
+
+
+@pytest.mark.asyncio
+async def test_execute_marks_analyzing_then_recommend(engine, monkeypatch):
+    analyzing_mock = AsyncMock()
+    recommend_mock = AsyncMock()
+    monkeypatch.setattr(DecisionSessionService, "mark_analyzing", analyzing_mock)
+    monkeypatch.setattr(DecisionSessionService, "mark_recommend", recommend_mock)
+
+    run = await engine.submit_goal("heavy rain", district_id=1)
+    await engine.wait_for(run.run_id)
+
+    analyzing_mock.assert_awaited_once()
+    recommend_mock.assert_awaited_once()
+    assert analyzing_mock.await_args[1]["run_id"] == run.run_id
+    assert recommend_mock.await_args[1]["run_id"] == run.run_id
+
+
+@pytest.mark.asyncio
+async def test_decision_session_failure_does_not_break_the_run(engine, monkeypatch):
+    monkeypatch.setattr(DecisionSessionService, "create", AsyncMock(side_effect=RuntimeError("db down")))
+
+    run = await engine.submit_goal("heavy rain", district_id=1)
+    await engine.wait_for(run.run_id)
+
+    assert run.status == RunStatus.AWAITING_APPROVAL  # unaffected by the DecisionSession failure
