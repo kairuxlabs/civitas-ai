@@ -31,6 +31,8 @@ def to_node_row(entity: dict) -> dict:
         "updated_at": metadata.get("updated_at", ""),
         "wikidata_label": metadata.get("wikidata_label"),
         "wikidata_instance_of": metadata.get("wikidata_instance_of"),
+        "enriched_by": metadata.get("enriched_by"),
+        "enriched_at": metadata.get("enriched_at"),
     }
 
 

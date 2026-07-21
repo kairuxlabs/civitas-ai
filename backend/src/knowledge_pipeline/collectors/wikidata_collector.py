@@ -1,4 +1,5 @@
 import aiohttp
+from datetime import datetime, timezone
 
 from src.knowledge_pipeline.collectors.base import BaseCollector
 from src.utils.logger import get_logger
@@ -60,6 +61,11 @@ class WikidataCollector(BaseCollector):
                 continue
             entity["metadata"]["wikidata_label"] = row.get("itemLabel", {}).get("value")
             entity["metadata"]["wikidata_instance_of"] = row.get("instanceOfLabel", {}).get("value")
+            # Existing technical debt fix: record Wikidata's own provenance
+            # rather than overwriting OSM's `source`/`updated_at` — a fact
+            # retrieved from Wikidata must not display as "source: OpenStreetMap".
+            entity["metadata"]["enriched_by"] = "Wikidata"
+            entity["metadata"]["enriched_at"] = datetime.now(timezone.utc).isoformat()
             entity["confidence"] = 0.9
             enriched.append(entity)
         return enriched

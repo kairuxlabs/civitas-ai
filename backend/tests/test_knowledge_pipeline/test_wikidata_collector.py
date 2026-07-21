@@ -26,7 +26,11 @@ async def test_returns_empty_when_no_entity_has_a_qid():
 
 @pytest.mark.asyncio
 async def test_enriches_matching_entity_and_mutates_in_place():
-    entities = [{"id": "hospital_1", "metadata": {"wikidata_qid": "Q123"}, "confidence": 1.0}]
+    entities = [{
+        "id": "hospital_1",
+        "metadata": {"wikidata_qid": "Q123", "source": "OpenStreetMap", "updated_at": "2026-01-01"},
+        "confidence": 1.0,
+    }]
     sparql_response = {
         "results": {"bindings": [{
             "item": {"value": "http://www.wikidata.org/entity/Q123"},
@@ -39,9 +43,15 @@ async def test_enriches_matching_entity_and_mutates_in_place():
         result = await WikidataCollector(entities).collect()
 
     assert len(result) == 1
-    assert entities[0]["metadata"]["wikidata_label"] == "Bach Mai Hospital"
-    assert entities[0]["metadata"]["wikidata_instance_of"] == "hospital"
+    meta = entities[0]["metadata"]
+    assert meta["wikidata_label"] == "Bach Mai Hospital"
+    assert meta["wikidata_instance_of"] == "hospital"
     assert entities[0]["confidence"] == 0.9
+    # existing technical debt fix: Wikidata's own provenance, NOT overwriting OSM's
+    assert meta["enriched_by"] == "Wikidata"
+    assert meta["enriched_at"]  # non-empty ISO timestamp
+    assert meta["source"] == "OpenStreetMap"  # untouched
+    assert meta["updated_at"] == "2026-01-01"  # untouched
 
 
 @pytest.mark.asyncio
