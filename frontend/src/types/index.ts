@@ -220,6 +220,34 @@ export interface DecisionSession {
   evaluated_at: string | null;
 }
 
+export interface SystemStatus {
+  database: boolean;
+  gemini_configured: boolean;
+  neo4j_configured: boolean;
+  qdrant_configured: boolean;
+  openrouter_configured: boolean;
+  gemini_model: string;
+  gemini_temperature: number;
+  openrouter_fallback_models: string[];
+}
+
+export interface KnowledgeRelatedItem {
+  name: string | null;
+  label: string | null;
+  relation: string | null;
+  related_name: string | null;
+  rel_source: string | null;
+  rel_confidence: number | null;
+  rel_created_at: string | null;
+}
+
+export interface KnowledgeSummary {
+  configured: boolean;
+  entities: number;
+  relations: number;
+  sample: KnowledgeRelatedItem[];
+}
+
 export interface DecisionSessionAnalytics {
   total_sessions: number;
   approval_rate: number | null;

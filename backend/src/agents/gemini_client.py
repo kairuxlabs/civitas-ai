@@ -8,6 +8,7 @@ logger = get_logger(__name__)
 
 # Current Gemini model supporting generateContent
 GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_TEMPERATURE = 0.4
 EMBED_MODEL = "models/gemini-embedding-001"
 EMBED_DIM = 768
 
@@ -27,7 +28,7 @@ def _call_gemini_raw(prompt: str) -> str | None:
             contents=prompt,
             config=types.GenerateContentConfig(
                 max_output_tokens=600,
-                temperature=0.4,
+                temperature=GEMINI_TEMPERATURE,
             ),
         )
         text = response.text.strip() if response.text else None

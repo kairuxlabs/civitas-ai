@@ -4,9 +4,9 @@ Civitas AI has three layers of automated testing:
 
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
-| **Backend unit** | pytest + httpx | 322 tests | API routes, services (incl. Decision Session), repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline |
-| **Frontend unit** | Vitest + Testing Library | 91 tests | React components (incl. DecisionSessionsPanel, EvidenceModal gap/freshness), hooks, API service |
-| **E2E integration** | Playwright (Chromium) | 52 tests | Full UI flows, map, simulator, chat, evidence viewer, Mission Control v2 + Decision Sessions panel |
+| **Backend unit** | pytest + httpx | 331 tests | API routes (incl. system status, knowledge summary), services (incl. Decision Session), repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline |
+| **Frontend unit** | Vitest + Testing Library | 103 tests | React components (incl. DecisionSessionsPanel, EvidenceModal gap/freshness), Stitch pages (City Intelligence, Reports, Data Sources, Knowledge Graph, Settings), hooks, API service |
+| **E2E integration** | Playwright (Chromium) | 58 tests | Full UI flows, map, simulator, chat, evidence viewer, Mission Control v2 + Decision Sessions panel, remaining Stitch screens |
 
 ---
 
@@ -211,6 +211,7 @@ npm run e2e
 | `04-chat.spec.ts` | 8 | No | Chat input, Enter key, AI response, report update, evidence modal |
 | `05-integration.spec.ts` | 7 | Yes (auto-skip) | Real health check, real districts, real chat, real simulator |
 | `06-mission-control.spec.ts` | 6 | No | v2 goal submit, approval, Digital Twin, Decision Sessions panel |
+| `07-stitch-screens.spec.ts` | 6 | No | City Intelligence, Reports, Data Sources, Knowledge Graph, Settings, sidebar nav |
 
 Suites 01–04 and 06 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable. `waitForApp` / Mission Control helpers also stub `**/api/decision-sessions` and `**/api/decision-sessions/analytics`.
 
@@ -257,7 +258,20 @@ All testable elements have `data-testid` attributes:
 | Decision Workspace | `decision-workspace-page` |
 | Decision Sessions page | `decision-sessions-page` |
 | Command Center route wrap | `command-center-route` |
-| Mock Stitch page | `mock-stitch-page` |
+| City Intelligence page | `city-intelligence-page` |
+| City Intelligence overall score | `city-intelligence-overall-score` |
+| City Intelligence district selector | `city-intelligence-district-option` |
+| Reports page | `reports-page` |
+| Report row | `report-row` |
+| Report approve/reject buttons | `report-approve-button` / `report-reject-button` |
+| Data Sources page | `data-sources-page` |
+| Data source row | `data-source-row` |
+| Knowledge Graph page | `knowledge-graph-page` |
+| Knowledge entity/relation counts | `knowledge-entity-count` / `knowledge-relation-count` |
+| Knowledge sample row | `knowledge-sample-row` |
+| Settings page | `settings-page` |
+| Settings Gemini model/temperature | `settings-gemini-model` / `settings-gemini-temperature` |
+| Settings fallback model row | `settings-fallback-model` |
 | Page wrapper (Command Center) | `mission-control` |
 | Header bar | `app-header` |
 | Connection badge | `connection-status` |

@@ -3,7 +3,7 @@ import type {
   District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint,
   RuntimeRun, RuntimeRunSummary, RuntimeMonitor,
   SimulationStatus, ScenarioInfo, CrawlResults,
-  DecisionSession, DecisionSessionAnalytics,
+  DecisionSession, DecisionSessionAnalytics, SystemStatus, KnowledgeSummary,
 } from '../types'
 
 const stripBOM = (s: string) => s.replace(/^﻿/, '').trim()
@@ -56,6 +56,9 @@ export const api = {
     http.post<DecisionSession>(`/api/decision-sessions/${id}/observe`).then(r => r.data),
   getDecisionSessionAnalytics: () =>
     http.get<DecisionSessionAnalytics>('/api/decision-sessions/analytics').then(r => r.data),
+
+  getSystemStatus: () => http.get<SystemStatus>('/api/system/status').then(r => r.data),
+  getKnowledgeSummary: () => http.get<KnowledgeSummary>('/api/knowledge/summary').then(r => r.data),
 }
 
 export function createWebSocket(): WebSocket {

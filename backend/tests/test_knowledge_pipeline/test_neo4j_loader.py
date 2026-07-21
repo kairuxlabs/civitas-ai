@@ -162,6 +162,48 @@ def test_find_related_runs_query_and_maps_rows(monkeypatch):
     assert kwargs == {"keywords": ["Metro"], "limit": 5}
 
 
+def test_count_summary_no_op_when_not_configured(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "")
+    loader = Neo4jLoader()
+    assert loader.count_summary() == {"entities": 0, "relations": 0}
+
+
+def test_count_summary_runs_count_queries(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_session = MagicMock()
+    mock_session.run.side_effect = [
+        [{"count": 128}],
+        [{"count": 426}],
+    ]
+    mock_driver = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_driver.session.return_value.__exit__.return_value = None
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        result = loader.count_summary()
+
+    assert result == {"entities": 128, "relations": 426}
+
+
+def test_count_summary_returns_zeros_on_driver_error(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_driver = MagicMock()
+    mock_driver.session.side_effect = RuntimeError("connection refused")
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        result = loader.count_summary()
+
+    assert result == {"entities": 0, "relations": 0}
+
+
 def test_find_related_returns_empty_list_on_driver_error(monkeypatch):
     monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
     monkeypatch.setattr(settings, "neo4j_user", "neo4j")

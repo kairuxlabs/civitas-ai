@@ -104,3 +104,17 @@ class Neo4jLoader:
         except Exception as e:
             logger.warning(f"Neo4j find_related failed: {e}")
             return []
+
+    def count_summary(self) -> dict:
+        """Real entity/relation counts for the Knowledge Graph explorer.
+        No-ops to zeros when Neo4j isn't configured or the driver fails."""
+        if not self._driver:
+            return {"entities": 0, "relations": 0}
+        try:
+            with self._driver.session() as session:
+                entities = list(session.run("MATCH (n) RETURN count(n) AS count"))[0]["count"]
+                relations = list(session.run("MATCH ()-[r]->() RETURN count(r) AS count"))[0]["count"]
+                return {"entities": entities, "relations": relations}
+        except Exception as e:
+            logger.warning(f"Neo4j count_summary failed: {e}")
+            return {"entities": 0, "relations": 0}
