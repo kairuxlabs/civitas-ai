@@ -1,0 +1,81 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { renderWithQueryClient } from '../test-utils'
+import DecisionSessionsPanel from '../../components/DecisionSessionsPanel'
+import { api } from '../../services/api'
+import type { DecisionSession, DecisionSessionAnalytics } from '../../types'
+
+vi.mock('../../services/api', () => ({
+  api: {
+    getDecisionSessions: vi.fn(),
+    getDecisionSessionAnalytics: vi.fn(),
+    observeDecisionSession: vi.fn(),
+  },
+}))
+
+const analytics: DecisionSessionAnalytics = {
+  total_sessions: 2, approval_rate: 50, evaluated_count: 1,
+  improved_rate: 100, avg_improvement: 13, avg_decision_latency_minutes: 5,
+}
+
+const observingSession: DecisionSession = {
+  id: 1, run_id: 'run-1', goal: 'Reduce congestion', district_id: 1,
+  status: 'observing', decision_id: 10,
+  baseline_scores: { traffic_score: 42, environment_score: 60, citizen_score: 70, risk_score: 30, overall_score: 55 },
+  expected_outcome: null, observed_scores: null, outcome_delta: null,
+  success_rate: null, outcome_status: null, context_snapshot: null, outcome_evidence: null,
+  created_at: '2026-07-21T09:00:00Z', approved_at: '2026-07-21T09:05:00Z',
+  observed_at: null, evaluated_at: null,
+}
+
+const rejectedSession: DecisionSession = {
+  ...observingSession, id: 2, run_id: 'run-2', status: 'rejected',
+  baseline_scores: null, approved_at: null,
+}
+
+beforeEach(() => {
+  vi.mocked(api.getDecisionSessions).mockResolvedValue([observingSession, rejectedSession])
+  vi.mocked(api.getDecisionSessionAnalytics).mockResolvedValue(analytics)
+})
+
+describe('DecisionSessionsPanel', () => {
+  it('renders the KPI tiles from analytics', async () => {
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getByTestId('decision-analytics')).toBeInTheDocument())
+    expect(screen.getByTestId('decision-analytics')).toHaveTextContent('2')
+  })
+
+  it('renders one card per session', async () => {
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
+  })
+
+  it('renders a timeline stepper on each card', async () => {
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-timeline')).toHaveLength(2))
+  })
+
+  it('shows Check Outcome Now only for sessions in observing status', async () => {
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
+    expect(screen.getAllByTestId('check-outcome-now-button')).toHaveLength(1)
+  })
+
+  it('does not render a baseline/observed card for rejected sessions', async () => {
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
+    const rejectedCard = screen.getByText('run-2').closest('[data-testid="decision-session-card"]')!
+    expect(rejectedCard).not.toHaveTextContent('Baseline')
+  })
+
+  it('calls observeDecisionSession and refetches when Check Outcome Now is clicked', async () => {
+    vi.mocked(api.observeDecisionSession).mockResolvedValue({ ...observingSession, status: 'evaluated' })
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getAllByTestId('check-outcome-now-button')).toHaveLength(1))
+
+    await userEvent.click(screen.getByTestId('check-outcome-now-button'))
+
+    await waitFor(() => expect(api.observeDecisionSession).toHaveBeenCalledWith(1))
+  })
+})
