@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 
 LABEL_BY_TYPE: dict[str, str] = {
@@ -55,15 +56,23 @@ def build_entity_graph(entities: list[dict], loader) -> dict[str, int]:
 
 
 def build_relation_graph(relations: list[dict], loader) -> int:
-    """relations: [{"from_type", "from_name", "rel", "to_type", "to_name"}],
-    as produced by bootstrap.py from entity_extractor output. Types that
-    don't map to a known OSM entity label (e.g. "flood", "emergency") fall
-    back to a generic "Concept" node."""
+    """relations: [{"from_type", "from_name", "rel", "to_type", "to_name",
+    "source"?}], as produced by bootstrap.py from entity_extractor output.
+    "source" is optional — present when the relation came from a chunk with
+    known provenance (bootstrap.py sets it from the chunk's own "source"
+    field); confidence is always None today, since the entity extractor
+    doesn't compute a per-relation confidence value. Types that don't map to
+    a known OSM entity label (e.g. "flood", "emergency") fall back to a
+    generic "Concept" node."""
     count = 0
+    now = datetime.now(timezone.utc).isoformat()
     for rel in relations:
         from_label = LABEL_BY_TYPE.get(rel["from_type"].lower(), "Concept")
         to_label = LABEL_BY_TYPE.get(rel["to_type"].lower(), "Concept")
-        ok = loader.merge_relation_by_name(from_label, rel["from_name"], rel["rel"], to_label, rel["to_name"])
+        ok = loader.merge_relation_by_name(
+            from_label, rel["from_name"], rel["rel"], to_label, rel["to_name"],
+            source=rel.get("source"), confidence=None, created_at=now,
+        )
         if ok:
             count += 1
     return count

@@ -12,8 +12,9 @@ class FakeLoader:
         self.node_calls.append((label, rows))
         return len(rows)
 
-    def merge_relation_by_name(self, from_label, from_name, rel_type, to_label, to_name):
-        self.relation_calls.append((from_label, from_name, rel_type, to_label, to_name))
+    def merge_relation_by_name(self, from_label, from_name, rel_type, to_label, to_name,
+                                source=None, confidence=None, created_at=None):
+        self.relation_calls.append((from_label, from_name, rel_type, to_label, to_name, source, confidence, created_at))
         return True
 
 
@@ -104,7 +105,21 @@ def test_build_relation_graph_uses_label_by_type_with_concept_fallback():
     loader = FakeLoader()
     count = build_relation_graph(relations, loader)
     assert count == 1
-    from_label, from_name, rel, to_label, to_name = loader.relation_calls[0]
+    from_label, from_name, rel, to_label, to_name, source, confidence, created_at = loader.relation_calls[0]
     assert from_label == "Hospital"
     assert to_label == "Concept"  # "flood" is not in LABEL_BY_TYPE
     assert rel == "IMPACTS"
+    assert source is None  # no "source" key on this relation dict
+    assert confidence is None  # not computed by the entity extractor today
+    assert created_at  # non-empty ISO timestamp
+
+
+def test_build_relation_graph_passes_through_source_when_present():
+    relations = [
+        {"from_type": "hospital", "from_name": "Bach Mai", "rel": "IMPACTS", "to_type": "flood",
+         "to_name": "Flood", "source": "Wikipedia"},
+    ]
+    loader = FakeLoader()
+    build_relation_graph(relations, loader)
+    _, _, _, _, _, source, _, _ = loader.relation_calls[0]
+    assert source == "Wikipedia"

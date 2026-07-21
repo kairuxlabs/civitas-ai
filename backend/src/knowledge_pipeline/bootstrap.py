@@ -101,6 +101,7 @@ async def bootstrap() -> dict:
                     "rel": rel.get("relation", "RELATED_TO").upper().replace(" ", "_"),
                     "to_type": type_by_name.get(to_name, "concept"),
                     "to_name": to_name,
+                    "source": chunk.get("source", "unknown"),
                 })
         except Exception as e:
             logger.warning(f"Entity extraction failed for a chunk: {e}")
