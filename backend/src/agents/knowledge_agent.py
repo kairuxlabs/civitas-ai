@@ -166,14 +166,14 @@ def knowledge_agent(state: AgentState) -> dict:
         {
             "id": f"ev-knowledge-graph-{i + 1}",
             "agent": "knowledge",
-            "source": "Neo4j Knowledge Graph",
+            "source": fact.get("rel_source") or "Neo4j Knowledge Graph",
             "type": "knowledge",
             "content": (
                 f"{fact['name']} ({fact['label']})"
                 + (f" —[{fact['relation']}]→ {fact['related_name']}" if fact.get("relation") else "")
             ),
-            "confidence": 0.6,
-            "time": "static",
+            "confidence": fact.get("rel_confidence") if fact.get("rel_confidence") is not None else 0.6,
+            "time": fact.get("rel_created_at") or "static",
         }
         for i, fact in enumerate(graph_facts)
     ]
@@ -181,7 +181,16 @@ def knowledge_agent(state: AgentState) -> dict:
     if not top and not city_chunks and not graph_facts:
         summary = "No specific SOP matched. Apply general city operations protocol."
         logger.info("Knowledge agent: no SOP matched")
-        return {"knowledge_summary": summary, "knowledge_evidence": evidence}
+        gap_evidence = [{
+            "id": "ev-knowledge-gap-1",
+            "agent": "knowledge",
+            "source": "Knowledge Retrieval",
+            "type": "gap",
+            "content": "No SOP, city knowledge, or graph facts matched this query.",
+            "confidence": 0,
+            "time": now,
+        }]
+        return {"knowledge_summary": summary, "knowledge_evidence": gap_evidence}
 
     # Try Gemini to synthesize a brief action summary from whatever context is available
     try:

@@ -170,10 +170,18 @@ def test_matched_sop_produces_evidence():
     assert all(e["time"] == "static" for e in ev)
 
 
-def test_no_match_produces_no_evidence():
+def test_no_match_produces_gap_evidence():
+    """Supersedes the old test_no_match_produces_no_evidence: 'no match' now
+    produces a gap evidence item instead of an empty list, so Critic (and
+    the operator) can see *why* nothing was found."""
     state = _state("What is the current status?", aqi=80, rain=0)
     result = knowledge_agent(state)
-    assert result["knowledge_evidence"] == []
+    ev = result["knowledge_evidence"]
+    assert len(ev) == 1
+    assert ev[0]["type"] == "gap"
+    assert ev[0]["source"] == "Knowledge Retrieval"
+    assert ev[0]["confidence"] == 0
+    assert ev[0]["agent"] == "knowledge"
 
 
 def test_city_chunks_produce_evidence_with_real_source(monkeypatch):
@@ -301,6 +309,27 @@ def test_graph_facts_included_in_gemini_prompt(monkeypatch):
 
     assert captured_prompts
     assert "Metro Line 2A" in captured_prompts[0]
+
+
+def test_graph_facts_use_real_provenance_when_present(monkeypatch):
+    import src.agents.knowledge_agent as ka
+
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    fake_loader = MagicMock()
+    fake_loader.find_related.return_value = [
+        {"name": "Metro Line 2A", "label": "Road", "relation": "CONNECTS", "related_name": "Cat Linh",
+         "rel_source": "Wikipedia", "rel_confidence": 0.92, "rel_created_at": "2026-07-21T09:00:00+00:00"},
+    ]
+    monkeypatch.setattr(ka, "Neo4jLoader", lambda: fake_loader)
+
+    state = _state("Tell me about Metro Line 2A", aqi=80, rain=0)
+    result = knowledge_agent(state)
+
+    graph_items = [e for e in result["knowledge_evidence"] if e["type"] == "knowledge" and "Metro Line 2A" in e["content"]]
+    assert len(graph_items) == 1
+    assert graph_items[0]["source"] == "Wikipedia"
+    assert graph_items[0]["confidence"] == 0.92
+    assert graph_items[0]["time"] == "2026-07-21T09:00:00+00:00"
 
 
 def test_graph_only_match_does_not_return_baseline_message(monkeypatch):
