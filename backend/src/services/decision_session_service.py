@@ -185,3 +185,44 @@ class DecisionSessionService:
         await session.commit()
         await session.refresh(record)
         return record
+
+    @staticmethod
+    async def get(session: AsyncSession, session_id: int) -> DecisionSession | None:
+        result = await session.execute(select(DecisionSession).where(DecisionSession.id == session_id))
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def list_sessions(session: AsyncSession, status: str | None = None) -> list[DecisionSession]:
+        query = select(DecisionSession).order_by(DecisionSession.created_at.desc())
+        if status:
+            query = query.where(DecisionSession.status == status)
+        result = await session.execute(query)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def analytics(session: AsyncSession) -> dict:
+        result = await session.execute(select(DecisionSession))
+        sessions = list(result.scalars().all())
+
+        decided = [s for s in sessions if s.status != "collecting" and s.status != "analyzing"
+                   and s.status != "recommend" and s.status != "awaiting_approval"]
+        approved = [s for s in decided if s.status != "rejected"]
+        evaluated = [s for s in sessions if s.status == "evaluated"]
+        improved = [s for s in evaluated if s.outcome_status == "improved"]
+        latencies = [
+            (s.approved_at - s.created_at).total_seconds() / 60
+            for s in sessions if s.approved_at is not None
+        ]
+        improvements = [
+            s.outcome_delta["overall_score"] for s in evaluated
+            if s.outcome_delta and "overall_score" in s.outcome_delta
+        ]
+
+        return {
+            "total_sessions": len(sessions),
+            "approval_rate": round(len(approved) / len(decided) * 100, 1) if decided else None,
+            "evaluated_count": len(evaluated),
+            "improved_rate": round(len(improved) / len(evaluated) * 100, 1) if evaluated else None,
+            "avg_improvement": round(sum(improvements) / len(improvements), 1) if improvements else None,
+            "avg_decision_latency_minutes": round(sum(latencies) / len(latencies), 1) if latencies else None,
+        }

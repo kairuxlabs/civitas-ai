@@ -198,3 +198,54 @@ async def test_observe_returns_none_when_not_observing(db_session):
 
 async def test_observe_unknown_session_id_returns_none(db_session):
     assert await DecisionSessionService.observe(db_session, 999999) is None
+
+
+async def test_get_returns_none_for_unknown_id(db_session):
+    assert await DecisionSessionService.get(db_session, 999999) is None
+
+
+async def test_list_sessions_orders_newest_first(db_session):
+    await DecisionSessionService.create(db_session, "run-a", "goal a", 1)
+    await DecisionSessionService.create(db_session, "run-b", "goal b", 1)
+
+    sessions = await DecisionSessionService.list_sessions(db_session)
+    run_ids = [s.run_id for s in sessions]
+    assert run_ids.index("run-b") < run_ids.index("run-a")
+
+
+async def test_list_sessions_filters_by_status(db_session):
+    await DecisionSessionService.create(db_session, "run-c", "goal", 1)
+    d = await DecisionSessionService.create(db_session, "run-d", "goal", 1)
+    await DecisionSessionService.mark_rejected(db_session, d.run_id)
+
+    rejected = await DecisionSessionService.list_sessions(db_session, status="rejected")
+    assert [s.run_id for s in rejected] == ["run-d"]
+
+
+async def test_analytics_empty_is_zero_safe(db_session):
+    result = await DecisionSessionService.analytics(db_session)
+    assert result == {
+        "total_sessions": 0, "approval_rate": None, "evaluated_count": 0,
+        "improved_rate": None, "avg_improvement": None, "avg_decision_latency_minutes": None,
+    }
+
+
+async def test_analytics_computes_rates(db_session):
+    district = await _seed_district_with_readings(db_session, aqi_index=200)
+    a = await DecisionSessionService.create(db_session, "run-e", "goal", district.id)
+    await DecisionSessionService.mark_rejected(db_session, a.run_id)
+
+    await DecisionSessionService.create(db_session, "run-f", "goal", district.id)
+    approved = await DecisionSessionService.mark_approved(db_session, "run-f")
+    db_session.add(AQI(city_id="hanoi", district_id=district.id, timestamp=datetime.now(timezone.utc),
+                        pm25=10.0, pm10=20.0, co=0.5, no2=10.0, aqi_index=40))
+    await db_session.flush()
+    await DecisionSessionService.observe(db_session, approved.id)
+
+    result = await DecisionSessionService.analytics(db_session)
+    assert result["total_sessions"] == 2
+    assert result["approval_rate"] == 50.0  # 1 approved out of 2 decided
+    assert result["evaluated_count"] == 1
+    assert result["improved_rate"] == 100.0
+    assert result["avg_improvement"] is not None
+    assert result["avg_decision_latency_minutes"] is not None
