@@ -28,3 +28,13 @@ def test_critic_no_notes_when_well_supported():
     result = critic_agent(state)
     assert result["critic_notes"] == []
     assert result["decision"]["confidence"] == 80
+
+
+def test_critic_reduces_confidence_on_knowledge_gap():
+    state = _state(confidence=80, evidence=[
+        {"type": "sensor"}, {"type": "sensor"},
+        {"type": "gap", "source": "Knowledge Retrieval"},
+    ])
+    result = critic_agent(state)
+    assert result["decision"]["confidence"] == 65
+    assert any("gap" in n.lower() for n in result["critic_notes"])

@@ -16,6 +16,8 @@ def review(decision: dict, evidence: list[dict]) -> dict:
 
     evidence_types = {e.get("type") for e in evidence}
     evidence_sources = {e.get("source") for e in evidence}
+    if "gap" in evidence_types:
+        notes.append("Knowledge gap: retrieval found no supporting SOP, city knowledge, or graph facts for this query.")
     prediction = decision.get("prediction", {}) or {}
     if not isinstance(prediction, dict):
         # v2 runtime decisions carry "prediction" as a free-text string, not a

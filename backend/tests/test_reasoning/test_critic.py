@@ -63,3 +63,19 @@ def test_flood_risk_requires_weather_specific_evidence():
     ]
     result = review(_decision(confidence=80, flood_risk="high"), evidence_with_weather)
     assert not any("flood_risk" in n.lower() for n in result["critic_notes"])
+
+
+def test_knowledge_gap_reduces_confidence():
+    evidence = [
+        {"type": "sensor"}, {"type": "sensor"},
+        {"type": "gap", "source": "Knowledge Retrieval"},
+    ]
+    result = review(_decision(confidence=80), evidence)
+    assert any("gap" in n.lower() for n in result["critic_notes"])
+    assert result["confidence"] == 65  # one 15-point penalty
+
+
+def test_no_gap_evidence_no_gap_note():
+    evidence = [{"type": "sensor"}, {"type": "sensor"}]
+    result = review(_decision(confidence=80), evidence)
+    assert not any("gap" in n.lower() for n in result["critic_notes"])
