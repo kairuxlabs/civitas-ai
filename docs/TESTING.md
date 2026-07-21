@@ -219,19 +219,32 @@ Suites 01–04 and 06 mock all API calls via `page.route()` — they work withou
 All mocked tests use the shared `waitForApp()` helper from `e2e/helpers.ts`. Mocks must be registered **before** `page.goto()`:
 
 ```ts
-import { waitForApp } from './helpers'
+import { waitForApp, waitForCommandCenter, switchToMissionControl } from './helpers'
 
-test('example', async ({ page }) => {
-  await waitForApp(page)      // registers mocks + navigates + waits for data
+test('overview shell', async ({ page }) => {
+  await waitForApp(page) // mocks + `/` Overview
+  await expect(page.getByTestId('overview-page')).toBeVisible()
+})
+
+test('command center chrome', async ({ page }) => {
+  await waitForCommandCenter(page) // waitForApp then `/command-center`
   await expect(page.getByTestId('app-header')).toBeVisible()
+})
+
+test('decision workspace', async ({ page }) => {
+  await waitForApp(page)
+  await switchToMissionControl(page) // mocks v2 APIs + `/workspace`
+  await expect(page.getByTestId('decision-workspace-page')).toBeVisible()
 })
 ```
 
 `waitForApp` mocks:
 - `**/api/districts` → 12 Hanoi district objects
 - `**/api/scores` → 12 score objects with `overall_score: 72-83`
+- `**/health` → `{ status: 'ok' }`
+- empty decision-sessions + analytics stubs
 
-It then waits for `data-testid="app-header"` and for the text "Hoàn Kiếm" to appear (confirming TanStack Query resolved).
+It then waits for `data-testid="app-shell"` and `overview-page`. Suites that need chat/map/simulator call `waitForCommandCenter` (Command Center lives at `/command-center`, not `/`).
 
 ### data-testid reference
 
@@ -239,7 +252,13 @@ All testable elements have `data-testid` attributes:
 
 | Component | `data-testid` |
 |---|---|
-| Page wrapper | `mission-control` |
+| App shell | `app-shell` |
+| Overview page | `overview-page` |
+| Decision Workspace | `decision-workspace-page` |
+| Decision Sessions page | `decision-sessions-page` |
+| Command Center route wrap | `command-center-route` |
+| Mock Stitch page | `mock-stitch-page` |
+| Page wrapper (Command Center) | `mission-control` |
 | Header bar | `app-header` |
 | Connection badge | `connection-status` |
 | Chat messages | `chat-messages` |
