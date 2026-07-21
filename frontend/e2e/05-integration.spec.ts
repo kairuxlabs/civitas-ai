@@ -4,7 +4,7 @@
  * Tests real HTTP + WebSocket flow end-to-end.
  */
 import { test, expect } from '@playwright/test'
-import { waitForApp, backendReachable } from './helpers'
+import { waitForCommandCenter, backendReachable } from './helpers'
 
 test.describe('Full stack integration', () => {
   test.beforeEach(async ({ page }) => {
@@ -27,27 +27,27 @@ test.describe('Full stack integration', () => {
   })
 
   test('WebSocket connection shows Live badge', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     // Give WS time to connect
     await page.waitForTimeout(2000)
     await expect(page.getByTestId('connection-status')).toContainText('Live')
   })
 
   test('selecting district 1 shows Hoàn Kiếm in info bar', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.locator('[data-testid="district-1"]').click()
     await expect(page.getByText('Hoàn Kiếm')).toBeVisible()
   })
 
   test('KPI cards appear when scores are loaded', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     // Wait for TanStack Query to fetch scores (up to 8s)
     await expect(page.getByText('City Health')).toBeVisible({ timeout: 8000 })
     await expect(page.getByText('Districts')).toBeVisible()
   })
 
   test('chat sends real request and receives decision', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.locator('[data-testid="district-1"]').click()
     await page.getByTestId('chat-input').fill('What is the current flood risk?')
     await page.getByTestId('chat-send').click()
@@ -61,7 +61,7 @@ test.describe('Full stack integration', () => {
   })
 
   test('simulator sends real request and shows pipeline progress', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await page.getByTestId('scenario-air_pollution').click()
     await page.getByTestId('simulator-run-btn').click()

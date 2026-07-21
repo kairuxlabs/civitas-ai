@@ -3,7 +3,7 @@
  * Mocks /api/chat so tests run without a live backend.
  */
 import { test, expect } from '@playwright/test'
-import { waitForApp } from './helpers'
+import { waitForCommandCenter } from './helpers'
 
 const MOCK_DECISION = {
   prediction: { flood_risk: 'medium', traffic: 'moderate' },
@@ -30,7 +30,7 @@ test.describe('AI Copilot chat', () => {
         body: JSON.stringify(MOCK_DECISION),
       })
     })
-    await waitForApp(page)
+    await waitForCommandCenter(page)
   })
 
   test('chat input accepts text', async ({ page }) => {

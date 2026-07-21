@@ -4,11 +4,11 @@
  * Tests clicking districts and verifying the selected district name appears.
  */
 import { test, expect } from '@playwright/test'
-import { waitForApp, MOCK_DISTRICTS } from './helpers'
+import { waitForCommandCenter, MOCK_DISTRICTS } from './helpers'
 
 test.describe('Map district selection', () => {
   test('all 12 district nodes are in the DOM', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     for (let i = 1; i <= 12; i++) {
       await expect(page.locator(`[data-testid="district-${i}"]`)).toBeAttached()
     }
@@ -16,7 +16,7 @@ test.describe('Map district selection', () => {
 
   for (const { id, name } of MOCK_DISTRICTS) {
     test(`clicking district ${id} (${name}) updates header and copilot label`, async ({ page }) => {
-      await waitForApp(page)
+      await waitForCommandCenter(page)
       // SVG <g> hover handlers mutate the DOM on mousemove, making the element unstable.
       // dispatchEvent fires the click directly without moving the mouse, bypassing all hover effects.
       await page.locator(`[data-testid="district-${id}"]`).dispatchEvent('click')
@@ -28,7 +28,7 @@ test.describe('Map district selection', () => {
   }
 
   test('clicking a district highlights it (selection ring visible)', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.locator('[data-testid="district-3"]').dispatchEvent('click')
     const svg = page.locator('svg').first()
     await expect(svg).toBeVisible()
@@ -40,7 +40,7 @@ test.describe('Map district selection', () => {
     // "<rect fill=url(#grid)> subtree intercepts pointer events"). Unlike dispatchEvent
     // or { force: true }, a plain .click() performs real hit-testing and would have
     // caught this regression.
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.locator('[data-testid="district-2"]').click()
     await expect(page.getByText('Ba Đình', { exact: false }).first()).toBeVisible()
 

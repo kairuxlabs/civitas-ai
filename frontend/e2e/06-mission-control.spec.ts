@@ -1,19 +1,19 @@
 /**
- * Suite 6 – Mission Control v2 (Autonomous Runtime)
- * First e2e coverage for MissionControlPage — previously untested.
+ * Suite 6 – Decision Workspace (Stitch / formerly Mission Control v2)
  * All /api/v2/* calls mocked; no backend required.
  */
 import { test, expect } from '@playwright/test'
 import { waitForApp, switchToMissionControl } from './helpers'
 
-test.describe('Mission Control v2', () => {
-  test('switching to Mission Control v2 shows the goal input', async ({ page }) => {
+test.describe('Decision Workspace', () => {
+  test('opening workspace shows the goal input', async ({ page }) => {
     await waitForApp(page)
     await switchToMissionControl(page)
-    await expect(page.getByText('Giao mục tiêu cho CityOS Runtime')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Decision Workspace' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Execute Decision/i })).toBeVisible()
   })
 
-  test('submitting a goal shows the run status', async ({ page }) => {
+  test('submitting a goal shows the active run', async ({ page }) => {
     await waitForApp(page)
     await switchToMissionControl(page)
     const runningRun = {
@@ -24,16 +24,15 @@ test.describe('Mission Control v2', () => {
     await page.route('**/api/v2/goal', route => route.fulfill({
       status: 202, contentType: 'application/json', body: JSON.stringify(runningRun),
     }))
-    // MissionControlPage sets activeRunId on submit success and immediately fetches
-    // GET /api/v2/runs/run-1 via useQuery — must be mocked or the status never renders.
     await page.route('**/api/v2/runs/run-1', route => route.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify(runningRun),
     }))
 
-    await page.getByPlaceholder(/Chuẩn bị thành phố/).fill('Test goal')
-    await page.getByRole('button', { name: /Thực thi/ }).click()
+    await page.getByPlaceholder(/Reduce congestion/i).fill('Test goal')
+    await page.getByRole('button', { name: /Execute Decision/i }).click()
 
-    await expect(page.getByText('Đang thực thi')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByText('Active run: run-1')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByRole('heading', { name: 'Test goal' })).toBeVisible()
   })
 
   test('an awaiting_approval run shows Approve/Reject buttons that call the resolve endpoint', async ({ page }) => {
@@ -41,11 +40,11 @@ test.describe('Mission Control v2', () => {
     await switchToMissionControl(page)
 
     const runningRun = {
-      run_id: 'run-2', goal: 'Ứng phó ô nhiễm', district_id: 1, status: 'awaiting_approval',
+      run_id: 'run-2', goal: 'Respond to pollution', district_id: 1, status: 'awaiting_approval',
       tasks: [],
       decision: {
-        summary: 'Ô nhiễm cao', prediction: 'AQI tăng', risk: 'high',
-        recommendation: ['Cảnh báo sức khỏe'], confidence: 55, evidence: [],
+        summary: 'High pollution', prediction: 'AQI rising', risk: 'high',
+        recommendation: ['Issue health advisory'], confidence: 55, evidence: [],
       },
       workflow_steps: [], timeline: [], created_at: new Date().toISOString(),
       decision_record_id: 9, reflection: null,
@@ -59,11 +58,11 @@ test.describe('Mission Control v2', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...runningRun, status: 'executing_workflow' }) })
     })
 
-    await page.getByPlaceholder(/Chuẩn bị thành phố/).fill('Ứng phó ô nhiễm')
-    await page.getByRole('button', { name: /Thực thi/ }).click()
+    await page.getByPlaceholder(/Reduce congestion/i).fill('Respond to pollution')
+    await page.getByRole('button', { name: /Execute Decision/i }).click()
 
-    await expect(page.getByRole('button', { name: /Phê duyệt/ })).toBeVisible({ timeout: 8_000 })
-    await page.getByRole('button', { name: /Phê duyệt/ }).click()
+    await expect(page.getByRole('button', { name: /Approve/i })).toBeVisible({ timeout: 8_000 })
+    await page.getByRole('button', { name: /Approve/i }).click()
 
     await expect.poll(() => resolveBody).toEqual({ approved: true })
   })
@@ -75,16 +74,14 @@ test.describe('Mission Control v2', () => {
     await page.route('**/api/v2/goal', route => route.fulfill({
       status: 202, contentType: 'application/json',
       body: JSON.stringify({
-        run_id: 'run-3', goal: 'Lịch sử test', district_id: 1, status: 'done',
+        run_id: 'run-3', goal: 'History test', district_id: 1, status: 'done',
         tasks: [], decision: null, workflow_steps: [], timeline: [],
         created_at: new Date().toISOString(), decision_record_id: null, reflection: null,
       }),
     }))
-    // MissionControlPage sets activeRunId on submit success and immediately fetches
-    // GET /api/v2/runs/run-3 via useQuery — must be mocked or the status never renders.
     await page.route('**/api/v2/runs/run-3', route => route.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({
-        run_id: 'run-3', goal: 'Lịch sử test', district_id: 1, status: 'done',
+        run_id: 'run-3', goal: 'History test', district_id: 1, status: 'done',
         tasks: [], decision: null, workflow_steps: [], timeline: [],
         created_at: new Date().toISOString(), decision_record_id: null, reflection: null,
       }),
@@ -92,44 +89,28 @@ test.describe('Mission Control v2', () => {
     await page.route('**/api/v2/runs', route => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
-        runs: [{ run_id: 'run-3', goal: 'Lịch sử test', district_id: 1, status: 'done', created_at: new Date().toISOString(), task_count: 0, confidence: 90 }],
+        runs: [{ run_id: 'run-3', goal: 'History test', district_id: 1, status: 'done', created_at: new Date().toISOString(), task_count: 0, confidence: 90 }],
       }),
     }))
 
-    await page.getByPlaceholder(/Chuẩn bị thành phố/).fill('Lịch sử test')
-    await page.getByRole('button', { name: /Thực thi/ }).click()
+    await page.getByPlaceholder(/Reduce congestion/i).fill('History test')
+    await page.getByRole('button', { name: /Execute Decision/i }).click()
 
-    await expect(page.getByText('Lịch sử test')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByRole('button', { name: /History test/ })).toBeVisible({ timeout: 8_000 })
   })
 
-  test('Digital Twin panel Start button is visible and starts the simulation', async ({ page }) => {
+  // SimulationPanel / Digital Twin controls live on the legacy MissionControlPage,
+  // which is no longer routed in the Stitch shell (Workspace replaces it for phase 1).
+  test.skip('Digital Twin panel Start button is visible and starts the simulation', async () => {})
+
+  test('Decision Sessions page renders a session card from the API', async ({ page }) => {
     await waitForApp(page)
-    await switchToMissionControl(page)
 
-    await page.route('**/api/v2/simulation/start', route => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({
-        running: true, scenario: 'heavy_rain', scenario_label: 'Mưa lớn', interval_s: 30, auto_goal: true, tick: 0,
-        values: { rain: 10, aqi: 90, temperature: 28, humidity: 75, wind_speed: 12 }, last_auto_goal: null,
-      }),
-    }))
-
-    await expect(page.getByRole('button', { name: /Bắt đầu/ })).toBeVisible()
-    await page.getByRole('button', { name: /Bắt đầu/ }).click()
-
-    await expect(page.getByRole('button', { name: /Dừng/ })).toBeVisible({ timeout: 8_000 })
-  })
-
-  test('Decision Sessions panel renders a session card from the API', async ({ page }) => {
-    await waitForApp(page)
-    await switchToMissionControl(page)
-
-    // Overrides the empty-array default registered by switchToMissionControl.
     await page.route('**/api/decision-sessions', route => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify([
         {
-          id: 1, run_id: 'run-9', goal: 'Giảm ùn tắc Hoàn Kiếm', district_id: 1,
+          id: 1, run_id: 'run-9', goal: 'Reduce congestion at Hoan Kiem', district_id: 1,
           status: 'observing', decision_id: 5,
           baseline_scores: { traffic_score: 60, environment_score: 70, citizen_score: 65, risk_score: 20, overall_score: 68 },
           expected_outcome: null, observed_scores: null, outcome_delta: null,
@@ -147,7 +128,9 @@ test.describe('Mission Control v2', () => {
       }),
     }))
 
+    await page.goto('/sessions')
+    await expect(page.getByTestId('decision-sessions-page')).toBeVisible({ timeout: 8_000 })
     await expect(page.getByTestId('decision-session-card')).toBeVisible({ timeout: 8_000 })
-    await expect(page.getByText('Giảm ùn tắc Hoàn Kiếm')).toBeVisible()
+    await expect(page.getByText('Reduce congestion at Hoan Kiem')).toBeVisible()
   })
 })

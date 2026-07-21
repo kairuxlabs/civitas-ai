@@ -4,18 +4,18 @@
  * and mocks the /api/simulate endpoint so the pipeline progress is testable.
  */
 import { test, expect } from '@playwright/test'
-import { waitForApp } from './helpers'
+import { waitForCommandCenter } from './helpers'
 
 test.describe('Simulator modal', () => {
   test('opens when clicking Mô phỏng button', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await expect(page.getByTestId('simulator-modal')).toBeVisible()
     await expect(page.getByText('What-If Simulator')).toBeVisible()
   })
 
   test('closes when clicking X button', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await expect(page.getByTestId('simulator-modal')).toBeVisible()
     await page.locator('[data-testid="simulator-modal"] button').filter({ hasText: '' }).first().click()
@@ -23,7 +23,7 @@ test.describe('Simulator modal', () => {
   })
 
   test('shows 4 scenario cards', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await expect(page.getByTestId('scenario-heavy_rain')).toBeVisible()
     await expect(page.getByTestId('scenario-air_pollution')).toBeVisible()
@@ -32,20 +32,20 @@ test.describe('Simulator modal', () => {
   })
 
   test('Run button is disabled before selecting a scenario', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await expect(page.getByTestId('simulator-run-btn')).toBeDisabled()
   })
 
   test('Run button enables after selecting a scenario', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await page.getByTestId('scenario-heavy_rain').click()
     await expect(page.getByTestId('simulator-run-btn')).toBeEnabled()
   })
 
   test('selecting different scenario changes active card', async ({ page }) => {
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await page.getByTestId('scenario-heatwave').click()
     // Heatwave card should have scale-[1.02] applied (selected state)
@@ -88,7 +88,7 @@ test.describe('Simulator modal', () => {
       })
     })
 
-    await waitForApp(page)
+    await waitForCommandCenter(page)
     await page.getByTestId('simulator-btn').click()
     await page.getByTestId('scenario-heavy_rain').click()
     await page.getByTestId('simulator-run-btn').click()
