@@ -41,22 +41,28 @@ class Neo4jLoader:
             return 0
 
     def merge_relation_by_name(
-        self, from_label: str, from_name: str, rel_type: str, to_label: str, to_name: str
+        self, from_label: str, from_name: str, rel_type: str, to_label: str, to_name: str,
+        source: str | None = None, confidence: float | None = None, created_at: str | None = None,
     ) -> bool:
         """MERGEs both endpoints by `name` (creating lightweight nodes if they
-        don't already exist) and the relationship between them. Used for
-        entity-extraction-derived relations, which reference concepts by
-        name, not by OSM id."""
+        don't already exist) and the relationship between them, setting
+        source/confidence/created_at as relationship properties ("Knowledge
+        Edge Metadata"). Used for entity-extraction-derived relations, which
+        reference concepts by name, not by OSM id."""
         if not self._driver:
             return False
         query = (
             f"MERGE (a:{from_label} {{name: $from_name}}) "
             f"MERGE (b:{to_label} {{name: $to_name}}) "
-            f"MERGE (a)-[:{rel_type}]->(b)"
+            f"MERGE (a)-[r:{rel_type}]->(b) "
+            f"SET r.source = $source, r.confidence = $confidence, r.created_at = $created_at"
         )
         try:
             with self._driver.session() as session:
-                session.run(query, from_name=from_name, to_name=to_name)
+                session.run(
+                    query, from_name=from_name, to_name=to_name,
+                    source=source, confidence=confidence, created_at=created_at,
+                )
             return True
         except Exception as e:
             logger.warning(f"Neo4j merge_relation_by_name failed: {e}")
@@ -65,9 +71,10 @@ class Neo4jLoader:
     def find_related(self, keywords: list[str], limit: int = 5) -> list[dict]:
         """Read-side counterpart to upsert_nodes/merge_relation_by_name. Finds
         nodes whose name or display_name contains any of the given keywords
-        (case-insensitive), along with one hop of their relations. No-ops
-        (returns []) when Neo4j isn't configured, the driver failed to
-        initialize, or keywords is empty."""
+        (case-insensitive), along with one hop of their relations and that
+        relation's Knowledge Edge Metadata. No-ops (returns []) when Neo4j
+        isn't configured, the driver failed to initialize, or keywords is
+        empty."""
         if not self._driver or not keywords:
             return []
         query = (
@@ -75,7 +82,8 @@ class Neo4jLoader:
             "MATCH (n) "
             "WHERE toLower(n.name) CONTAINS toLower(kw) OR toLower(n.display_name) CONTAINS toLower(kw) "
             "OPTIONAL MATCH (n)-[r]-(m) "
-            "RETURN DISTINCT n.name AS name, labels(n)[0] AS label, type(r) AS relation, m.name AS related_name "
+            "RETURN DISTINCT n.name AS name, labels(n)[0] AS label, type(r) AS relation, m.name AS related_name, "
+            "r.source AS rel_source, r.confidence AS rel_confidence, r.created_at AS rel_created_at "
             "LIMIT $limit"
         )
         try:
@@ -87,6 +95,9 @@ class Neo4jLoader:
                         "label": row["label"],
                         "relation": row["relation"],
                         "related_name": row["related_name"],
+                        "rel_source": row["rel_source"],
+                        "rel_confidence": row["rel_confidence"],
+                        "rel_created_at": row["rel_created_at"],
                     }
                     for row in result
                 ]

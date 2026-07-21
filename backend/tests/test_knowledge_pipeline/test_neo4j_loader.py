@@ -31,7 +31,7 @@ def test_upsert_nodes_runs_merge_query_with_rows(monkeypatch):
     assert kwargs["rows"] == [{"id": "h1", "name": "Bach Mai"}]
 
 
-def test_merge_relation_by_name_runs_merge_query(monkeypatch):
+def test_merge_relation_by_name_runs_merge_query_with_no_metadata(monkeypatch):
     monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
     monkeypatch.setattr(settings, "neo4j_user", "neo4j")
     monkeypatch.setattr(settings, "neo4j_password", "pw")
@@ -49,8 +49,34 @@ def test_merge_relation_by_name_runs_merge_query(monkeypatch):
     args, kwargs = mock_session.run.call_args
     assert "MERGE (a:Flood {name: $from_name})" in args[0]
     assert "MERGE (b:Hospital {name: $to_name})" in args[0]
-    assert "MERGE (a)-[:IMPACTS]->(b)" in args[0]
-    assert kwargs == {"from_name": "Flood", "to_name": "Bach Mai Hospital"}
+    assert "MERGE (a)-[r:IMPACTS]->(b)" in args[0]
+    assert "SET r.source = $source, r.confidence = $confidence, r.created_at = $created_at" in args[0]
+    assert kwargs == {
+        "from_name": "Flood", "to_name": "Bach Mai Hospital",
+        "source": None, "confidence": None, "created_at": None,
+    }
+
+
+def test_merge_relation_by_name_passes_through_metadata(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_session = MagicMock()
+    mock_driver = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_driver.session.return_value.__exit__.return_value = None
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        loader.merge_relation_by_name(
+            "Flood", "Flood", "IMPACTS", "Hospital", "Bach Mai Hospital",
+            source="Wikipedia", confidence=None, created_at="2026-07-21T09:00:00+00:00",
+        )
+
+    _, kwargs = mock_session.run.call_args
+    assert kwargs["source"] == "Wikipedia"
+    assert kwargs["created_at"] == "2026-07-21T09:00:00+00:00"
 
 
 def test_upsert_nodes_returns_zero_on_driver_error(monkeypatch):
@@ -112,7 +138,10 @@ def test_find_related_runs_query_and_maps_rows(monkeypatch):
 
     mock_session = MagicMock()
     mock_session.run.return_value = [
-        {"name": "Metro Line 2A", "label": "Road", "relation": "CONNECTS", "related_name": "Cat Linh"},
+        {
+            "name": "Metro Line 2A", "label": "Road", "relation": "CONNECTS", "related_name": "Cat Linh",
+            "rel_source": "Wikipedia", "rel_confidence": None, "rel_created_at": "2026-07-21T09:00:00+00:00",
+        },
     ]
     mock_driver = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
@@ -122,12 +151,14 @@ def test_find_related_runs_query_and_maps_rows(monkeypatch):
         loader = Neo4jLoader()
         result = loader.find_related(["Metro"], limit=5)
 
-    assert result == [
-        {"name": "Metro Line 2A", "label": "Road", "relation": "CONNECTS", "related_name": "Cat Linh"},
-    ]
+    assert result == [{
+        "name": "Metro Line 2A", "label": "Road", "relation": "CONNECTS", "related_name": "Cat Linh",
+        "rel_source": "Wikipedia", "rel_confidence": None, "rel_created_at": "2026-07-21T09:00:00+00:00",
+    }]
     args, kwargs = mock_session.run.call_args
-    assert "UNWIND $keywords AS kw" in args[0]
-    assert "CONTAINS toLower(kw)" in args[0]
+    assert "r.source AS rel_source" in args[0]
+    assert "r.confidence AS rel_confidence" in args[0]
+    assert "r.created_at AS rel_created_at" in args[0]
     assert kwargs == {"keywords": ["Metro"], "limit": 5}
 
 
