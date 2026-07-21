@@ -212,6 +212,7 @@ npm run e2e
 | `05-integration.spec.ts` | 7 | Yes (auto-skip) | Real health check, real districts, real chat, real simulator |
 | `06-mission-control.spec.ts` | 6 | No | v2 goal submit, approval, Digital Twin, Decision Sessions panel |
 | `07-stitch-screens.spec.ts` | 6 | No | City Intelligence, Reports, Data Sources, Knowledge Graph, Settings, sidebar nav |
+| `08-production-smoke.spec.ts` | 10 | No (hits live prod) | Read-only smoke test against the deployed Vercel frontend + Render backend, all 9 screens |
 
 Suites 01–04 and 06 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable. `waitForApp` / Mission Control helpers also stub `**/api/decision-sessions` and `**/api/decision-sessions/analytics`.
 
