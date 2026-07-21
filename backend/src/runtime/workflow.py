@@ -24,6 +24,7 @@ class WorkflowRuntime:
         run.status = RunStatus.AWAITING_APPROVAL
         run.log("Recommendation awaiting human approval", actor="workflow")
         await self._persist_decision(run)
+        await self._mark_session_awaiting_approval(run)
         await self._publish(run, EventTypes.APPROVAL_NEEDED, {
             "decision": run.decision,
             "decision_record_id": run.decision_record_id,
@@ -43,11 +44,13 @@ class WorkflowRuntime:
                 outcome="rejected",
             )
             await self._update_persisted(run, approved=False)
+            await self._mark_session_rejected(run)
             await self._publish(run, EventTypes.WORKFLOW_FINISHED, {"outcome": "rejected"})
             return
 
         run.status = RunStatus.EXECUTING_WORKFLOW
         await self._update_persisted(run, approved=True)
+        await self._mark_session_approved_and_schedule(run)
         await self._step(run, "notify", "Đã gửi thông báo tới các đơn vị liên quan")
         await self._step(run, "create_incident", f"Đã tạo sự cố cho mục tiêu: {run.goal}")
         await asyncio.to_thread(
@@ -125,3 +128,43 @@ class WorkflowRuntime:
                 await session.commit()
         except Exception as e:
             logger.warning(f"Decision approval persistence skipped: {e}")
+
+    async def _mark_session_awaiting_approval(self, run: RunState) -> None:
+        try:
+            from src.database.connection import AsyncSessionLocal
+            from src.services.decision_session_service import DecisionSessionService
+            async with AsyncSessionLocal() as session:
+                await DecisionSessionService.mark_awaiting_approval(
+                    session, run_id=run.run_id, decision_id=run.decision_record_id,
+                )
+        except Exception as e:
+            logger.warning(f"DecisionSession mark_awaiting_approval skipped for {run.run_id}: {e}")
+
+    async def _mark_session_rejected(self, run: RunState) -> None:
+        try:
+            from src.database.connection import AsyncSessionLocal
+            from src.services.decision_session_service import DecisionSessionService
+            async with AsyncSessionLocal() as session:
+                await DecisionSessionService.mark_rejected(session, run_id=run.run_id)
+        except Exception as e:
+            logger.warning(f"DecisionSession mark_rejected skipped for {run.run_id}: {e}")
+
+    async def _mark_session_approved_and_schedule(self, run: RunState) -> None:
+        try:
+            from datetime import timedelta
+
+            from src.database.connection import AsyncSessionLocal
+            from src.scheduler.registry import scheduler
+            from src.services.decision_session_service import (
+                DECISION_OBSERVE_DELAY_MIN, DecisionSessionService, observe_session_job,
+            )
+            async with AsyncSessionLocal() as session:
+                record = await DecisionSessionService.mark_approved(session, run_id=run.run_id)
+            if record is not None:
+                run_date = datetime.now(timezone.utc) + timedelta(minutes=DECISION_OBSERVE_DELAY_MIN)
+                scheduler.add_job(
+                    observe_session_job, "date", run_date=run_date,
+                    args=[record.id], id=f"observe_session_{record.id}", replace_existing=True,
+                )
+        except Exception as e:
+            logger.warning(f"DecisionSession approval handling skipped for {run.run_id}: {e}")

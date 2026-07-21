@@ -226,3 +226,17 @@ class DecisionSessionService:
             "avg_improvement": round(sum(improvements) / len(improvements), 1) if improvements else None,
             "avg_decision_latency_minutes": round(sum(latencies) / len(latencies), 1) if latencies else None,
         }
+
+
+async def observe_session_job(session_id: int) -> None:
+    """APScheduler entry point — best-effort, matches workflow.py's
+    persistence philosophy. Never raises (a failed scheduled job must not
+    crash the scheduler thread)."""
+    from src.database.connection import AsyncSessionLocal
+    from src.utils.logger import get_logger
+    logger = get_logger(__name__)
+    try:
+        async with AsyncSessionLocal() as session:
+            await DecisionSessionService.observe(session, session_id)
+    except Exception as e:
+        logger.warning(f"DecisionSession observe job skipped for session {session_id}: {e}")
