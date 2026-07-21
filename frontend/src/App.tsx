@@ -1,47 +1,42 @@
-import { useState } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import CommandCenterPage from './pages/CommandCenterPage'
-import MissionControlPage from './pages/MissionControlPage'
+import AppShell from './layout/AppShell'
+import OverviewPage from './pages/stitch/OverviewPage'
+import DecisionWorkspacePage from './pages/stitch/DecisionWorkspacePage'
+import DecisionSessionsPage from './pages/stitch/DecisionSessionsPage'
+import CommandCenterRoute from './pages/stitch/CommandCenterRoute'
+import MockStitchPage from './pages/stitch/MockStitchPage'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15000, retry: 1 } },
 })
 
-type View = 'command' | 'runtime'
-
 export default function App() {
-  const [view, setView] = useState<View>('command')
-
   return (
     <QueryClientProvider client={queryClient}>
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #424754; border-radius: 10px; }
         * { box-sizing: border-box; }
         html, body, #root { height: 100%; margin: 0; padding: 0; }
       `}</style>
-      <div className="h-full flex flex-col bg-slate-950">
-        <nav className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
-          <span className="text-xs font-bold text-cyan-400 tracking-widest mr-3">CITYOS</span>
-          <button
-            onClick={() => setView('command')}
-            className={`text-xs px-3 py-1 rounded ${view === 'command' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            Command Center
-          </button>
-          <button
-            onClick={() => setView('runtime')}
-            className={`text-xs px-3 py-1 rounded ${view === 'runtime' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            Mission Control v2
-          </button>
-        </nav>
-        <div className="flex-1 min-h-0">
-          {view === 'command' ? <CommandCenterPage /> : <MissionControlPage />}
-        </div>
-      </div>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route index element={<OverviewPage />} />
+            <Route path="workspace" element={<DecisionWorkspacePage />} />
+            <Route path="sessions" element={<DecisionSessionsPage />} />
+            <Route path="command-center" element={<CommandCenterRoute />} />
+            <Route path="data-sources" element={<MockStitchPage title="Data Sources" blurb="Ingestion health and pipeline status (mock)." />} />
+            <Route path="knowledge" element={<MockStitchPage title="Knowledge Graph" blurb="Neo4j entity explorer (mock layout)." />} />
+            <Route path="intelligence" element={<MockStitchPage title="City Intelligence" blurb="District score deep-dive (mock layout)." />} />
+            <Route path="reports" element={<MockStitchPage title="Reports" blurb="Decision report archive (mock layout)." />} />
+            <Route path="settings" element={<MockStitchPage title="Settings" blurb="Platform configuration (mock layout)." />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   )
 }
