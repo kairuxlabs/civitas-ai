@@ -4,26 +4,26 @@ import { api } from '../services/api'
 import type { DecisionSession } from '../types'
 
 const STATUS_LABEL: Record<string, string> = {
-  collecting: 'Đang thu thập', analyzing: 'Đang phân tích', recommend: 'Đang đề xuất',
-  awaiting_approval: 'Chờ phê duyệt', rejected: 'Đã từ chối',
-  observing: 'Đang theo dõi', evaluated: 'Đã đánh giá',
+  collecting: 'Collecting', analyzing: 'Analyzing', recommend: 'Recommend',
+  awaiting_approval: 'Awaiting approval', rejected: 'Rejected',
+  observing: 'Observing', evaluated: 'Evaluated',
 }
 
 const OUTCOME_STYLES: Record<string, string> = {
-  improved: 'text-emerald-400', worse: 'text-rose-400', no_change: 'text-slate-400',
+  improved: 'text-emerald-400', worse: 'text-rose-400', no_change: 'text-on-surface-variant',
 }
 
 function ScoreRow({ label, value }: { label: string; value: number | undefined }) {
   return (
     <div className="flex justify-between text-xs">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-slate-300 tabular-nums">{value != null ? Math.round(value) : '—'}</span>
+      <span className="text-on-surface-variant">{label}</span>
+      <span className="text-on-surface tabular-nums">{value != null ? Math.round(value) : '—'}</span>
     </div>
   )
 }
 
 function fmtTime(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'
+  return iso ? new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'
 }
 
 function SessionTimeline({ session }: { session: DecisionSession }) {
@@ -34,9 +34,9 @@ function SessionTimeline({ session }: { session: DecisionSession }) {
     ['Evaluated', session.evaluated_at],
   ]
   return (
-    <div data-testid="decision-session-timeline" className="flex justify-between text-[9px] text-slate-600 pt-1">
+    <div data-testid="decision-session-timeline" className="flex justify-between text-[9px] text-on-surface-variant pt-1">
       {steps.map(([label, ts]) => (
-        <div key={label} className={`text-center ${ts ? 'text-slate-400' : ''}`}>
+        <div key={label} className={`text-center ${ts ? 'text-on-surface' : ''}`}>
           <div>{label}</div>
           <div className="tabular-nums">{fmtTime(ts)}</div>
         </div>
@@ -59,26 +59,26 @@ function SessionCard({ session }: { session: DecisionSession }) {
     && session.status !== 'recommend' && session.status !== 'awaiting_approval' && session.status !== 'rejected'
 
   return (
-    <div data-testid="decision-session-card" className="bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+    <div data-testid="decision-session-card" className="bg-surface-container border border-outline-variant rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-200">Session #{session.id}</p>
-        <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-400 rounded-full px-2 py-0.5">
+        <p className="text-xs font-semibold text-on-surface">Session #{session.id}</p>
+        <span className="text-[10px] bg-surface-container-high border border-outline-variant text-on-surface-variant rounded-full px-2 py-0.5">
           {STATUS_LABEL[session.status] ?? session.status}
         </span>
       </div>
-      <p className="text-xs text-slate-400">{session.goal}</p>
-      <p className="text-[10px] text-slate-600">{session.run_id}</p>
+      <p className="text-xs text-on-surface-variant">{session.goal}</p>
+      <p className="text-[10px] text-on-surface-variant">{session.run_id}</p>
       <SessionTimeline session={session} />
 
       {showOutcome && session.baseline_scores && (
-        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-800">
+        <div className="grid grid-cols-2 gap-3 pt-1 border-t border-outline-variant">
           <div>
-            <p className="text-[10px] text-slate-600 uppercase mb-1">Baseline</p>
+            <p className="text-[10px] text-on-surface-variant uppercase mb-1">Baseline</p>
             <ScoreRow label="Traffic" value={session.baseline_scores.traffic_score} />
             <ScoreRow label="AQI proxy" value={session.baseline_scores.environment_score} />
           </div>
           <div>
-            <p className="text-[10px] text-slate-600 uppercase mb-1">Observed</p>
+            <p className="text-[10px] text-on-surface-variant uppercase mb-1">Observed</p>
             <ScoreRow label="Traffic" value={session.observed_scores?.traffic_score} />
             <ScoreRow label="AQI proxy" value={session.observed_scores?.environment_score} />
           </div>
@@ -86,7 +86,7 @@ function SessionCard({ session }: { session: DecisionSession }) {
       )}
 
       {session.outcome_status && (
-        <div className="flex items-center justify-between pt-1 border-t border-slate-800 text-xs">
+        <div className="flex items-center justify-between pt-1 border-t border-outline-variant text-xs">
           <span className={OUTCOME_STYLES[session.outcome_status]}>
             {session.outcome_delta?.overall_score != null && `${session.outcome_delta.overall_score > 0 ? '+' : ''}${session.outcome_delta.overall_score}`}
             {session.success_rate != null && ` · Success ${session.success_rate}%`}
@@ -102,7 +102,7 @@ function SessionCard({ session }: { session: DecisionSession }) {
           data-testid="check-outcome-now-button"
           onClick={() => observe.mutate()}
           disabled={observe.isPending}
-          className="w-full text-xs bg-cyan-800 hover:bg-cyan-700 disabled:opacity-50 text-white rounded py-1.5 flex items-center justify-center gap-1.5"
+          className="w-full text-xs bg-primary hover:bg-primary/90 disabled:opacity-50 text-on-primary rounded py-1.5 flex items-center justify-center gap-1.5"
         >
           {observe.isPending ? <Loader2 size={12} className="animate-spin" /> : null}
           Check Outcome Now
@@ -125,24 +125,24 @@ export default function DecisionSessionsPanel() {
   })
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
-      <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-        <TrendingUp size={15} className="text-cyan-400" /> Decision Sessions
+    <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
+      <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+        <TrendingUp size={15} className="text-primary" /> Decision Sessions
       </h3>
 
       {analytics && (
         <div data-testid="decision-analytics" className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-slate-800 rounded p-2">
-            <p className="text-sm font-bold text-slate-200">{analytics.total_sessions}</p>
-            <p className="text-[10px] text-slate-500">Sessions</p>
+          <div className="bg-surface-container-high rounded p-2">
+            <p className="text-sm font-bold text-on-surface">{analytics.total_sessions}</p>
+            <p className="text-[10px] text-on-surface-variant">Sessions</p>
           </div>
-          <div className="bg-slate-800 rounded p-2">
-            <p className="text-sm font-bold text-slate-200">{analytics.improved_rate != null ? `${analytics.improved_rate}%` : '—'}</p>
-            <p className="text-[10px] text-slate-500">Improved</p>
+          <div className="bg-surface-container-high rounded p-2">
+            <p className="text-sm font-bold text-on-surface">{analytics.improved_rate != null ? `${analytics.improved_rate}%` : '—'}</p>
+            <p className="text-[10px] text-on-surface-variant">Improved</p>
           </div>
-          <div className="bg-slate-800 rounded p-2">
-            <p className="text-sm font-bold text-slate-200">{analytics.approval_rate != null ? `${analytics.approval_rate}%` : '—'}</p>
-            <p className="text-[10px] text-slate-500">Approval</p>
+          <div className="bg-surface-container-high rounded p-2">
+            <p className="text-sm font-bold text-on-surface">{analytics.approval_rate != null ? `${analytics.approval_rate}%` : '—'}</p>
+            <p className="text-[10px] text-on-surface-variant">Approval</p>
           </div>
         </div>
       )}
@@ -150,7 +150,7 @@ export default function DecisionSessionsPanel() {
       <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
         {(sessions ?? []).map(s => <SessionCard key={s.id} session={s} />)}
         {sessions && sessions.length === 0 && (
-          <p className="text-xs text-slate-600 italic text-center py-4">Chưa có decision session nào</p>
+          <p className="text-xs text-on-surface-variant italic text-center py-4">No decision sessions yet</p>
         )}
       </div>
     </div>
