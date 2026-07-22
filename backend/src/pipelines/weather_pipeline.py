@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,13 +15,26 @@ OPEN_METEO_URL = (
     "&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m"
 )
 
+HTTP_TIMEOUT_SECONDS = 10
+
 
 class WeatherPipeline:
     @staticmethod
     async def run(session: AsyncSession) -> None:
-        async with aiohttp.ClientSession() as http:
-            async with http.get(OPEN_METEO_URL) as resp:
-                data = await resp.json()
+        timeout = aiohttp.ClientTimeout(total=HTTP_TIMEOUT_SECONDS)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as http:
+                async with http.get(OPEN_METEO_URL) as resp:
+                    data = await resp.json()
+        except asyncio.TimeoutError:
+            logger.warning(f"Open-Meteo call timed out after {HTTP_TIMEOUT_SECONDS}s")
+            return
+        except aiohttp.ContentTypeError as e:
+            logger.warning(f"Open-Meteo returned a non-JSON response: {e}")
+            return
+        except Exception as e:
+            logger.warning(f"Open-Meteo call failed: {e}")
+            return
 
         current = data.get("current", {})
         timestamp = datetime.now(timezone.utc)
