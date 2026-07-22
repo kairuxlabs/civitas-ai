@@ -17,15 +17,19 @@ export default function SimulatorPage() {
   const [districtId, setDistrictId] = useState(1)
   const [result, setResult] = useState<DecisionOut | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const { data: districts = [] } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
 
   const handleRun = async () => {
     if (!scenario) return
     setLoading(true)
+    setError(null)
     try {
       const r = await api.simulate(scenario, districtId)
       setResult(r)
+    } catch {
+      setError('Simulation failed. Check backend connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -77,6 +81,12 @@ export default function SimulatorPage() {
       >
         {loading ? 'Running simulation...' : 'Run Simulation'}
       </button>
+
+      {error && (
+        <div data-testid="simulator-error" className="bg-red-950/50 border border-red-800 rounded-xl p-3 text-red-300 text-sm">
+          {error}
+        </div>
+      )}
 
       {(result || loading) && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
