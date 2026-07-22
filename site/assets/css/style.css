@@ -263,3 +263,95 @@ code {
   border: 1px solid var(--outline-variant);
   color: var(--on-surface-variant);
 }
+
+/* Tech stack */
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.stack-chip {
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.stack-chip__layer {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tertiary);
+}
+.stack-chip__name {
+  font-size: 0.85rem;
+  color: var(--on-surface);
+}
+
+/* Screenshots */
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.screenshot-card {
+  padding: 0;
+  overflow: hidden;
+}
+.screenshot-card img {
+  width: 100%;
+  display: block;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.screenshot-card figcaption {
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+}
+
+/* Engineering rigor */
+.rigor-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.rigor-stat {
+  text-align: center;
+}
+.rigor-stat__num {
+  display: block;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--secondary);
+}
+.rigor-stat__label {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+}
+
+/* Footer */
+.footer {
+  padding: 2.5rem 0;
+}
+.footer__inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.footer p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.footer__links {
+  display: flex;
+  gap: 1.5rem;
+}
+.footer__links a {
+  font-size: 0.85rem;
+  font-weight: 600;
+}

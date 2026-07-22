@@ -182,13 +182,104 @@
     </div>
   </section>
 
-  <!-- stack -->
+  <section class="section" id="stack">
+    <div class="container">
+      <p class="eyebrow">Tech Stack</p>
+      <h2>What it's built with</h2>
+      <div class="stack-grid">
+        <div class="stack-chip glass-card">
+          <span class="stack-chip__layer">Frontend</span>
+          <span class="stack-chip__name">React 18 · TypeScript · Vite · Tailwind · TanStack Query</span>
+        </div>
+        <div class="stack-chip glass-card">
+          <span class="stack-chip__layer">Backend</span>
+          <span class="stack-chip__name">FastAPI · Python · SQLAlchemy (async) · Pydantic v2</span>
+        </div>
+        <div class="stack-chip glass-card">
+          <span class="stack-chip__layer">Knowledge Graph</span>
+          <span class="stack-chip__name">Neo4j · Qdrant</span>
+        </div>
+        <div class="stack-chip glass-card">
+          <span class="stack-chip__layer">AI Gateway</span>
+          <span class="stack-chip__name">NVIDIA Nemotron via OpenRouter · Google Gemini fallback</span>
+        </div>
+        <div class="stack-chip glass-card">
+          <span class="stack-chip__layer">Database</span>
+          <span class="stack-chip__name">PostgreSQL (Neon.tech) · SQLite (local dev)</span>
+        </div>
+        <div class="stack-chip glass-card">
+          <span class="stack-chip__layer">Testing</span>
+          <span class="stack-chip__name">pytest · Vitest + Testing Library · Playwright</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <!-- screenshots -->
+  <section class="section" id="screenshots">
+    <div class="container">
+      <p class="eyebrow">Screenshots</p>
+      <h2>Real data, live from production</h2>
+      <p>Every screen below is a live capture from the deployed app — no placeholder content.</p>
+      <div class="screenshot-grid">
+        <figure class="screenshot-card glass-card">
+          <img src="assets/img/overview.png" alt="Overview page — City Status Matrix with live district scores" loading="lazy" />
+          <figcaption>Overview — live City Status Matrix and district digital twin</figcaption>
+        </figure>
+        <figure class="screenshot-card glass-card">
+          <img src="assets/img/decision-workspace.png" alt="Decision Workspace with execution trace and district map" loading="lazy" />
+          <figcaption>Decision Workspace — goal-driven runtime with a live execution trace</figcaption>
+        </figure>
+        <figure class="screenshot-card glass-card">
+          <img src="assets/img/decision-workspace-evidence.png" alt="Decision Workspace Evidence and Explanation modal" loading="lazy" />
+          <figcaption>Every citation behind a decision, grouped by agent</figcaption>
+        </figure>
+        <figure class="screenshot-card glass-card">
+          <img src="assets/img/decision-sessions.png" alt="Decision Sessions page with responsive card grid" loading="lazy" />
+          <figcaption>Decision Sessions — baseline vs. observed CityScore outcome tracking</figcaption>
+        </figure>
+        <figure class="screenshot-card glass-card">
+          <img src="assets/img/city-intelligence.png" alt="City Intelligence page with AQI trend chart" loading="lazy" />
+          <figcaption>City Intelligence — per-district AQI trend and score breakdown</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
 
-  <!-- rigor -->
+  <section class="section" id="rigor">
+    <div class="container">
+      <p class="eyebrow">Engineering Rigor</p>
+      <h2>Tested like it matters</h2>
+      <p>
+        A system that recommends action for real emergencies doesn't get to skip tests. CI runs the full
+        suite on every push, and the running app itself shows only real data end to end — no mocked metrics
+        behind the numbers you see live.
+      </p>
+      <div class="rigor-stats">
+        <div class="glass-card rigor-stat">
+          <span class="rigor-stat__num">377</span>
+          <span class="rigor-stat__label">backend tests</span>
+        </div>
+        <div class="glass-card rigor-stat">
+          <span class="rigor-stat__num">126</span>
+          <span class="rigor-stat__label">frontend tests</span>
+        </div>
+        <div class="glass-card rigor-stat">
+          <span class="rigor-stat__num">26</span>
+          <span class="rigor-stat__label">E2E tests</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <!-- footer -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <p>CityOS (Civitas AI) — MIT License</p>
+      <div class="footer__links">
+        <a href="https://github.com/kairuxlabs/civitas-ai" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://frontend-eta-six-46.vercel.app" target="_blank" rel="noopener">Live Demo</a>
+      </div>
+    </div>
+  </footer>
 
   <script src="assets/js/main.js" defer></script>
 </body>
