@@ -67,7 +67,11 @@ async def test_heatwave_auto_goal_triggers_on_temperature_not_rain_or_aqi():
     assert len(eng._goal_calls) == 1
     call = eng._goal_calls[0]
     assert "nắng nóng" in call["goal"].lower()
-    assert call["overrides"]["weather_data"]["temperature"] > 38
+    # The trigger condition checks the unrounded value (must be strictly > 38);
+    # the overrides carry a value rounded to 1 decimal, which can display as
+    # exactly 38.0 even when the raw reading was e.g. 38.04 — so >= here,
+    # not >, to avoid a rounding-induced flake.
+    assert call["overrides"]["weather_data"]["temperature"] >= 38
 
 
 @pytest.mark.asyncio
