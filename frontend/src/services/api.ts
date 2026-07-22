@@ -8,7 +8,15 @@ import type {
 
 const stripBOM = (s: string) => s.replace(/^﻿/, '').trim()
 const baseURL = stripBOM(import.meta.env.VITE_API_BASE_URL || '')
-const http = axios.create({ baseURL })
+const http = axios.create({ baseURL, timeout: 30000 })
+
+// Optional X-API-Key header for mutating endpoints — backend no-ops when its
+// own API_KEY env var is unset, so we only attach the header when configured
+// here too. Sending no header at all (the default) preserves today's behavior.
+const apiKey = import.meta.env.VITE_API_KEY
+if (apiKey) {
+  http.defaults.headers.common['X-API-Key'] = apiKey
+}
 
 export const api = {
   getDistricts: () => http.get<District[]>('/api/districts').then(r => r.data),
