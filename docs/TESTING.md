@@ -265,11 +265,13 @@ All testable elements have `data-testid` attributes:
 | Reports page | `reports-page` |
 | Report row | `report-row` |
 | Report approve/reject buttons | `report-approve-button` / `report-reject-button` |
+| Reports search input / status filter | `reports-search-input` / `reports-status-filter` |
 | Data Sources page | `data-sources-page` |
 | Data source row | `data-source-row` |
 | Knowledge Graph page | `knowledge-graph-page` |
 | Knowledge entity/relation counts | `knowledge-entity-count` / `knowledge-relation-count` |
 | Knowledge sample row | `knowledge-sample-row` |
+| Knowledge search input / label filter chip | `knowledge-search-input` / `knowledge-label-filter` |
 | Settings page | `settings-page` |
 | Settings Gemini model/temperature | `settings-gemini-model` / `settings-gemini-temperature` |
 | Settings fallback model row | `settings-fallback-model` |
@@ -291,6 +293,7 @@ All testable elements have `data-testid` attributes:
 | Decision Session card | `decision-session-card` |
 | Decision Session timeline | `decision-session-timeline` |
 | Check Outcome Now button | `check-outcome-now-button` |
+| Decision Sessions district/status filter | `decision-sessions-district-filter` / `decision-sessions-status-filter` |
 
 ### Playwright config highlights
 
