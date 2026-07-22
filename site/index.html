@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CityOS (Civitas AI) — Autonomous Multi-Agent Decision Intelligence</title>
+  <meta name="description" content="CityOS is an autonomous multi-agent decision intelligence platform for smart cities: a goal-driven agent runtime, an evidence-backed Critic, and a live Neo4j + Qdrant knowledge graph, reasoning over real weather/AQI/traffic/citizen data for Hanoi." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container navbar__inner">
+      <a href="#hero" class="navbar__brand">
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="16" y1="6" x2="6" y2="14" stroke="currentColor" stroke-width="1" stroke-opacity="0.5" />
+          <line x1="16" y1="6" x2="26" y2="14" stroke="currentColor" stroke-width="1" stroke-opacity="0.5" />
+          <line x1="6" y1="14" x2="11" y2="25" stroke="currentColor" stroke-width="1" stroke-opacity="0.5" />
+          <line x1="26" y1="14" x2="21" y2="25" stroke="currentColor" stroke-width="1" stroke-opacity="0.5" />
+          <line x1="6" y1="14" x2="21" y2="25" stroke="currentColor" stroke-width="1" stroke-opacity="0.5" />
+          <line x1="26" y1="14" x2="11" y2="25" stroke="currentColor" stroke-width="1" stroke-opacity="0.5" />
+          <circle cx="16" cy="6" r="3" fill="currentColor" />
+          <circle cx="6" cy="14" r="2.5" fill="currentColor" />
+          <circle cx="26" cy="14" r="2.5" fill="currentColor" />
+          <circle cx="11" cy="25" r="2.5" fill="currentColor" />
+          <circle cx="21" cy="25" r="2.5" fill="currentColor" />
+        </svg>
+        CityOS
+      </a>
+      <nav class="navbar__links">
+        <a href="#why">Why</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#runtime">Runtime</a>
+        <a href="#knowledge">Knowledge</a>
+        <a href="#stack">Stack</a>
+        <a href="#screenshots">Screenshots</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section hero" id="hero">
+    <div class="container hero__inner">
+      <p class="eyebrow">Hanoi City System Operator</p>
+      <h1>CityOS <span class="hero__sub">(Civitas AI)</span></h1>
+      <p class="hero__tagline">An Autonomous Multi-Agent Decision Intelligence Platform for Smart Cities</p>
+      <p class="hero__pitch">
+        CityOS ingests real-time weather, air quality, traffic, and citizen data, reasons over it with a
+        goal-driven multi-agent runtime backed by a Neo4j + Qdrant knowledge graph and NVIDIA Nemotron
+        models via OpenRouter, and surfaces explainable, human-approved decisions through a Decision
+        Workspace dashboard — real data only, in English or Vietnamese.
+      </p>
+      <div class="hero__cta">
+        <a href="https://frontend-eta-six-46.vercel.app" class="btn btn--primary" target="_blank" rel="noopener">View Live Demo</a>
+        <a href="https://github.com/kairuxlabs/civitas-ai" class="btn btn--ghost" target="_blank" rel="noopener">GitHub Repo</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="container">
+      <p class="eyebrow">Why This Project</p>
+      <h2>City operators don't need another dashboard. They need a system that reasons.</h2>
+      <p>
+        Hanoi generates a constant stream of fast-moving, ambiguous signals — a sudden downpour, a spike in
+        PM2.5, a cluster of citizen complaints, a crowd forming for an unplanned event. Individually, none of
+        these signals says much. Together, read in real time by someone who has to decide whether to close a
+        road or open a cooling station, they're exactly the kind of judgment call that's easy to get wrong —
+        either by reacting too slowly, or by trusting an opaque system that can't explain itself when the
+        decision turns out to matter.
+      </p>
+      <p>
+        CityOS is built around a different premise: an AI system that recommends action for real emergencies
+        should never be a black box. Every agent in the pipeline — Traffic, Environment, Emergency, Citizen,
+        Knowledge — cites structured evidence instead of asserting a conclusion. A rule-based Critic checks
+        that evidence for sufficiency before anything reaches a human. And nothing ships without an operator's
+        approval. The system's job is to make the reasoning behind a recommendation inspectable, not to
+        replace the person accountable for it.
+      </p>
+      <p>
+        This project exists to demonstrate that a multi-agent architecture can do this in practice — not as a
+        toy demo with fabricated metrics, but as a system running against real weather and air-quality feeds,
+        a real knowledge graph, and a real (if simulated-scenario) approval workflow, end to end.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="architecture">
+    <div class="container">
+      <p class="eyebrow">Architecture Overview</p>
+      <h2>Four layers, one decision loop</h2>
+      <p>
+        The frontend never talks to an LLM directly, the agent runtimes never write to Postgres directly, and
+        no agent calls an AI provider directly — each layer only knows about the one below it.
+      </p>
+      <div class="arch-diagram">
+        <div class="arch-layer glass-card">
+          <h3>Frontend — Stitch Shell</h3>
+          <p>React + TypeScript dashboard. Decision Workspace, Decision Sessions, City Intelligence, Knowledge Graph, Reports, Settings — real backend data only, English/Vietnamese.</p>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-layer glass-card">
+          <h3>FastAPI Backend</h3>
+          <p>REST + WebSocket API. Routes goals/simulations to the agent runtimes, streams live progress, serves CityScore/AQI/decision-history reads.</p>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-layer glass-card arch-layer--split">
+          <div>
+            <h3>Multi-Agent Runtime</h3>
+            <p>v1 sequential pipeline + v2 event-driven Planner → Workers → Reflection → Decision, gated by human approval.</p>
+          </div>
+          <div>
+            <h3>Knowledge + AI Gateway</h3>
+            <p>Neo4j + Qdrant knowledge graph; NVIDIA Nemotron via OpenRouter behind a single gateway, Gemini fallback.</p>
+          </div>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-layer glass-card">
+          <h3>Data Layer</h3>
+          <p>PostgreSQL (sensor readings, decisions, sessions) · Open-Meteo + OpenAQ (real per-district weather/AQI, refreshed every 15 minutes)</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- runtime -->
+
+  <!-- knowledge -->
+
+  <!-- stack -->
+
+  <!-- screenshots -->
+
+  <!-- rigor -->
+
+  <!-- footer -->
+
+  <script src="assets/js/main.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+:root {
+  --bg: #10131a;
+  --surface: #1d2027;
+  --surface-high: #272a31;
+  --surface-low: #191b23;
+  --outline-variant: #424754;
+  --outline: #8c909f;
+  --on-surface: #e1e2ec;
+  --on-surface-variant: #c2c6d6;
+  --primary: #adc6ff;
+  --secondary: #4edea3;
+  --tertiary: #ffb786;
+  --radius: 1rem;
+  --radius-sm: 0.5rem;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--on-surface);
+  font-family: -apple-system, 'Segoe UI', Inter, system-ui, sans-serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.section {
+  padding: 5rem 0;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.section:last-of-type { border-bottom: none; }
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--secondary);
+  margin-bottom: 0.75rem;
+}
+
+h1, h2, h3 { line-height: 1.2; margin: 0 0 1rem; }
+
+h2 {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+h3 {
+  font-size: 1.05rem;
+  color: var(--on-surface);
+}
+
+p { color: var(--on-surface-variant); margin: 0 0 1rem; }
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: var(--surface-high);
+  padding: 0.15em 0.4em;
+  border-radius: 0.3em;
+  font-size: 0.9em;
+  color: var(--secondary);
+}
+
+.glass-card {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.btn:hover { transform: translateY(-1px); text-decoration: none; }
+
+.btn--primary {
+  background: var(--primary);
+  color: #002e6a;
+}
+.btn--primary:hover { opacity: 0.9; }
+
+.btn--ghost {
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+}
+.btn--ghost:hover { background: var(--surface-high); }
+
+/* Navbar */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--outline-variant);
+}
+.navbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+}
+.navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.navbar__links {
+  display: flex;
+  gap: 1.5rem;
+}
+.navbar__links a {
+  color: var(--on-surface-variant);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.navbar__links a:hover,
+.navbar__links a.active {
+  color: var(--secondary);
+  text-decoration: none;
+}
+@media (max-width: 720px) {
+  .navbar__links { display: none; }
+}
+
+/* Hero */
+.hero {
+  padding-top: 4.5rem;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, color-mix(in srgb, var(--primary) 12%, transparent), transparent);
+}
+.hero__inner { max-width: 760px; }
+.hero h1 {
+  font-size: clamp(2.25rem, 6vw, 3.25rem);
+  margin-bottom: 0.5rem;
+}
+.hero__sub {
+  color: var(--on-surface-variant);
+  font-weight: 400;
+  font-size: 0.55em;
+  display: block;
+}
+.hero__tagline {
+  color: var(--on-surface);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+.hero__pitch {
+  font-size: 1rem;
+  margin-bottom: 2rem;
+}
+.hero__cta {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Architecture diagram */
+.arch-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin-top: 2rem;
+}
+.arch-layer h3 { color: var(--primary); }
+.arch-layer p { margin-bottom: 0; font-size: 0.9rem; }
+.arch-layer--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.arch-layer--split h3 { color: var(--secondary); }
+@media (max-width: 640px) {
+  .arch-layer--split { grid-template-columns: 1fr; }
+}
+.arch-connector {
+  width: 2px;
+  height: 2rem;
+  background: var(--outline-variant);
+  margin: 0 auto;
+}
