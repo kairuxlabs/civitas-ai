@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { renderWithQueryClient } from '../test-utils'
 import OverviewPage from '../../pages/stitch/OverviewPage'
 import { api } from '../../services/api'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../services/api')
 
@@ -27,9 +28,11 @@ beforeEach(() => {
 describe('OverviewPage', () => {
   it('renders city score KPI from scores API', async () => {
     renderWithQueryClient(
-      <MemoryRouter>
-        <OverviewPage />
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter>
+          <OverviewPage />
+        </MemoryRouter>
+      </LanguageProvider>,
     )
     await waitFor(() => expect(screen.getByTestId('overview-page')).toBeInTheDocument())
     await waitFor(() => expect(screen.getByTestId('overview-overall-score')).toHaveTextContent('74'))
@@ -40,9 +43,11 @@ describe('OverviewPage', () => {
     vi.mocked(api.getScores).mockImplementation(() => new Promise(resolve => { resolveScores = resolve }))
 
     renderWithQueryClient(
-      <MemoryRouter>
-        <OverviewPage />
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter>
+          <OverviewPage />
+        </MemoryRouter>
+      </LanguageProvider>,
     )
     expect(screen.getByTestId('overview-loading')).toBeInTheDocument()
 
@@ -54,10 +59,27 @@ describe('OverviewPage', () => {
     vi.mocked(api.getScores).mockRejectedValue(new Error('network down'))
 
     renderWithQueryClient(
-      <MemoryRouter>
-        <OverviewPage />
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter>
+          <OverviewPage />
+        </MemoryRouter>
+      </LanguageProvider>,
     )
     await waitFor(() => expect(screen.getByTestId('overview-error')).toBeInTheDocument())
+  })
+
+  it('renders Vietnamese labels when the language is switched to vi', async () => {
+    localStorage.setItem('civitas-language', 'vi')
+
+    renderWithQueryClient(
+      <LanguageProvider>
+        <MemoryRouter>
+          <OverviewPage />
+        </MemoryRouter>
+      </LanguageProvider>,
+    )
+
+    await waitFor(() => expect(screen.getByText('Bảng trạng thái thành phố')).toBeInTheDocument())
+    localStorage.removeItem('civitas-language')
   })
 })

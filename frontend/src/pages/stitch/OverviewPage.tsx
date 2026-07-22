@@ -5,9 +5,11 @@ import { Activity, Database, Loader2, Rocket, ShieldAlert } from 'lucide-react'
 import { api } from '../../services/api'
 import HanoiMap from '../../components/HanoiMap'
 import { averageOverallScore } from '../../utils/scores'
+import { useTranslation } from '../../i18n/useTranslation'
 
 export default function OverviewPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [selectedDistrict, setSelectedDistrict] = useState(1)
 
   const { data: health } = useQuery({ queryKey: ['health'], queryFn: api.getHealth, refetchInterval: 15000 })
@@ -35,7 +37,7 @@ export default function OverviewPage() {
     return (
       <div data-testid="overview-page" className="p-margin-desktop space-y-gutter pb-16">
         <div data-testid="overview-error" className="glass-panel rounded-xl p-6 text-error text-sm">
-          Failed to load — check your connection.
+          {t('common.loadError')}
         </div>
       </div>
     )
@@ -46,9 +48,9 @@ export default function OverviewPage() {
       <section className="glass-panel p-6 rounded-xl relative overflow-hidden">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight mb-2">City Status Matrix</h1>
+            <h1 className="text-2xl font-bold tracking-tight mb-2">{t('overview.title')}</h1>
             <p className="text-on-surface-variant max-w-xl text-sm">
-              Hanoi Metropolitan Area. {(districts?.length ?? 12)} districts reporting
+              {t('overview.metroArea')} {(districts?.length ?? 12)} {t('overview.districtsReporting')}
               {health?.status ? ` · API ${health.status}` : ''}.
             </p>
           </div>
@@ -57,7 +59,7 @@ export default function OverviewPage() {
             onClick={() => navigate('/workspace')}
             className="bg-primary text-on-primary text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 shrink-0"
           >
-            <Rocket size={16} /> Run Decision
+            <Rocket size={16} /> {t('common.runDecision')}
           </button>
         </div>
       </section>
@@ -65,7 +67,7 @@ export default function OverviewPage() {
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
         <div className="glass-panel p-5 rounded-xl border-l-4 border-l-primary">
           <div className="text-xs text-on-surface-variant mb-2 flex justify-between">
-            <span>Overall City Score</span>
+            <span>{t('overview.overallCityScore')}</span>
             <Activity size={16} className="text-primary" />
           </div>
           <div data-testid="overview-overall-score" className="text-2xl font-semibold">
@@ -74,12 +76,12 @@ export default function OverviewPage() {
           </div>
         </div>
         <div className="glass-panel p-5 rounded-xl border-l-4 border-l-secondary">
-          <div className="text-xs text-on-surface-variant mb-2">Decision Sessions</div>
+          <div className="text-xs text-on-surface-variant mb-2">{t('overview.decisionSessions')}</div>
           <div className="text-2xl font-semibold">{analytics?.total_sessions ?? '—'}</div>
         </div>
         <div className="glass-panel p-5 rounded-xl border-l-4 border-l-primary-container">
           <div className="text-xs text-on-surface-variant mb-2 flex justify-between">
-            <span>Approval Rate</span>
+            <span>{t('overview.approvalRate')}</span>
             <Database size={16} className="text-primary-container" />
           </div>
           <div className="text-2xl font-semibold">
@@ -88,7 +90,7 @@ export default function OverviewPage() {
         </div>
         <div className="glass-panel p-5 rounded-xl border-l-4 border-l-tertiary">
           <div className="text-xs text-on-surface-variant mb-2 flex justify-between">
-            <span>Improved Rate</span>
+            <span>{t('overview.improvedRate')}</span>
             <ShieldAlert size={16} className="text-tertiary" />
           </div>
           <div className="text-2xl font-semibold">
@@ -99,9 +101,9 @@ export default function OverviewPage() {
 
       <section className="glass-panel rounded-xl overflow-hidden">
         <div className="p-4 border-b border-outline-variant flex items-center justify-between">
-          <h2 className="font-semibold text-base">Live Intelligence Stream: Hanoi</h2>
+          <h2 className="font-semibold text-base">{t('overview.liveIntelligenceStream')}</h2>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-primary/30 text-primary bg-primary/10">
-            LIVE TELEMETRY
+            {t('overview.liveTelemetry')}
           </span>
         </div>
         <div className="p-4 bg-surface-container-lowest">
