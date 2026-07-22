@@ -212,3 +212,54 @@ code {
   background: var(--outline-variant);
   margin: 0 auto;
 }
+
+/* Pipeline (Multi-Agent Runtime) */
+.pipeline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+.pipeline-step {
+  padding: 0.9rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  flex: 1 1 160px;
+  text-align: center;
+}
+.pipeline-step small {
+  display: block;
+  font-weight: 400;
+  color: var(--on-surface-variant);
+  margin-top: 0.25rem;
+}
+.pipeline-step--accent {
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+.pipeline-arrow {
+  color: var(--secondary);
+  font-size: 1.25rem;
+  flex: 0 0 auto;
+}
+@media (max-width: 720px) {
+  .pipeline { flex-direction: column; align-items: stretch; }
+  .pipeline-arrow { text-align: center; transform: rotate(90deg); }
+}
+
+/* Tag list (Knowledge Layer) */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.tag {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant);
+}

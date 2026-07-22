@@ -122,9 +122,65 @@
     </div>
   </section>
 
-  <!-- runtime -->
+  <section class="section" id="runtime">
+    <div class="container">
+      <p class="eyebrow">Multi-Agent Runtime</p>
+      <h2>A goal decomposes into a task graph, not a single prompt</h2>
+      <p>
+        A submitted goal doesn't go straight to an LLM. A Planner decomposes it into a dependency-aware DAG,
+        and specialized workers execute the independent branches in parallel.
+      </p>
+      <div class="pipeline">
+        <div class="pipeline-step glass-card">Planner</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card">Traffic / Emergency / Knowledge Workers <small>(parallel)</small></div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card">Reflection</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card">Decision</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card pipeline-step--accent">Human Approval</div>
+      </div>
+      <h3 style="margin-top: 2.5rem;">Evidence, not assertions</h3>
+      <p>
+        Every agent cites structured evidence — source, type, confidence, timestamp — instead of writing
+        prose conclusions. A rule-based Critic (not an LLM call) reviews that evidence for sufficiency and
+        unsupported claims; a weak or contradicted decision automatically routes to human approval rather
+        than shipping silently.
+      </p>
+      <h3>Outcomes are measured, not claimed</h3>
+      <p>
+        Every goal persists a Decision Session through its full lifecycle — collecting → analyzing →
+        recommend → awaiting approval → observing → evaluated. At approval, a real baseline CityScore is
+        captured. After a delay (or on demand via <strong>Check Outcome Now</strong>), the observed CityScore
+        is compared against that baseline, so "did this decision help" is a measured answer, not an assumed one.
+      </p>
+    </div>
+  </section>
 
-  <!-- knowledge -->
+  <section class="section" id="knowledge">
+    <div class="container">
+      <p class="eyebrow">Knowledge Layer</p>
+      <h2>A knowledge graph the agents actually query</h2>
+      <p>
+        City-specific knowledge doesn't live in a prompt template — it's ingested once and queried live.
+      </p>
+      <div class="tag-list">
+        <span class="tag">OpenStreetMap</span>
+        <span class="tag">Wikipedia</span>
+        <span class="tag">Wikidata</span>
+        <span class="tag">GeoJSON district boundaries</span>
+        <span class="tag">Government PDFs</span>
+      </div>
+      <p style="margin-top: 1.5rem;">
+        These sources are chunked, embedded, and indexed into <strong>Neo4j</strong> (an entity/relation
+        graph) and <strong>Qdrant</strong> (a vector store), retrieved through a full
+        <code>embed → search → rerank</code> pipeline. The Knowledge Agent doesn't just write to the graph —
+        it extracts keywords from the current goal, queries Neo4j for related entities and relations, and
+        folds real graph facts into both its reasoning context and its cited evidence.
+      </p>
+    </div>
+  </section>
 
   <!-- stack -->
 
