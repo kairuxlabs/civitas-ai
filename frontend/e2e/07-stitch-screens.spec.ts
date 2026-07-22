@@ -57,6 +57,40 @@ test.describe('Remaining Stitch screens', () => {
     await expect.poll(() => approvedId).toBe(1)
   })
 
+  test('Reports search and status filter narrow the real timeline rows', async ({ page }) => {
+    await waitForApp(page)
+    await page.route('**/api/timeline**', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 1, city_id: 'hanoi', district_id: 1, query: 'Prepare for heavy rain',
+          prediction: {}, impact: {}, recommendations: [], confidence: 62,
+          explanation: [], evidence: [], requires_approval: true, approved: null,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 2, city_id: 'hanoi', district_id: 2, query: 'Air pollution response',
+          prediction: {}, impact: {}, recommendations: [], confidence: 88,
+          explanation: [], evidence: [], requires_approval: false, approved: true,
+          created_at: new Date().toISOString(),
+        },
+      ]),
+    }))
+
+    await page.goto('/reports')
+    await expect(page.getByTestId('reports-page')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByTestId('report-row')).toHaveCount(2)
+
+    await page.getByTestId('reports-search-input').fill('pollution')
+    await expect(page.getByTestId('report-row')).toHaveCount(1)
+    await expect(page.getByText('Air pollution response')).toBeVisible()
+
+    await page.getByTestId('reports-search-input').fill('')
+    await page.getByTestId('reports-status-filter').selectOption('pending')
+    await expect(page.getByTestId('report-row')).toHaveCount(1)
+    await expect(page.getByText('Prepare for heavy rain')).toBeVisible()
+  })
+
   test('Data Sources shows real configured/not-configured integration status', async ({ page }) => {
     await waitForApp(page)
     await page.route('**/api/system/status', route => route.fulfill({
@@ -85,6 +119,36 @@ test.describe('Remaining Stitch screens', () => {
     await expect(page.getByTestId('knowledge-graph-page')).toBeVisible({ timeout: 8_000 })
     await expect(page.getByTestId('knowledge-entity-count')).toHaveText('128')
     await expect(page.getByTestId('knowledge-relation-count')).toHaveText('426')
+  })
+
+  test('Knowledge Graph search box queries the real API with the search term, and label chips filter the sample', async ({ page }) => {
+    await waitForApp(page)
+    const requestedQueries: (string | null)[] = []
+    await page.route('**/api/knowledge/summary**', route => {
+      const url = new URL(route.request().url())
+      requestedQueries.push(url.searchParams.get('q'))
+      route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({
+          configured: true, entities: 128, relations: 426,
+          sample: [
+            { name: 'Hoan Kiem', label: 'District', relation: 'NEAR', related_name: 'Old Quarter', rel_source: 'OSM', rel_confidence: null, rel_created_at: null },
+            { name: 'Bach Mai Hospital', label: 'Hospital', relation: 'IN', related_name: 'Hai Ba Trung', rel_source: 'OSM', rel_confidence: null, rel_created_at: null },
+          ],
+        }),
+      })
+    })
+
+    await page.goto('/knowledge')
+    await expect(page.getByTestId('knowledge-graph-page')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByTestId('knowledge-sample-row')).toHaveCount(2)
+
+    await page.getByTestId('knowledge-search-input').fill('Cau Giay')
+    await expect.poll(() => requestedQueries.at(-1)).toBe('Cau Giay')
+
+    await page.getByRole('button', { name: 'Hospital' }).click()
+    await expect(page.getByTestId('knowledge-sample-row')).toHaveCount(1)
+    await expect(page.getByText('Bach Mai Hospital')).toBeVisible()
   })
 
   test('Settings shows the real Gemini model and OpenRouter fallback list', async ({ page }) => {

@@ -133,4 +133,58 @@ test.describe('Decision Workspace', () => {
     await expect(page.getByTestId('decision-session-card')).toBeVisible({ timeout: 8_000 })
     await expect(page.getByText('Reduce congestion at Hoan Kiem')).toBeVisible()
   })
+
+  test('Decision Sessions district and status filters narrow the real session cards', async ({ page }) => {
+    await waitForApp(page)
+
+    await page.route('**/api/districts', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 1, city_id: 'hanoi', name: 'Hoan Kiem' },
+        { id: 2, city_id: 'hanoi', name: 'Ba Dinh' },
+      ]),
+    }))
+    await page.route('**/api/decision-sessions', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 1, run_id: 'run-9', goal: 'Reduce congestion at Hoan Kiem', district_id: 1,
+          status: 'observing', decision_id: 5,
+          baseline_scores: { traffic_score: 60, environment_score: 70, citizen_score: 65, risk_score: 20, overall_score: 68 },
+          expected_outcome: null, observed_scores: null, outcome_delta: null,
+          success_rate: null, outcome_status: null, context_snapshot: null, outcome_evidence: null,
+          created_at: new Date().toISOString(), approved_at: new Date().toISOString(),
+          observed_at: null, evaluated_at: null,
+        },
+        {
+          id: 2, run_id: 'run-10', goal: 'Reject bad plan at Ba Dinh', district_id: 2,
+          status: 'rejected', decision_id: 6,
+          baseline_scores: null, expected_outcome: null, observed_scores: null, outcome_delta: null,
+          success_rate: null, outcome_status: null, context_snapshot: null, outcome_evidence: null,
+          created_at: new Date().toISOString(), approved_at: null,
+          observed_at: null, evaluated_at: null,
+        },
+      ]),
+    }))
+    await page.route('**/api/decision-sessions/analytics', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        total_sessions: 2, approval_rate: 50, evaluated_count: 0,
+        improved_rate: null, avg_improvement: null, avg_decision_latency_minutes: 4,
+      }),
+    }))
+
+    await page.goto('/sessions')
+    await expect(page.getByTestId('decision-sessions-page')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByTestId('decision-session-card')).toHaveCount(2)
+
+    await page.getByTestId('decision-sessions-status-filter').selectOption('rejected')
+    await expect(page.getByTestId('decision-session-card')).toHaveCount(1)
+    await expect(page.getByText('Reject bad plan at Ba Dinh')).toBeVisible()
+
+    await page.getByTestId('decision-sessions-status-filter').selectOption('all')
+    await page.getByTestId('decision-sessions-district-filter').selectOption('Hoan Kiem')
+    await expect(page.getByTestId('decision-session-card')).toHaveCount(1)
+    await expect(page.getByText('Reduce congestion at Hoan Kiem')).toBeVisible()
+  })
 })
