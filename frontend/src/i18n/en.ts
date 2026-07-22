@@ -97,6 +97,7 @@ export const en = {
   'sessions.outcomeWorse': 'Worse',
   'sessions.outcomeNoChange': 'No change',
   'sessions.checkOutcomeNow': 'Check Outcome Now',
+  'sessions.evidence': 'Evidence',
   'sessions.submitted': 'Submitted',
   'sessions.approved': 'Approved',
 

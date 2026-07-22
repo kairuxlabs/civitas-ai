@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { Loader2, TrendingUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Loader2, TrendingUp } from 'lucide-react'
 import { api } from '../services/api'
 import { useTranslation } from '../i18n/useTranslation'
 import type { DecisionSession } from '../types'
@@ -47,6 +47,7 @@ function SessionTimeline({ session }: { session: DecisionSession }) {
 function SessionCard({ session }: { session: DecisionSession }) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
+  const [showEvidence, setShowEvidence] = useState(false)
   const statusLabel: Record<string, string> = {
     collecting: t('sessions.statusCollecting'),
     analyzing: t('sessions.statusAnalyzing'),
@@ -55,6 +56,13 @@ function SessionCard({ session }: { session: DecisionSession }) {
     rejected: t('sessions.statusRejected'),
     observing: t('sessions.statusObserving'),
     evaluated: t('sessions.statusEvaluated'),
+  }
+  const metricLabel: Record<string, string> = {
+    traffic_score: t('sessions.traffic'),
+    environment_score: t('sessions.aqiProxy'),
+    citizen_score: t('workspace.citizen'),
+    risk_score: t('workspace.risk'),
+    overall_score: t('workspace.metricOverall'),
   }
   const observe = useMutation({
     mutationFn: () => api.observeDecisionSession(session.id),
@@ -103,6 +111,32 @@ function SessionCard({ session }: { session: DecisionSession }) {
           <span className={`font-semibold ${OUTCOME_STYLES[session.outcome_status]}`}>
             {session.outcome_status === 'improved' ? t('sessions.improved') : session.outcome_status === 'worse' ? t('sessions.outcomeWorse') : t('sessions.outcomeNoChange')}
           </span>
+        </div>
+      )}
+
+      {session.outcome_evidence && session.outcome_evidence.length > 0 && (
+        <div className="pt-1 border-t border-outline-variant">
+          <button
+            type="button"
+            data-testid="session-evidence-toggle"
+            onClick={() => setShowEvidence(v => !v)}
+            className="w-full flex items-center justify-between text-[10px] text-on-surface-variant hover:text-on-surface"
+          >
+            <span>{t('sessions.evidence')} ({session.outcome_evidence.length})</span>
+            {showEvidence ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          </button>
+          {showEvidence && (
+            <ul data-testid="session-evidence-list" className="space-y-1 mt-1.5">
+              {session.outcome_evidence.map((item, index) => (
+                <li key={index} className="text-[10px] bg-surface-container-high/40 rounded p-1.5 flex items-center justify-between">
+                  <span className="text-on-surface">{metricLabel[item.metric] ?? item.metric}</span>
+                  <span className="font-mono text-on-surface-variant">
+                    {Math.round(item.value)} · {item.source} · {item.confidence}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

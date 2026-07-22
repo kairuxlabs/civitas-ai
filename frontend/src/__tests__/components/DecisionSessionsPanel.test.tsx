@@ -138,4 +138,42 @@ describe('DecisionSessionsPanel', () => {
     await waitFor(() => expect(screen.getByText('Phiên quyết định')).toBeInTheDocument())
     localStorage.removeItem('civitas-language')
   })
+
+  it('expands and collapses the real outcome evidence list when its toggle is clicked', async () => {
+    const evaluatedSession: DecisionSession = {
+      ...observingSession,
+      status: 'evaluated',
+      observed_scores: { traffic_score: 60, environment_score: 70, citizen_score: 75, risk_score: 20, overall_score: 65 },
+      outcome_status: 'improved',
+      outcome_delta: { overall_score: 10 },
+      success_rate: 80,
+      outcome_evidence: [
+        { source: 'CityScoreService', type: 'sensor_derived', metric: 'traffic_score', value: 60, confidence: 90, timestamp: '2026-07-21T09:30:00Z' },
+        { source: 'CityScoreService', type: 'sensor_derived', metric: 'overall_score', value: 65, confidence: 90, timestamp: '2026-07-21T09:30:00Z' },
+      ],
+    }
+    vi.mocked(api.getDecisionSessions).mockResolvedValue([evaluatedSession])
+
+    renderPanel()
+    await waitFor(() => expect(screen.getByTestId('session-evidence-toggle')).toBeInTheDocument())
+    expect(screen.queryByTestId('session-evidence-list')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByTestId('session-evidence-toggle'))
+
+    await waitFor(() => expect(screen.getByTestId('session-evidence-list')).toBeInTheDocument())
+    const list = screen.getByTestId('session-evidence-list')
+    expect(list).toHaveTextContent('CityScoreService')
+    expect(list).toHaveTextContent('90%')
+    expect(list).toHaveTextContent('60')
+    expect(list).toHaveTextContent('65')
+
+    await userEvent.click(screen.getByTestId('session-evidence-toggle'))
+    expect(screen.queryByTestId('session-evidence-list')).not.toBeInTheDocument()
+  })
+
+  it('does not render the evidence toggle when outcome_evidence is null', async () => {
+    renderPanel()
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
+    expect(screen.queryByTestId('session-evidence-toggle')).not.toBeInTheDocument()
+  })
 })

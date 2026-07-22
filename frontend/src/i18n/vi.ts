@@ -94,6 +94,7 @@ export const vi: Record<TranslationKey, string> = {
   'sessions.outcomeWorse': 'Xấu hơn',
   'sessions.outcomeNoChange': 'Không đổi',
   'sessions.checkOutcomeNow': 'Kiểm tra kết quả ngay',
+  'sessions.evidence': 'Bằng chứng',
   'sessions.submitted': 'Đã gửi',
   'sessions.approved': 'Đã phê duyệt',
 
