@@ -1,6 +1,7 @@
 # backend/src/agents/decision_agent.py
 from src.agents.base import AgentState
 from src.agents.gemini_client import call_gemini, parse_json_safe
+from src.reasoning.thresholds import FLOOD_RISK_HIGH_RAIN_MM, FLOOD_RISK_MODERATE_RAIN_MM
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -81,7 +82,11 @@ def _rule_based_decision(state: AgentState) -> dict:
     return {
         "prediction": {
             "next_6h_aqi_trend": "worsening" if aqi_index > 150 else "improving" if aqi_index < 80 else "stable",
-            "flood_risk": "high" if rain > 20 else "moderate" if rain > 5 else "low",
+            "flood_risk": (
+                "high" if rain > FLOOD_RISK_HIGH_RAIN_MM
+                else "moderate" if rain > FLOOD_RISK_MODERATE_RAIN_MM
+                else "low"
+            ),
             "traffic_disruption": "likely" if aqi_index > 150 or rain > 10 else "unlikely",
             "heat_stress": "high" if temperature > 38 else "moderate" if temperature > 35 else "low",
         },
