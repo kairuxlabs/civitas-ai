@@ -3,6 +3,7 @@ import {
   LayoutDashboard, LineChart, History, Database, Share2,
   Building2, FileBarChart, Settings, Rocket,
 } from 'lucide-react'
+import LogoMark from '../components/LogoMark'
 
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean }[] = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -30,7 +31,10 @@ export default function AppShell() {
     <div data-testid="app-shell" className="min-h-screen bg-background text-on-surface">
       <aside className="h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant flex flex-col z-50">
         <div className="px-6 py-5">
-          <div className="text-xl font-bold text-primary">Civitas AI</div>
+          <div className="flex items-center gap-2 text-xl font-bold text-primary">
+            <LogoMark size={22} />
+            Civitas AI
+          </div>
           <div className="text-[10px] text-on-surface-variant mt-0.5">Hanoi City System Operator</div>
         </div>
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
