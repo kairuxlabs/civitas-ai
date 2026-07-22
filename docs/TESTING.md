@@ -5,7 +5,7 @@ Civitas AI has three layers of automated testing:
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
 | **Backend unit** | pytest + httpx | 369 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler |
-| **Frontend unit** | Vitest + Testing Library | 91 tests | React components (incl. DecisionSessionsPanel), Stitch pages (all 8), hooks, API service |
+| **Frontend unit** | Vitest + Testing Library | 110 tests | React components (incl. DecisionSessionsPanel, LogoMark), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
 | **E2E integration** | Playwright (Chromium) | 26 tests | Decision Workspace (v2 goal/approval, Digital Twin, Decision Sessions + filters), remaining Stitch screens, live-backend integration, production smoke |
 
 ---
@@ -131,11 +131,18 @@ frontend/src/__tests__/
 ├── setup.ts                          # global mocks (axios, matchMedia, ResizeObserver)
 ├── components/
 │   ├── HanoiMap.test.tsx             # SVG rendering, district nodes, legend items
-│   ├── DecisionSessionsPanel.test.tsx # KPI tiles, session cards, timeline, Check Outcome Now
+│   ├── DecisionSessionsPanel.test.tsx # KPI tiles, session cards, timeline, Check Outcome Now, VI labels
 │   ├── DecisionPanel.test.tsx        # confidence bar, prediction, recommendations, explanation
+│   ├── LogoMark.test.tsx             # SVG mark renders, custom size
 │   └── ScoreGauge.test.tsx
 ├── pages/
-│   └── MissionControlPage.test.tsx   # v2 goal/DAG smoke + Decision Sessions panel mount
+│   ├── MissionControlPage.test.tsx   # v2 goal/DAG smoke + Decision Sessions panel mount
+│   └── *Page.test.tsx                # each Stitch page: real-data rendering + "switches to vi" test
+├── i18n/
+│   ├── dictionaries.test.ts          # en.ts / vi.ts have identical key sets, no empty values
+│   └── LanguageContext.test.tsx      # defaults to en, switches + persists to localStorage, restores on mount
+├── layout/
+│   └── AppShell.test.tsx             # nav links, language switcher (EN/VI)
 ├── hooks/
 │   └── useWebSocket.test.ts         # connection, reconnect, message parsing
 └── services/
@@ -203,7 +210,7 @@ npm run e2e
 |---|---|---|---|
 | `05-integration.spec.ts` | 2 | Yes (auto-skip) | Real health check, real districts endpoint |
 | `06-mission-control.spec.ts` | 7 | No | v2 goal submit, approval, Digital Twin (ported into Decision Workspace), Decision Sessions panel + filters |
-| `07-stitch-screens.spec.ts` | 6 | No | City Intelligence, Reports, Data Sources, Knowledge Graph, Settings, sidebar nav |
+| `07-stitch-screens.spec.ts` | 8 | No | City Intelligence, Reports (+search/status filter), Data Sources, Knowledge Graph (+search/label filter), Settings, sidebar nav |
 | `08-production-smoke.spec.ts` | 9 | No (hits live prod) | Read-only smoke test against the deployed Vercel frontend + Render backend, all 8 screens |
 
 Suites 06 and 07 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable. `waitForApp` / Decision Workspace helpers also stub `**/api/decision-sessions` and `**/api/decision-sessions/analytics`.

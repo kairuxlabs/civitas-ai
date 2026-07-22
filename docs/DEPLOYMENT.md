@@ -87,6 +87,8 @@ In **Environment** tab, add:
 |---|---|---|
 | `DATABASE_URL` | ✅ | `postgresql+asyncpg://...` from Neon |
 | `GEMINI_API_KEY` | ✅ | Google Gemini key (planner/decision/knowledge fall back to rules without it) |
+| `API_KEY` | ❌ | Enables the `X-API-Key` header check on mutating endpoints (decisions approve/reject, decision-session observe, v2 goal/approval, v2 simulation start/stop, v2 crawl). Empty = auth disabled (default) |
+| `CORS_ORIGINS` | ❌ | Comma-separated allowed origins. Defaults to the Vite dev server + the deployed Vercel frontend — override if you deploy the frontend to a different domain |
 | `OPENROUTER_API_KEY` | ❌ | Enables the AI Gateway (NVIDIA Nemotron planning/embedding/rerank/safety) and the Gemini-quota fallback path. Verify real model slugs with `python -m scripts.verify_openrouter` before depending on this for a demo |
 | `OPENROUTER_TIMEOUT_SECONDS` | ❌ | Per-request timeout for OpenRouter calls (default `10.0`) |
 | `NEO4J_URI` | ❌ | `neo4j+s://xxx.databases.neo4j.io` from Neo4j Aura — enables the knowledge graph (entity/relation storage + live `find_related()` queries from the Knowledge Agent) and persistent decision-memory |
@@ -174,6 +176,7 @@ In the Vercel dashboard under **Settings → Environment Variables**, add:
 |---|---|
 | `VITE_API_BASE_URL` | `https://civitas-ai-backend.onrender.com` |
 | `VITE_WS_URL` | `wss://civitas-ai-backend.onrender.com/ws` |
+| `VITE_API_KEY` | Only needed if the backend has `API_KEY` set — attaches `X-API-Key` to every request. Leave unset otherwise |
 
 > ⚠️ Paste values as plain text — a BOM character copied into these values has previously broken API calls in production (the frontend strips a leading BOM defensively, but keep values clean).
 
@@ -223,14 +226,15 @@ Two workflow files manage the pipeline:
 **`.github/workflows/ci.yml`** — runs on every push and pull request:
 
 ```
-backend tests (pytest, 94 tests)
+backend tests (pytest, 369 tests)
     └─ SQLite in-memory, no external services needed
        (v2 runtime tests force Gemini/Qdrant/Neo4j fallback paths)
 
-frontend unit tests (Vitest, 52 tests)
+frontend unit tests (Vitest, 110 tests)
 
-frontend E2E tests (Playwright, suites 01–04)
-    └─ Chromium, API responses mocked
+frontend E2E tests (Playwright, suites 06–07)
+    └─ Chromium, API responses mocked (Decision Workspace, Decision Sessions,
+       remaining Stitch screens — no Command Center, it was removed)
 
 frontend build check
     └─ TypeScript + Vite production build
@@ -251,9 +255,9 @@ deploy-frontend → vercel deploy --prod → Vercel builds from source and publi
 git push origin main
     │
     ├── ci.yml (parallel)
-    │   ├── backend: pytest (94)
-    │   ├── frontend-unit: vitest (52)
-    │   ├── frontend-e2e: playwright (suites 01-04)
+    │   ├── backend: pytest (369)
+    │   ├── frontend-unit: vitest (110)
+    │   ├── frontend-e2e: playwright (suites 06-07)
     │   └── frontend-build: npm run build
     │
     ├── Render auto-deploy → new Docker container (triggered by the push itself)
