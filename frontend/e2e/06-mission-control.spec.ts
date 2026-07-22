@@ -99,9 +99,52 @@ test.describe('Decision Workspace', () => {
     await expect(page.getByRole('button', { name: /History test/ })).toBeVisible({ timeout: 8_000 })
   })
 
-  // SimulationPanel / Digital Twin controls live on the legacy MissionControlPage,
-  // which is no longer routed in the Stitch shell (Workspace replaces it for phase 1).
-  test.skip('Digital Twin panel Start button is visible and starts the simulation', async () => {})
+  test('Digital Twin panel Start button is visible and starts the simulation', async ({ page }) => {
+    await waitForApp(page)
+    await switchToMissionControl(page)
+
+    await expect(page.getByTestId('digital-twin-panel')).toBeVisible()
+    await expect(page.getByTestId('sim-start-btn')).toBeVisible()
+
+    let running = false
+    const runningStatus = {
+      running: true, scenario: 'heavy_rain', scenario_label: 'Heavy rain', interval_s: 30, auto_goal: true, tick: 1,
+      values: { rain: 40, aqi: 150, temperature: 28, humidity: 90, wind_speed: 15 }, last_auto_goal: null,
+    }
+    const idleStatus = {
+      running: false, scenario: 'normal', scenario_label: 'Normal', interval_s: 30, auto_goal: true, tick: 0,
+      values: { rain: 0, aqi: 90, temperature: 30, humidity: 70, wind_speed: 10 }, last_auto_goal: null,
+    }
+    // The panel invalidates + refetches simulation status right after start/stop resolve,
+    // so the status mock must reflect the same in-memory "running" flag those calls flip.
+    await page.route('**/api/v2/simulation/status', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify(running ? runningStatus : idleStatus),
+    }))
+    await page.route('**/api/v2/simulation/start', route => {
+      running = true
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(runningStatus) })
+    })
+
+    await page.getByTestId('sim-start-btn').click()
+
+    await expect(page.getByTestId('sim-stop-btn')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByTestId('sim-status')).toContainText('Heavy rain')
+
+    await page.route('**/api/v2/crawl', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        results: {
+          weather: { ok: true, count: 12 },
+          aqi: { ok: true, count: 12 },
+          news: { ok: false, error: 'timeout' },
+        },
+      }),
+    }))
+
+    await page.getByTestId('sim-crawl-btn').click()
+    await expect(page.getByTestId('sim-crawl-results')).toBeVisible({ timeout: 8_000 })
+  })
 
   test('Decision Sessions page renders a session card from the API', async ({ page }) => {
     await waitForApp(page)

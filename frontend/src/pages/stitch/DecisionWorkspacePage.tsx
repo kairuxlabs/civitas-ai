@@ -4,6 +4,7 @@ import {
   Activity, AlertTriangle, Brain, CheckCircle, Loader2, Rocket, XCircle,
 } from 'lucide-react'
 import HanoiMap from '../../components/HanoiMap'
+import SimulationPanel from '../../components/SimulationPanel'
 import { api } from '../../services/api'
 import type { RuntimeRun, RuntimeTask } from '../../types'
 
@@ -123,6 +124,8 @@ export default function DecisionWorkspacePage() {
           ))}
         </div>
       </div>
+
+      <SimulationPanel />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-gutter">
         <section className="xl:col-span-3 glass-panel rounded-xl p-4 space-y-3">

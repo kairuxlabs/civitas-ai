@@ -42,7 +42,7 @@ export default function SimulationPanel() {
   })
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
+    <div data-testid="digital-twin-panel" className="bg-slate-900 border border-slate-700 rounded-lg p-4 space-y-3">
       <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
         <CloudDrizzle size={16} className="text-sky-400" /> Digital Twin &amp; Data
       </h3>
@@ -71,6 +71,7 @@ export default function SimulationPanel() {
         </label>
         {status?.running ? (
           <button
+            data-testid="sim-stop-btn"
             onClick={() => stop.mutate()}
             disabled={stop.isPending}
             className="ml-auto bg-rose-800 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5"
@@ -79,6 +80,7 @@ export default function SimulationPanel() {
           </button>
         ) : (
           <button
+            data-testid="sim-start-btn"
             onClick={() => start.mutate()}
             disabled={start.isPending}
             className="ml-auto bg-sky-700 hover:bg-sky-600 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5"
@@ -90,7 +92,7 @@ export default function SimulationPanel() {
 
       {/* Live status */}
       {status && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div data-testid="sim-status" className="flex flex-wrap items-center gap-2 text-xs">
           <span className={`px-2 py-0.5 rounded-full border ${
             status.running
               ? 'bg-sky-950 text-sky-300 border-sky-700 animate-pulse'
@@ -113,6 +115,7 @@ export default function SimulationPanel() {
       <div className="border-t border-slate-800 pt-3 space-y-2">
         <div className="flex items-center gap-2">
           <button
+            data-testid="sim-crawl-btn"
             onClick={() => crawl.mutate()}
             disabled={crawl.isPending}
             className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5"
@@ -123,7 +126,7 @@ export default function SimulationPanel() {
           <span className="text-xs text-slate-600">Open-Meteo · OpenAQ · VnExpress RSS</span>
         </div>
         {crawlResults && (
-          <ul className="flex flex-wrap gap-2">
+          <ul data-testid="sim-crawl-results" className="flex flex-wrap gap-2">
             {CRAWL_SOURCES.map(({ key, label }) => {
               const r = crawlResults[key]
               if (!r) return null

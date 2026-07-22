@@ -257,6 +257,10 @@ All testable elements have `data-testid` attributes:
 | App shell | `app-shell` |
 | Overview page | `overview-page` |
 | Decision Workspace | `decision-workspace-page` |
+| Digital Twin panel (Decision Workspace) | `digital-twin-panel` |
+| Digital Twin start/stop button | `sim-start-btn` / `sim-stop-btn` |
+| Digital Twin live status | `sim-status` |
+| Digital Twin crawl button/results | `sim-crawl-btn` / `sim-crawl-results` |
 | Decision Sessions page | `decision-sessions-page` |
 | Command Center route wrap | `command-center-route` |
 | City Intelligence page | `city-intelligence-page` |
