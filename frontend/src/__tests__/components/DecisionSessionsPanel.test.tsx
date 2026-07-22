@@ -5,6 +5,11 @@ import { renderWithQueryClient } from '../test-utils'
 import DecisionSessionsPanel from '../../components/DecisionSessionsPanel'
 import { api } from '../../services/api'
 import type { DecisionSession, DecisionSessionAnalytics } from '../../types'
+import { LanguageProvider } from '../../i18n/LanguageContext'
+
+function renderPanel() {
+  return renderWithQueryClient(<LanguageProvider><DecisionSessionsPanel /></LanguageProvider>)
+}
 
 vi.mock('../../services/api', () => ({
   api: {
@@ -46,29 +51,29 @@ beforeEach(() => {
 
 describe('DecisionSessionsPanel', () => {
   it('renders the KPI tiles from analytics', async () => {
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getByTestId('decision-analytics')).toBeInTheDocument())
     expect(screen.getByTestId('decision-analytics')).toHaveTextContent('2')
   })
 
   it('renders one card per session', async () => {
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
   })
 
   it('renders a timeline stepper on each card', async () => {
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('decision-session-timeline')).toHaveLength(2))
   })
 
   it('shows Check Outcome Now only for sessions in observing status', async () => {
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
     expect(screen.getAllByTestId('check-outcome-now-button')).toHaveLength(1)
   })
 
   it('does not render a baseline/observed card for rejected sessions', async () => {
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
     const rejectedCard = screen.getByText('run-2').closest('[data-testid="decision-session-card"]')!
     expect(rejectedCard).not.toHaveTextContent('Baseline')
@@ -76,7 +81,7 @@ describe('DecisionSessionsPanel', () => {
 
   it('calls observeDecisionSession and refetches when Check Outcome Now is clicked', async () => {
     vi.mocked(api.observeDecisionSession).mockResolvedValue({ ...observingSession, status: 'evaluated' })
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('check-outcome-now-button')).toHaveLength(1))
 
     await userEvent.click(screen.getByTestId('check-outcome-now-button'))
@@ -85,7 +90,7 @@ describe('DecisionSessionsPanel', () => {
   })
 
   it('filters sessions by status using the real session status field', async () => {
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
 
     await userEvent.selectOptions(screen.getByTestId('decision-sessions-status-filter'), 'rejected')
@@ -99,7 +104,7 @@ describe('DecisionSessionsPanel', () => {
       observingSession,
       { ...rejectedSession, district_id: 2 },
     ])
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
 
     await userEvent.selectOptions(screen.getByTestId('decision-sessions-district-filter'), 'Ba Dinh')
@@ -112,7 +117,7 @@ describe('DecisionSessionsPanel', () => {
     let resolveSessions: (v: unknown) => void = () => {}
     vi.mocked(api.getDecisionSessions).mockImplementation(() => new Promise(resolve => { resolveSessions = resolve }))
 
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     expect(screen.getByTestId('decision-sessions-loading')).toBeInTheDocument()
 
     resolveSessions([])
@@ -122,7 +127,15 @@ describe('DecisionSessionsPanel', () => {
   it('shows an inline error when the sessions query fails', async () => {
     vi.mocked(api.getDecisionSessions).mockRejectedValue(new Error('network down'))
 
-    renderWithQueryClient(<DecisionSessionsPanel />)
+    renderPanel()
     await waitFor(() => expect(screen.getByTestId('decision-sessions-error')).toBeInTheDocument())
+  })
+
+  it('renders Vietnamese labels when the language is switched to vi', async () => {
+    localStorage.setItem('civitas-language', 'vi')
+    renderPanel()
+
+    await waitFor(() => expect(screen.getByText('Phiên quyết định')).toBeInTheDocument())
+    localStorage.removeItem('civitas-language')
   })
 })

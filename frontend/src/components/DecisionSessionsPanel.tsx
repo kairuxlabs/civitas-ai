@@ -2,19 +2,8 @@ import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { Loader2, TrendingUp } from 'lucide-react'
 import { api } from '../services/api'
-
-const PANEL_HEADER = (
-  <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
-    <TrendingUp size={15} className="text-primary" /> Decision Sessions
-  </h3>
-)
+import { useTranslation } from '../i18n/useTranslation'
 import type { DecisionSession } from '../types'
-
-const STATUS_LABEL: Record<string, string> = {
-  collecting: 'Collecting', analyzing: 'Analyzing', recommend: 'Recommend',
-  awaiting_approval: 'Awaiting approval', rejected: 'Rejected',
-  observing: 'Observing', evaluated: 'Evaluated',
-}
 
 const OUTCOME_STYLES: Record<string, string> = {
   improved: 'text-emerald-400', worse: 'text-rose-400', no_change: 'text-on-surface-variant',
@@ -36,11 +25,12 @@ function fmtTime(iso: string | null): string {
 }
 
 function SessionTimeline({ session }: { session: DecisionSession }) {
+  const { t } = useTranslation()
   const steps: [string, string | null][] = [
-    ['Submitted', session.created_at],
-    [session.status === 'rejected' ? 'Rejected' : 'Approved', session.approved_at],
-    ['Observed', session.observed_at],
-    ['Evaluated', session.evaluated_at],
+    [t('sessions.submitted'), session.created_at],
+    [session.status === 'rejected' ? t('sessions.statusRejected') : t('sessions.approved'), session.approved_at],
+    [t('sessions.observed'), session.observed_at],
+    [t('sessions.statusEvaluated'), session.evaluated_at],
   ]
   return (
     <div data-testid="decision-session-timeline" className="flex justify-between text-[9px] text-on-surface-variant pt-1">
@@ -56,6 +46,16 @@ function SessionTimeline({ session }: { session: DecisionSession }) {
 
 function SessionCard({ session }: { session: DecisionSession }) {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
+  const statusLabel: Record<string, string> = {
+    collecting: t('sessions.statusCollecting'),
+    analyzing: t('sessions.statusAnalyzing'),
+    recommend: t('sessions.statusRecommend'),
+    awaiting_approval: t('sessions.statusAwaitingApproval'),
+    rejected: t('sessions.statusRejected'),
+    observing: t('sessions.statusObserving'),
+    evaluated: t('sessions.statusEvaluated'),
+  }
   const observe = useMutation({
     mutationFn: () => api.observeDecisionSession(session.id),
     onSuccess: () => {
@@ -72,7 +72,7 @@ function SessionCard({ session }: { session: DecisionSession }) {
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-on-surface">Session #{session.id}</p>
         <span className="text-[10px] bg-surface-container-high border border-outline-variant text-on-surface-variant rounded-full px-2 py-0.5">
-          {STATUS_LABEL[session.status] ?? session.status}
+          {statusLabel[session.status] ?? session.status}
         </span>
       </div>
       <p className="text-xs text-on-surface-variant">{session.goal}</p>
@@ -82,14 +82,14 @@ function SessionCard({ session }: { session: DecisionSession }) {
       {showOutcome && session.baseline_scores && (
         <div className="grid grid-cols-2 gap-3 pt-1 border-t border-outline-variant">
           <div>
-            <p className="text-[10px] text-on-surface-variant uppercase mb-1">Baseline</p>
-            <ScoreRow label="Traffic" value={session.baseline_scores.traffic_score} />
-            <ScoreRow label="AQI proxy" value={session.baseline_scores.environment_score} />
+            <p className="text-[10px] text-on-surface-variant uppercase mb-1">{t('sessions.baseline')}</p>
+            <ScoreRow label={t('sessions.traffic')} value={session.baseline_scores.traffic_score} />
+            <ScoreRow label={t('sessions.aqiProxy')} value={session.baseline_scores.environment_score} />
           </div>
           <div>
-            <p className="text-[10px] text-on-surface-variant uppercase mb-1">Observed</p>
-            <ScoreRow label="Traffic" value={session.observed_scores?.traffic_score} />
-            <ScoreRow label="AQI proxy" value={session.observed_scores?.environment_score} />
+            <p className="text-[10px] text-on-surface-variant uppercase mb-1">{t('sessions.observed')}</p>
+            <ScoreRow label={t('sessions.traffic')} value={session.observed_scores?.traffic_score} />
+            <ScoreRow label={t('sessions.aqiProxy')} value={session.observed_scores?.environment_score} />
           </div>
         </div>
       )}
@@ -98,10 +98,10 @@ function SessionCard({ session }: { session: DecisionSession }) {
         <div className="flex items-center justify-between pt-1 border-t border-outline-variant text-xs">
           <span className={OUTCOME_STYLES[session.outcome_status]}>
             {session.outcome_delta?.overall_score != null && `${session.outcome_delta.overall_score > 0 ? '+' : ''}${session.outcome_delta.overall_score}`}
-            {session.success_rate != null && ` · Success ${session.success_rate}%`}
+            {session.success_rate != null && ` · ${t('sessions.success')} ${session.success_rate}%`}
           </span>
           <span className={`font-semibold ${OUTCOME_STYLES[session.outcome_status]}`}>
-            {session.outcome_status === 'improved' ? 'Improved' : session.outcome_status === 'worse' ? 'Worse' : 'No change'}
+            {session.outcome_status === 'improved' ? t('sessions.improved') : session.outcome_status === 'worse' ? t('sessions.outcomeWorse') : t('sessions.outcomeNoChange')}
           </span>
         </div>
       )}
@@ -114,7 +114,7 @@ function SessionCard({ session }: { session: DecisionSession }) {
           className="w-full text-xs bg-primary hover:bg-primary/90 disabled:opacity-50 text-on-primary rounded py-1.5 flex items-center justify-center gap-1.5"
         >
           {observe.isPending ? <Loader2 size={12} className="animate-spin" /> : null}
-          Check Outcome Now
+          {t('sessions.checkOutcomeNow')}
         </button>
       )}
     </div>
@@ -124,6 +124,21 @@ function SessionCard({ session }: { session: DecisionSession }) {
 export default function DecisionSessionsPanel() {
   const [districtFilter, setDistrictFilter] = useState<number | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const { t } = useTranslation()
+  const panelHeader = (
+    <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+      <TrendingUp size={15} className="text-primary" /> {t('sessions.panelTitle')}
+    </h3>
+  )
+  const statusLabel: Record<string, string> = {
+    collecting: t('sessions.statusCollecting'),
+    analyzing: t('sessions.statusAnalyzing'),
+    recommend: t('sessions.statusRecommend'),
+    awaiting_approval: t('sessions.statusAwaitingApproval'),
+    rejected: t('sessions.statusRejected'),
+    observing: t('sessions.statusObserving'),
+    evaluated: t('sessions.statusEvaluated'),
+  }
 
   const { data: sessions, isLoading, isError } = useQuery({
     queryKey: ['decision-sessions'],
@@ -156,7 +171,7 @@ export default function DecisionSessionsPanel() {
   if (isLoading) {
     return (
       <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
-        {PANEL_HEADER}
+        {panelHeader}
         <div data-testid="decision-sessions-loading" className="flex items-center justify-center py-12">
           <Loader2 size={24} className="animate-spin text-primary" />
         </div>
@@ -167,9 +182,9 @@ export default function DecisionSessionsPanel() {
   if (isError) {
     return (
       <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
-        {PANEL_HEADER}
+        {panelHeader}
         <div data-testid="decision-sessions-error" className="text-error text-sm py-4 text-center">
-          Failed to load — check your connection.
+          {t('common.loadError')}
         </div>
       </div>
     )
@@ -177,21 +192,21 @@ export default function DecisionSessionsPanel() {
 
   return (
     <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
-      {PANEL_HEADER}
+      {panelHeader}
 
       {analytics && (
         <div data-testid="decision-analytics" className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-surface-container-high rounded p-2">
             <p className="text-sm font-bold text-on-surface">{analytics.total_sessions}</p>
-            <p className="text-[10px] text-on-surface-variant">Sessions</p>
+            <p className="text-[10px] text-on-surface-variant">{t('sessions.sessionsLabel')}</p>
           </div>
           <div className="bg-surface-container-high rounded p-2">
             <p className="text-sm font-bold text-on-surface">{analytics.improved_rate != null ? `${analytics.improved_rate}%` : '—'}</p>
-            <p className="text-[10px] text-on-surface-variant">Improved</p>
+            <p className="text-[10px] text-on-surface-variant">{t('sessions.improved')}</p>
           </div>
           <div className="bg-surface-container-high rounded p-2">
             <p className="text-sm font-bold text-on-surface">{analytics.approval_rate != null ? `${analytics.approval_rate}%` : '—'}</p>
-            <p className="text-[10px] text-on-surface-variant">Approval</p>
+            <p className="text-[10px] text-on-surface-variant">{t('sessions.approval')}</p>
           </div>
         </div>
       )}
@@ -205,10 +220,10 @@ export default function DecisionSessionsPanel() {
               onChange={e => setDistrictFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               className={FILTER_SELECT_CLASS}
             >
-              <option value="all">All districts</option>
+              <option value="all">{t('sessions.allDistricts')}</option>
               {sessionDistrictIds.map(id => (
                 <option key={id} value={id}>
-                  {districts?.find(d => d.id === id)?.name ?? `District ${id}`}
+                  {districts?.find(d => d.id === id)?.name ?? `${t('sessions.districtFallback')} ${id}`}
                 </option>
               ))}
             </select>
@@ -220,9 +235,9 @@ export default function DecisionSessionsPanel() {
               onChange={e => setStatusFilter(e.target.value)}
               className={FILTER_SELECT_CLASS}
             >
-              <option value="all">All statuses</option>
+              <option value="all">{t('sessions.allStatuses')}</option>
               {sessionStatuses.map(status => (
-                <option key={status} value={status}>{STATUS_LABEL[status] ?? status}</option>
+                <option key={status} value={status}>{statusLabel[status] ?? status}</option>
               ))}
             </select>
           )}
@@ -232,10 +247,10 @@ export default function DecisionSessionsPanel() {
       <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
         {filteredSessions.map(s => <SessionCard key={s.id} session={s} />)}
         {sessions && sessions.length === 0 && (
-          <p className="text-xs text-on-surface-variant italic text-center py-4">No decision sessions yet</p>
+          <p className="text-xs text-on-surface-variant italic text-center py-4">{t('sessions.noSessionsYet')}</p>
         )}
         {sessions && sessions.length > 0 && filteredSessions.length === 0 && (
-          <p className="text-xs text-on-surface-variant italic text-center py-4">No sessions match these filters</p>
+          <p className="text-xs text-on-surface-variant italic text-center py-4">{t('sessions.noSessionsMatchFilters')}</p>
         )}
       </div>
     </div>
