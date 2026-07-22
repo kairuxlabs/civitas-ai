@@ -5,7 +5,7 @@ Civitas AI has three layers of automated testing:
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
 | **Backend unit** | pytest + httpx | 371 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler, per-scenario Digital Twin auto-goal triggers |
-| **Frontend unit** | Vitest + Testing Library | 115 tests | React components (incl. DecisionSessionsPanel, LogoMark, SimulationPanel), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
+| **Frontend unit** | Vitest + Testing Library | 117 tests | React components (incl. DecisionSessionsPanel + outcome evidence, LogoMark, SimulationPanel), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
 | **E2E integration** | Playwright (Chromium) | 26 tests | Decision Workspace (v2 goal/approval, Digital Twin, Decision Sessions + filters), remaining Stitch screens, live-backend integration, production smoke |
 
 ---
@@ -285,6 +285,7 @@ All testable elements have `data-testid` attributes:
 | Decision Session card | `decision-session-card` |
 | Decision Session timeline | `decision-session-timeline` |
 | Check Outcome Now button | `check-outcome-now-button` |
+| Decision Session evidence toggle/list | `session-evidence-toggle` / `session-evidence-list` |
 | Decision Sessions district/status filter | `decision-sessions-district-filter` / `decision-sessions-status-filter` |
 | Overview loading/error | `overview-loading` / `overview-error` |
 | City Intelligence loading/error | `city-intelligence-loading` / `city-intelligence-error` |

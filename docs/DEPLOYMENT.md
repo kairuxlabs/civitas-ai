@@ -256,7 +256,7 @@ git push origin main
     │
     ├── ci.yml (parallel)
     │   ├── backend: pytest (371)
-    │   ├── frontend-unit: vitest (115)
+    │   ├── frontend-unit: vitest (117)
     │   ├── frontend-e2e: playwright (suites 06-07)
     │   └── frontend-build: npm run build
     │
