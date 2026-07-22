@@ -108,7 +108,9 @@ export default function DecisionWorkspacePage() {
 
   const avgOverall = useMemo(() => averageOverallScore(scores), [scores])
   const selectedScore = scores?.find(score => score.district_id === selectedDistrict)
+  const gaugeScore = selectedScore ? Math.round(selectedScore.overall_score) : avgOverall
   const runDistrictName = districts?.find(d => d.id === run?.district_id)?.name
+  const selectedDistrictName = districts?.find(d => d.id === selectedDistrict)?.name
   const latestAqi = aqiHistory && aqiHistory.length > 0 ? aqiHistory[aqiHistory.length - 1] : null
 
   function submitGoal(value: string) {
@@ -299,7 +301,10 @@ export default function DecisionWorkspacePage() {
 
         <section className="xl:col-span-4 space-y-gutter">
           <div className="glass-panel rounded-xl p-4">
-            <div className="text-xs text-on-surface-variant mb-3">{t('workspace.cityScore')}</div>
+            <div className="text-xs text-on-surface-variant mb-3 flex items-center justify-between">
+              <span>{t('workspace.cityScore')}</span>
+              {selectedDistrictName && <span className="text-[10px] text-outline">{selectedDistrictName}</span>}
+            </div>
             <div className="flex items-center gap-4">
               <div className="relative w-16 h-16 shrink-0">
                 <svg viewBox="0 0 60 60" className="w-full h-full -rotate-90">
@@ -307,10 +312,10 @@ export default function DecisionWorkspacePage() {
                   <circle
                     cx="30" cy="30" r="26" fill="none" stroke="currentColor" className="text-secondary"
                     strokeWidth="6" strokeLinecap="round"
-                    strokeDasharray={`${((avgOverall ?? 0) / 100) * (2 * Math.PI * 26)} ${2 * Math.PI * 26}`}
+                    strokeDasharray={`${((gaugeScore ?? 0) / 100) * (2 * Math.PI * 26)} ${2 * Math.PI * 26}`}
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">{avgOverall ?? '—'}</span>
+                <span data-testid="city-score-value" className="absolute inset-0 flex items-center justify-center text-lg font-bold">{gaugeScore ?? '—'}</span>
               </div>
               {selectedScore && (
                 <div className="flex-1 space-y-1.5">

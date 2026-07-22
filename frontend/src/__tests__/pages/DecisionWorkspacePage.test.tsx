@@ -150,8 +150,28 @@ describe('DecisionWorkspacePage', () => {
     await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
     await user.click(screen.getByRole('button', { name: /Execute Decision|Submit|Run/i }))
 
-    await waitFor(() => expect(screen.getByText('Hoan Kiem')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('Hoan Kiem').length).toBeGreaterThan(0))
     expect(screen.getByText(/medium risk/i)).toBeInTheDocument()
+  })
+
+  it('updates the City Score gauge to the clicked district\'s overall score', async () => {
+    vi.mocked(api.getDistricts).mockResolvedValue([
+      { id: 1, city_id: 'hanoi', name: 'Hoan Kiem' },
+      { id: 2, city_id: 'hanoi', name: 'Ba Dinh' },
+    ])
+    vi.mocked(api.getScores).mockResolvedValue([
+      { id: 1, city_id: 'hanoi', district_id: 1, timestamp: '2026-07-21T09:00:00Z', traffic_score: 40, environment_score: 90, citizen_score: 70, risk_score: 20, overall_score: 60 },
+      { id: 2, city_id: 'hanoi', district_id: 2, timestamp: '2026-07-21T09:00:00Z', traffic_score: 80, environment_score: 50, citizen_score: 60, risk_score: 10, overall_score: 90 },
+    ])
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('city-score-value')).toHaveTextContent('60'))
+
+    await user.click(screen.getByTestId('district-2'))
+
+    await waitFor(() => expect(screen.getByTestId('city-score-value')).toHaveTextContent('90'))
+    expect(screen.getByText('Ba Dinh')).toBeInTheDocument()
   })
 
   it('switching the map metric toggle re-renders the map with the selected metric', async () => {

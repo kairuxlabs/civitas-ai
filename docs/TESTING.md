@@ -5,7 +5,7 @@ Civitas AI has three layers of automated testing:
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
 | **Backend unit** | pytest + httpx | 371 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler, per-scenario Digital Twin auto-goal triggers |
-| **Frontend unit** | Vitest + Testing Library | 117 tests | React components (incl. DecisionSessionsPanel + outcome evidence, LogoMark, SimulationPanel), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
+| **Frontend unit** | Vitest + Testing Library | 118 tests | React components (incl. DecisionSessionsPanel + outcome evidence, LogoMark, SimulationPanel), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
 | **E2E integration** | Playwright (Chromium) | 26 tests | Decision Workspace (v2 goal/approval, Digital Twin, Decision Sessions + filters), remaining Stitch screens, live-backend integration, production smoke |
 
 ---
@@ -258,6 +258,7 @@ All testable elements have `data-testid` attributes:
 | Decision Workspace reflection notes | `decision-reflection-notes` |
 | Decision Workspace map metric toggle | `map-metric-toggle` |
 | Decision Workspace evidence toggle/list | `decision-evidence-toggle` / `decision-evidence-list` |
+| Decision Workspace City Score gauge value | `city-score-value` (tracks the clicked district, falls back to city-wide average) |
 | Digital Twin panel (Decision Workspace) | `digital-twin-panel` |
 | Digital Twin start/stop button | `sim-start-btn` / `sim-stop-btn` |
 | Digital Twin live status | `sim-status` |
