@@ -301,6 +301,20 @@ Key points:
 
 ---
 
+## 8. GitHub Pages (Project Blog)
+
+A static, single-page project blog lives at `site/index.html` (plain HTML/CSS/vanilla JS, no build step), deployed by `.github/workflows/pages.yml` on every push to `main` that touches `site/**`.
+
+**One-time manual step required** — GitHub Pages must be enabled once per repo; this cannot be done from a workflow or without a token with admin scope:
+
+1. Repo **Settings → Pages**
+2. Under **Build and deployment → Source**, select **GitHub Actions**
+3. Push to `main` (or run the workflow manually via **Actions → Deploy GitHub Pages → Run workflow**)
+
+Once enabled, the site is live at `https://kairuxlabs.github.io/civitas-ai/`. Updating the page's screenshots is a manual step, same as `docs/screenshots/`: re-capture, copy the relevant PNGs into `site/assets/img/`, and push.
+
+---
+
 ## Troubleshooting
 
 **Backend returns 502 on Render free plan**

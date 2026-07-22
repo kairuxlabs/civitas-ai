@@ -17,7 +17,7 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 [![NVIDIA](https://img.shields.io/badge/NVIDIA-Nemotron_via_OpenRouter-76B900?style=flat-square&logo=nvidia&logoColor=white)](https://openrouter.ai/nvidia)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-[Demo](#demo) · [Features](#features) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Screenshots](#screenshots) · [Roadmap](#roadmap)
+[Project Blog](https://kairuxlabs.github.io/civitas-ai/) · [Demo](#demo) · [Features](#features) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Screenshots](#screenshots) · [Roadmap](#roadmap)
 
 </div>
 
