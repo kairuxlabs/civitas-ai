@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { Loader2, TrendingUp } from 'lucide-react'
 import { api } from '../services/api'
@@ -12,6 +13,8 @@ const STATUS_LABEL: Record<string, string> = {
 const OUTCOME_STYLES: Record<string, string> = {
   improved: 'text-emerald-400', worse: 'text-rose-400', no_change: 'text-on-surface-variant',
 }
+
+const FILTER_SELECT_CLASS = 'flex-1 bg-surface-container-high border border-outline-variant rounded text-xs px-2 py-1.5 text-on-surface'
 
 function ScoreRow({ label, value }: { label: string; value: number | undefined }) {
   return (
@@ -113,6 +116,9 @@ function SessionCard({ session }: { session: DecisionSession }) {
 }
 
 export default function DecisionSessionsPanel() {
+  const [districtFilter, setDistrictFilter] = useState<number | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+
   const { data: sessions } = useQuery({
     queryKey: ['decision-sessions'],
     queryFn: () => api.getDecisionSessions(),
@@ -123,6 +129,23 @@ export default function DecisionSessionsPanel() {
     queryFn: api.getDecisionSessionAnalytics,
     refetchInterval: 10000,
   })
+  const { data: districts } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
+
+  const sessionDistrictIds = useMemo(
+    () => Array.from(new Set((sessions ?? []).map(s => s.district_id).filter((id): id is number => id != null))),
+    [sessions],
+  )
+  const sessionStatuses = useMemo(
+    () => Array.from(new Set((sessions ?? []).map(s => s.status))),
+    [sessions],
+  )
+  const filteredSessions = useMemo(
+    () => (sessions ?? []).filter(s =>
+      (districtFilter === 'all' || s.district_id === districtFilter)
+      && (statusFilter === 'all' || s.status === statusFilter),
+    ),
+    [sessions, districtFilter, statusFilter],
+  )
 
   return (
     <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
@@ -147,10 +170,46 @@ export default function DecisionSessionsPanel() {
         </div>
       )}
 
+      {(sessionDistrictIds.length > 1 || sessionStatuses.length > 1) && (
+        <div className="flex gap-2">
+          {sessionDistrictIds.length > 1 && (
+            <select
+              data-testid="decision-sessions-district-filter"
+              value={districtFilter}
+              onChange={e => setDistrictFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className={FILTER_SELECT_CLASS}
+            >
+              <option value="all">All districts</option>
+              {sessionDistrictIds.map(id => (
+                <option key={id} value={id}>
+                  {districts?.find(d => d.id === id)?.name ?? `District ${id}`}
+                </option>
+              ))}
+            </select>
+          )}
+          {sessionStatuses.length > 1 && (
+            <select
+              data-testid="decision-sessions-status-filter"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className={FILTER_SELECT_CLASS}
+            >
+              <option value="all">All statuses</option>
+              {sessionStatuses.map(status => (
+                <option key={status} value={status}>{STATUS_LABEL[status] ?? status}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-        {(sessions ?? []).map(s => <SessionCard key={s.id} session={s} />)}
+        {filteredSessions.map(s => <SessionCard key={s.id} session={s} />)}
         {sessions && sessions.length === 0 && (
           <p className="text-xs text-on-surface-variant italic text-center py-4">No decision sessions yet</p>
+        )}
+        {sessions && sessions.length > 0 && filteredSessions.length === 0 && (
+          <p className="text-xs text-on-surface-variant italic text-center py-4">No sessions match these filters</p>
         )}
       </div>
     </div>

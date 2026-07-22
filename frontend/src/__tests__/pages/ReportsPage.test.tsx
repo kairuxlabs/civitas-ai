@@ -45,4 +45,24 @@ describe('ReportsPage', () => {
 
     await waitFor(() => expect(api.approveDecision).toHaveBeenCalledWith(1))
   })
+
+  it('filters reports by search text over the real query field', async () => {
+    renderWithQueryClient(<ReportsPage />)
+    await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(2))
+
+    await userEvent.type(screen.getByTestId('reports-search-input'), 'pollution')
+
+    await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(1))
+    expect(screen.getByText('Air pollution response')).toBeInTheDocument()
+  })
+
+  it('filters reports by status', async () => {
+    renderWithQueryClient(<ReportsPage />)
+    await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(2))
+
+    await userEvent.selectOptions(screen.getByTestId('reports-status-filter'), 'approved')
+
+    await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(1))
+    expect(screen.getByText('Air pollution response')).toBeInTheDocument()
+  })
 })

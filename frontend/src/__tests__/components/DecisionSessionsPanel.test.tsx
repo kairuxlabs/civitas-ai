@@ -11,6 +11,7 @@ vi.mock('../../services/api', () => ({
     getDecisionSessions: vi.fn(),
     getDecisionSessionAnalytics: vi.fn(),
     observeDecisionSession: vi.fn(),
+    getDistricts: vi.fn(),
   },
 }))
 
@@ -37,6 +38,10 @@ const rejectedSession: DecisionSession = {
 beforeEach(() => {
   vi.mocked(api.getDecisionSessions).mockResolvedValue([observingSession, rejectedSession])
   vi.mocked(api.getDecisionSessionAnalytics).mockResolvedValue(analytics)
+  vi.mocked(api.getDistricts).mockResolvedValue([
+    { id: 1, city_id: 'hanoi', name: 'Hoan Kiem' },
+    { id: 2, city_id: 'hanoi', name: 'Ba Dinh' },
+  ])
 })
 
 describe('DecisionSessionsPanel', () => {
@@ -77,5 +82,29 @@ describe('DecisionSessionsPanel', () => {
     await userEvent.click(screen.getByTestId('check-outcome-now-button'))
 
     await waitFor(() => expect(api.observeDecisionSession).toHaveBeenCalledWith(1))
+  })
+
+  it('filters sessions by status using the real session status field', async () => {
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
+
+    await userEvent.selectOptions(screen.getByTestId('decision-sessions-status-filter'), 'rejected')
+
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(1))
+    expect(screen.getByText('run-2')).toBeInTheDocument()
+  })
+
+  it('filters sessions by district using the real district_id field', async () => {
+    vi.mocked(api.getDecisionSessions).mockResolvedValue([
+      observingSession,
+      { ...rejectedSession, district_id: 2 },
+    ])
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
+
+    await userEvent.selectOptions(screen.getByTestId('decision-sessions-district-filter'), 'Ba Dinh')
+
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(1))
+    expect(screen.getByText('run-2')).toBeInTheDocument()
   })
 })

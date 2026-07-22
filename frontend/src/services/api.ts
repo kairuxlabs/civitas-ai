@@ -58,7 +58,9 @@ export const api = {
     http.get<DecisionSessionAnalytics>('/api/decision-sessions/analytics').then(r => r.data),
 
   getSystemStatus: () => http.get<SystemStatus>('/api/system/status').then(r => r.data),
-  getKnowledgeSummary: () => http.get<KnowledgeSummary>('/api/knowledge/summary').then(r => r.data),
+  getKnowledgeSummary: (q?: string) =>
+    http.get<KnowledgeSummary>('/api/knowledge/summary', { params: q ? { q, limit: 10 } : undefined })
+      .then(r => r.data),
 }
 
 export function createWebSocket(): WebSocket {
