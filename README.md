@@ -376,13 +376,13 @@ Connect at `ws://localhost:8000/ws`. Events:
 
 ## Testing
 
-Three automated test layers totalling **505** tests (369 backend + 110 frontend unit + 26 E2E).
+Three automated test layers totalling **512** tests (371 backend + 115 frontend unit + 26 E2E).
 
 ### Backend (pytest)
 
 ```bash
 cd backend
-pytest                          # all 369 tests
+pytest                          # all 371 tests
 pytest -v tests/test_health.py  # single file
 ```
 
@@ -392,7 +392,7 @@ Uses SQLite in-memory — no external services required. See [docs/TESTING.md](d
 
 ```bash
 cd frontend
-npm test            # 110 tests, single pass
+npm test            # 115 tests, single pass
 npm run test:watch  # watch mode
 ```
 

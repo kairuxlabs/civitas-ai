@@ -226,7 +226,7 @@ Two workflow files manage the pipeline:
 **`.github/workflows/ci.yml`** — runs on every push and pull request:
 
 ```
-backend tests (pytest, 369 tests)
+backend tests (pytest, 371 tests)
     └─ SQLite in-memory, no external services needed
        (v2 runtime tests force Gemini/Qdrant/Neo4j fallback paths)
 
@@ -255,8 +255,8 @@ deploy-frontend → vercel deploy --prod → Vercel builds from source and publi
 git push origin main
     │
     ├── ci.yml (parallel)
-    │   ├── backend: pytest (369)
-    │   ├── frontend-unit: vitest (110)
+    │   ├── backend: pytest (371)
+    │   ├── frontend-unit: vitest (115)
     │   ├── frontend-e2e: playwright (suites 06-07)
     │   └── frontend-build: npm run build
     │
