@@ -4,7 +4,7 @@ v1 pipeline (src/agents/critic_agent.py) and v2 runtime (src/runtime/decision.py
 """
 
 _PENALTY_PER_NOTE = 15
-_CONFIDENCE_FLOOR = 30
+CONFIDENCE_FLOOR = 30
 _SUFFICIENCY_THRESHOLD = 2
 
 
@@ -32,6 +32,6 @@ def review(decision: dict, evidence: list[dict]) -> dict:
 
     original_confidence = float(decision.get("confidence", 70))
     penalty = _PENALTY_PER_NOTE * len(notes)
-    adjusted_confidence = max(_CONFIDENCE_FLOOR, original_confidence - penalty) if notes else original_confidence
+    adjusted_confidence = max(CONFIDENCE_FLOOR, original_confidence - penalty) if notes else original_confidence
 
     return {"confidence": adjusted_confidence, "critic_notes": notes}

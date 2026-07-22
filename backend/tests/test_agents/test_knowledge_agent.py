@@ -113,6 +113,28 @@ def test_falls_back_to_sop_only_when_gemini_fails_with_city_knowledge_present(mo
     assert "Ho Hoan Kiem" not in result["knowledge_summary"]
 
 
+def test_falls_back_to_sop_only_when_gemini_raises(monkeypatch):
+    """If call_gemini raises instead of returning None (e.g. a transient SDK
+    error), the agent must not crash — it should log and fall through to the
+    same deterministic SOP-only summary as the None-return case."""
+    monkeypatch.setattr(settings, "qdrant_url", "https://fake.qdrant.io")
+    monkeypatch.setattr(
+        "src.agents.knowledge_agent.qdrant_loader.search_chunks",
+        lambda query, k=2: [{"title": "Ho Hoan Kiem", "content": "Ho trung tam Ha Noi.", "category": "geography", "source": "Wikipedia"}],
+    )
+
+    def _raise(prompt):
+        raise RuntimeError("simulated Gemini failure")
+
+    monkeypatch.setattr("src.agents.knowledge_agent.call_gemini", _raise)
+
+    state = _state("Tinh hinh ngap lut", rain=25.0)
+    result = knowledge_agent(state)
+
+    assert result["knowledge_summary"] == "Flood Emergency SOP: Activate drainage pumps at all low-lying districts."
+    assert "Ho Hoan Kiem" not in result["knowledge_summary"]
+
+
 def test_synthesizes_city_knowledge_only_when_no_sop_matches(monkeypatch):
     monkeypatch.setattr(settings, "qdrant_url", "https://fake.qdrant.io")
     monkeypatch.setattr(

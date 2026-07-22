@@ -229,8 +229,8 @@ def knowledge_agent(state: AgentState) -> dict:
                 f"Knowledge agent (Gemini): {len(top)} SOPs, {len(city_chunks)} city_knowledge chunks → summary"
             )
             return {"knowledge_summary": summary, "knowledge_evidence": evidence}
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Knowledge agent Gemini synthesis failed, falling back to deterministic summary: {e}")
 
     # Fallback: deterministic, SOP-only — city_chunks are intentionally not
     # stitched in without an LLM (a raw concatenation of Wikipedia/OSM text

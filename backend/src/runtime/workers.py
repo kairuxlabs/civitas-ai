@@ -12,6 +12,7 @@ from src.agents.citizen_agent import citizen_agent
 from src.agents.environment_agent import environment_agent
 from src.agents.knowledge_agent import knowledge_agent
 from src.agents.traffic_agent import traffic_agent
+from src.reasoning.thresholds import FLOOD_RISK_HIGH_RAIN_MM, FLOOD_RISK_MODERATE_RAIN_MM
 from src.runtime.state import RunState, TaskSpec
 
 Worker = Callable[[RunState, TaskSpec], Awaitable[dict]]
@@ -34,7 +35,11 @@ async def _run_v1_agent(agent_fn, run: RunState, output_key: str) -> str:
 
 async def weather_worker(run: RunState, spec: TaskSpec) -> dict:
     rain = float(_weather(run).get("rain") or 0)
-    flood_risk = "high" if rain > 50 else "medium" if rain > 20 else "low"
+    flood_risk = (
+        "high" if rain > FLOOD_RISK_HIGH_RAIN_MM
+        else "medium" if rain > FLOOD_RISK_MODERATE_RAIN_MM
+        else "low"
+    )
     run.context["flood_risk"] = flood_risk
     has_data = bool(run.context.get("weather_data"))
     summary = f"Rain {rain:.1f}mm/h — flood risk {flood_risk}"

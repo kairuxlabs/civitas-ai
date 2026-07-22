@@ -140,8 +140,9 @@ async def test_simulate_air_pollution_via_api(db_session, client):
     assert len(data["recommendations"]) >= 2
 
 
-async def test_simulate_unknown_scenario_uses_defaults(db_session, client):
-    """Unknown scenario key must not crash — falls back to neutral params."""
+async def test_simulate_unknown_scenario_rejected(db_session, client):
+    """Unknown scenario key must error (422), matching /api/v2/simulation/start's
+    validation, instead of silently falling back to neutral params with a 200."""
     district = District(city_id="hanoi", name="Unknown")
     db_session.add(district)
     await db_session.flush()
@@ -161,9 +162,7 @@ async def test_simulate_unknown_scenario_uses_defaults(db_session, client):
         "/api/simulate",
         json={"scenario": "nonexistent_scenario", "district_id": district.id},
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert "prediction" in data
+    assert response.status_code == 422
 
 
 async def test_critic_low_confidence_triggers_requires_approval(db_session):

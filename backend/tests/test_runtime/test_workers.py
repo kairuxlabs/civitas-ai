@@ -25,7 +25,11 @@ def test_every_catalog_agent_has_a_worker():
 
 @pytest.mark.asyncio
 async def test_weather_worker_flood_risk_thresholds():
-    for rain, expected in ((60, "high"), (30, "medium"), (2, "low")):
+    # Thresholds come from src.reasoning.thresholds — shared with v1's
+    # decision_agent so the same rain reading maps to the same flood_risk
+    # regardless of which runtime handles the request (rain > 20 => high,
+    # rain > 5 => medium, else low).
+    for rain, expected in ((30, "high"), (10, "medium"), (2, "low")):
         run = _make_run(rain=rain)
         result = await WORKERS["weather"](run, TaskSpec(id="weather", agent="weather"))
         assert result["flood_risk"] == expected

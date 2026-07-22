@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +23,9 @@ class SimulateRequest(BaseModel):
 
 @router.post("", response_model=DecisionOut)
 async def simulate(request: SimulateRequest, session: AsyncSession = Depends(get_db)):
-    scenario_params = SCENARIOS.get(request.scenario, {"rain_multiplier": 1.0, "aqi_boost": 0})
+    if request.scenario not in SCENARIOS:
+        raise HTTPException(status_code=422, detail=f"Unknown scenario. Available: {sorted(SCENARIOS)}")
+    scenario_params = SCENARIOS[request.scenario]
     query = f"Simulate scenario: {request.scenario}"
 
     sim_event = [

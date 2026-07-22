@@ -13,6 +13,7 @@ from src.agents.decision_agent import decision_agent
 from src.agents.critic_agent import critic_agent
 from src.agents.explanation_agent import explanation_agent
 from src.models.decision import AgentDecision
+from src.reasoning.thresholds import APPROVAL_CONFIDENCE_THRESHOLD
 from src.repositories.weather_repo import WeatherRepo
 from src.repositories.aqi_repo import AQIRepo
 from src.repositories.event_repo import EventRepo
@@ -120,7 +121,10 @@ async def run_agent_graph(
 
     dec = state["decision"]
     confidence = dec.get("confidence", 70.0)
-    requires_approval = confidence < 75 or dec.get("prediction", {}).get("flood_risk") == "high"
+    requires_approval = (
+        confidence < APPROVAL_CONFIDENCE_THRESHOLD
+        or dec.get("prediction", {}).get("flood_risk") == "high"
+    )
 
     out = DecisionOut(
         prediction=dec.get("prediction", {}),
