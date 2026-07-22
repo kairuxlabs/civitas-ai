@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
 from src.models.district import District
@@ -37,6 +37,48 @@ async def test_city_score_repo_latest(db_session):
     latest = await CityScoreRepo.get_latest_by_district(db_session, d.id)
     assert latest is not None
     assert latest.overall_score == 73.0
+
+
+async def test_city_score_repo_get_city_overview_returns_latest_per_district(db_session):
+    d1 = District(city_id="hanoi", name="D1")
+    d2 = District(city_id="hanoi", name="D2")
+    db_session.add_all([d1, d2])
+    await db_session.flush()
+
+    base = datetime.now(timezone.utc)
+    # Each district has two rows with different timestamps; only the newest
+    # per district should come back — this is the regression the swap from
+    # a per-district-loop N+1 query to a single query must not break.
+    db_session.add_all([
+        CityScore(
+            city_id="hanoi", district_id=d1.id, timestamp=base - timedelta(minutes=30),
+            traffic_score=1, environment_score=1, citizen_score=1, risk_score=1, overall_score=1,
+        ),
+        CityScore(
+            city_id="hanoi", district_id=d1.id, timestamp=base,
+            traffic_score=10, environment_score=10, citizen_score=10, risk_score=10, overall_score=10,
+        ),
+        CityScore(
+            city_id="hanoi", district_id=d2.id, timestamp=base - timedelta(minutes=15),
+            traffic_score=2, environment_score=2, citizen_score=2, risk_score=2, overall_score=2,
+        ),
+        CityScore(
+            city_id="hanoi", district_id=d2.id, timestamp=base,
+            traffic_score=20, environment_score=20, citizen_score=20, risk_score=20, overall_score=20,
+        ),
+    ])
+    await db_session.commit()
+
+    overview = await CityScoreRepo.get_city_overview(db_session)
+
+    assert len(overview) == 2
+    by_district = {s.district_id: s for s in overview}
+    assert by_district[d1.id].overall_score == 10
+    assert by_district[d2.id].overall_score == 20
+
+
+async def test_city_score_repo_get_city_overview_empty(db_session):
+    assert await CityScoreRepo.get_city_overview(db_session) == []
 
 
 async def test_weather_repo_save_all_commits_once(db_session):
