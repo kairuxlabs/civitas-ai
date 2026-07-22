@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Activity, Database, Rocket, ShieldAlert } from 'lucide-react'
+import { Activity, Database, Loader2, Rocket, ShieldAlert } from 'lucide-react'
 import { api } from '../../services/api'
 import HanoiMap from '../../components/HanoiMap'
+import { averageOverallScore } from '../../utils/scores'
 
 export default function OverviewPage() {
   const navigate = useNavigate()
@@ -11,17 +12,34 @@ export default function OverviewPage() {
 
   const { data: health } = useQuery({ queryKey: ['health'], queryFn: api.getHealth, refetchInterval: 15000 })
   const { data: districts } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
-  const { data: scores } = useQuery({ queryKey: ['scores'], queryFn: api.getScores, refetchInterval: 15000 })
+  const { data: scores, isLoading, isError } = useQuery({ queryKey: ['scores'], queryFn: api.getScores, refetchInterval: 15000 })
   const { data: analytics } = useQuery({
     queryKey: ['decision-sessions-analytics'],
     queryFn: api.getDecisionSessionAnalytics,
     refetchInterval: 10000,
   })
 
-  const avgOverall = useMemo(() => {
-    if (!scores?.length) return null
-    return Math.round(scores.reduce((sum, score) => sum + score.overall_score, 0) / scores.length)
-  }, [scores])
+  const avgOverall = useMemo(() => averageOverallScore(scores), [scores])
+
+  if (isLoading) {
+    return (
+      <div data-testid="overview-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="overview-loading" className="flex items-center justify-center py-24">
+          <Loader2 size={28} className="animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div data-testid="overview-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="overview-error" className="glass-panel rounded-xl p-6 text-error text-sm">
+          Failed to load — check your connection.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div data-testid="overview-page" className="p-margin-desktop space-y-gutter pb-16">
