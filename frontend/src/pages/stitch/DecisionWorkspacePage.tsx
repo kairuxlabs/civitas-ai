@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Activity, AlertTriangle, Brain, CheckCircle, ChevronDown, ChevronUp, Clock, Layers, Loader2,
+  Activity, AlertTriangle, Brain, CheckCircle, Clock, FileSearch, Layers, Loader2,
   MapPin, Rocket, ShieldAlert, XCircle,
 } from 'lucide-react'
 import HanoiMap, { type MapMetric } from '../../components/HanoiMap'
+import Modal from '../../components/Modal'
 import SimulationPanel from '../../components/SimulationPanel'
 import { api } from '../../services/api'
 import { averageOverallScore } from '../../utils/scores'
@@ -35,7 +36,7 @@ export default function DecisionWorkspacePage() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState(1)
   const [mapMetric, setMapMetric] = useState<MapMetric>('overall_score')
-  const [showEvidence, setShowEvidence] = useState(false)
+  const [evidenceModalOpen, setEvidenceModalOpen] = useState(false)
   const queryClient = useQueryClient()
 
   const goalPresets = [
@@ -363,35 +364,16 @@ export default function DecisionWorkspacePage() {
                     type="button"
                     data-testid="decision-evidence-toggle"
                     disabled={run.decision.evidence.length === 0}
-                    onClick={() => setShowEvidence(v => !v)}
+                    onClick={() => setEvidenceModalOpen(true)}
                     className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant text-left hover:bg-surface-container-high disabled:cursor-default disabled:hover:bg-surface-container-high/60"
                   >
                     <p className="text-[10px] text-outline flex items-center gap-1">
                       {t('workspace.evidence')}
-                      {run.decision.evidence.length > 0 && (
-                        showEvidence ? <ChevronUp size={10} /> : <ChevronDown size={10} />
-                      )}
+                      {run.decision.evidence.length > 0 && <FileSearch size={10} />}
                     </p>
                     <p className="text-sm font-bold">{run.decision.evidence.length}</p>
                   </button>
                 </div>
-                {showEvidence && run.decision.evidence.length > 0 && (
-                  <ul data-testid="decision-evidence-list" className="space-y-2 border-t border-outline-variant pt-2">
-                    {run.decision.evidence.map((item, index) => (
-                      <li key={index} className="text-xs bg-surface-container-high/40 rounded-lg p-2 space-y-0.5">
-                        <div className="flex items-center justify-between text-on-surface-variant">
-                          <span className="font-semibold text-on-surface">{item.agent}</span>
-                          <span className="font-mono text-[10px]">
-                            {item.source ?? '—'}
-                            {item.confidence != null && ` · ${Math.round(item.confidence * 100)}%`}
-                          </span>
-                        </div>
-                        <p className="text-on-surface-variant">{item.content ?? item.summary ?? '—'}</p>
-                        {item.time && <p className="text-[10px] text-outline">{item.time}</p>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
                 {(run.decision.critic_notes ?? []).length > 0 && (
                   <ul data-testid="decision-critic-notes" className="space-y-1 border-t border-outline-variant pt-2">
                     {run.decision.critic_notes!.map((note, index) => (
@@ -430,6 +412,47 @@ export default function DecisionWorkspacePage() {
           )}
         </section>
       </div>
+
+      {run?.decision && (
+        <Modal
+          open={evidenceModalOpen}
+          onClose={() => setEvidenceModalOpen(false)}
+          title={t('workspace.evidenceModalTitle')}
+          icon={<FileSearch size={16} className="text-primary" />}
+          testId="decision-evidence-modal"
+        >
+          <p className="text-xs text-on-surface-variant mb-4">{t('workspace.evidenceModalSubtitle')}</p>
+          <ul data-testid="decision-evidence-list" className="space-y-3">
+            {run.decision.evidence.map((item, index) => {
+              const pct = item.confidence != null ? Math.round(item.confidence * 100) : null
+              const confidenceClass = pct == null
+                ? 'text-on-surface-variant bg-surface-container-high border-outline-variant'
+                : pct >= 80 ? 'text-secondary bg-secondary/10 border-secondary/30'
+                  : pct >= 50 ? 'text-tertiary bg-tertiary/10 border-tertiary/30'
+                    : 'text-error bg-error/10 border-error/30'
+              return (
+                <li key={index} className="rounded-xl border border-outline-variant bg-surface-container-high/40 p-3.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-on-surface uppercase tracking-wide">{item.agent}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {item.source && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant">
+                          {item.source}
+                        </span>
+                      )}
+                      {pct != null && (
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${confidenceClass}`}>{pct}%</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">{item.content ?? item.summary ?? '—'}</p>
+                  {item.time && <p className="text-[10px] text-outline font-mono">{item.time}</p>}
+                </li>
+              )
+            })}
+          </ul>
+        </Modal>
+      )}
     </div>
   )
 }

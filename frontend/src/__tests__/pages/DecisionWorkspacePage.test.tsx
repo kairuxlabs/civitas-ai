@@ -196,7 +196,7 @@ describe('DecisionWorkspacePage', () => {
     localStorage.removeItem('civitas-language')
   })
 
-  it('expands and collapses the detailed evidence list when the Evidence tile is clicked', async () => {
+  it('opens the evidence modal when the Evidence tile is clicked, and closes it via the close button', async () => {
     const runWithEvidence: RuntimeRun = {
       ...activeRun,
       decision: {
@@ -218,19 +218,47 @@ describe('DecisionWorkspacePage', () => {
     await user.click(screen.getByRole('button', { name: /Execute Decision|Submit|Run/i }))
 
     await waitFor(() => expect(screen.getByTestId('decision-evidence-toggle')).toBeInTheDocument())
-    expect(screen.queryByTestId('decision-evidence-list')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('decision-evidence-modal')).not.toBeInTheDocument()
 
     await user.click(screen.getByTestId('decision-evidence-toggle'))
 
-    await waitFor(() => expect(screen.getByTestId('decision-evidence-list')).toBeInTheDocument())
-    expect(screen.getByText('Rain 45mm/h driving congestion risk')).toBeInTheDocument()
-    expect(screen.getByText('Flood Emergency SOP: activate drainage pumps.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('decision-evidence-modal')).toBeInTheDocument())
     const evidenceList = screen.getByTestId('decision-evidence-list')
+    expect(evidenceList).toHaveTextContent('Rain 45mm/h driving congestion risk')
+    expect(evidenceList).toHaveTextContent('Flood Emergency SOP: activate drainage pumps.')
     expect(evidenceList).toHaveTextContent('Open-Meteo')
     expect(evidenceList).toHaveTextContent('90%')
 
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByTestId('decision-evidence-modal')).not.toBeInTheDocument())
+  })
+
+  it('closes the evidence modal when the Escape key is pressed', async () => {
+    const runWithEvidence: RuntimeRun = {
+      ...activeRun,
+      decision: {
+        ...activeRun.decision!,
+        evidence: [
+          { agent: 'traffic', source: 'Open-Meteo', type: 'sensor', content: 'Rain driving congestion risk', confidence: 0.9, time: '2026-07-21T08:00:00Z' },
+        ],
+      },
+    }
+    vi.mocked(api.submitGoal).mockResolvedValue(runWithEvidence)
+    vi.mocked(api.getRun).mockResolvedValue(runWithEvidence)
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
+    await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
+    await user.click(screen.getByRole('button', { name: /Execute Decision|Submit|Run/i }))
+
+    await waitFor(() => expect(screen.getByTestId('decision-evidence-toggle')).toBeInTheDocument())
     await user.click(screen.getByTestId('decision-evidence-toggle'))
-    expect(screen.queryByTestId('decision-evidence-list')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('decision-evidence-modal')).toBeInTheDocument())
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByTestId('decision-evidence-modal')).not.toBeInTheDocument())
   })
 
   it('keeps the Execution Trace list in a bounded, scrollable container regardless of task count', async () => {

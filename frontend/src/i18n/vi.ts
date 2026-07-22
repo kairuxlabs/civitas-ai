@@ -59,6 +59,8 @@ export const vi: Record<TranslationKey, string> = {
   'workspace.confidence': 'Độ tin cậy',
   'workspace.risk': 'Rủi ro',
   'workspace.evidence': 'Bằng chứng',
+  'workspace.evidenceModalTitle': 'Bằng chứng & Giải thích',
+  'workspace.evidenceModalSubtitle': 'Toàn bộ dẫn chứng mà hệ thống dùng để đưa ra quyết định này, theo từng agent đóng góp.',
   'workspace.approve': 'Phê duyệt',
   'workspace.reject': 'Từ chối',
   'workspace.decisionCardEmpty': 'Thẻ quyết định sẽ hiện khi runtime hoàn tất lập kế hoạch.',

@@ -5,7 +5,7 @@ Civitas AI has three layers of automated testing:
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
 | **Backend unit** | pytest + httpx | 377 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler, per-scenario Digital Twin auto-goal triggers, real-data weather/AQI crawl pipelines |
-| **Frontend unit** | Vitest + Testing Library | 125 tests | React components (incl. DecisionSessionsPanel responsive grid + outcome evidence, LogoMark, SimulationPanel + crawl result counts), Stitch pages (all 8, EN/VI translated, incl. Knowledge Graph empty state and City Intelligence AQI trend chart), i18n (dictionaries + LanguageContext), hooks, API service |
+| **Frontend unit** | Vitest + Testing Library | 126 tests | React components (incl. DecisionSessionsPanel responsive grid + outcome evidence, LogoMark, SimulationPanel + crawl result counts, Modal), Stitch pages (all 8, EN/VI translated, incl. Knowledge Graph empty state, City Intelligence AQI trend chart, Decision Workspace evidence modal), i18n (dictionaries + LanguageContext), hooks, API service |
 | **E2E integration** | Playwright (Chromium) | 26 tests | Decision Workspace (v2 goal/approval, Digital Twin, Decision Sessions + filters), remaining Stitch screens, live-backend integration, production smoke |
 
 ---
@@ -257,7 +257,7 @@ All testable elements have `data-testid` attributes:
 | Decision Workspace critic warnings | `decision-critic-notes` |
 | Decision Workspace reflection notes | `decision-reflection-notes` |
 | Decision Workspace map metric toggle | `map-metric-toggle` |
-| Decision Workspace evidence toggle/list | `decision-evidence-toggle` / `decision-evidence-list` |
+| Decision Workspace evidence toggle/modal/list | `decision-evidence-toggle` / `decision-evidence-modal` / `decision-evidence-list` |
 | Decision Workspace City Score gauge value | `city-score-value` (tracks the clicked district, falls back to city-wide average) |
 | Digital Twin panel (Decision Workspace) | `digital-twin-panel` |
 | Digital Twin start/stop button | `sim-start-btn` / `sim-stop-btn` |

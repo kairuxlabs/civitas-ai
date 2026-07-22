@@ -61,6 +61,8 @@ export const en = {
   'workspace.confidence': 'Confidence',
   'workspace.risk': 'Risk',
   'workspace.evidence': 'Evidence',
+  'workspace.evidenceModalTitle': 'Evidence & Explanation',
+  'workspace.evidenceModalSubtitle': 'Every citation the runtime used to reach this decision, grouped by contributing agent.',
   'workspace.approve': 'Approve',
   'workspace.reject': 'Reject',
   'workspace.decisionCardEmpty': 'Decision card appears when the runtime finishes planning.',
