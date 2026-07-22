@@ -4,8 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { renderWithQueryClient } from '../test-utils'
 import ReportsPage from '../../pages/stitch/ReportsPage'
 import { api } from '../../services/api'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../services/api')
+
+function renderPage() {
+  return renderWithQueryClient(<LanguageProvider><ReportsPage /></LanguageProvider>)
+}
 
 const pendingReport = {
   id: 1, city_id: 'hanoi', district_id: 1, query: 'Prepare for heavy rain',
@@ -26,19 +31,19 @@ beforeEach(() => {
 
 describe('ReportsPage', () => {
   it('renders one row per decision report from the real timeline', async () => {
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(2))
   })
 
   it('shows approve/reject actions only for reports still pending', async () => {
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(2))
     expect(screen.getAllByTestId('report-approve-button')).toHaveLength(1)
     expect(screen.getAllByTestId('report-reject-button')).toHaveLength(1)
   })
 
   it('approves a pending report and refetches the timeline', async () => {
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-approve-button')).toHaveLength(1))
 
     await userEvent.click(screen.getByTestId('report-approve-button'))
@@ -47,7 +52,7 @@ describe('ReportsPage', () => {
   })
 
   it('filters reports by search text over the real query field', async () => {
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(2))
 
     await userEvent.type(screen.getByTestId('reports-search-input'), 'pollution')
@@ -57,7 +62,7 @@ describe('ReportsPage', () => {
   })
 
   it('filters reports by status', async () => {
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(2))
 
     await userEvent.selectOptions(screen.getByTestId('reports-status-filter'), 'approved')
@@ -68,7 +73,7 @@ describe('ReportsPage', () => {
 
   it('shows an inline error when approving a report fails', async () => {
     vi.mocked(api.approveDecision).mockRejectedValue(new Error('network down'))
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-approve-button')).toHaveLength(1))
 
     await userEvent.click(screen.getByTestId('report-approve-button'))
@@ -78,7 +83,7 @@ describe('ReportsPage', () => {
 
   it('shows an inline error when rejecting a report fails', async () => {
     vi.mocked(api.rejectDecision).mockRejectedValue(new Error('network down'))
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-reject-button')).toHaveLength(1))
 
     await userEvent.click(screen.getByTestId('report-reject-button'))
@@ -88,7 +93,7 @@ describe('ReportsPage', () => {
 
   it('dismisses the action error banner when Dismiss is clicked', async () => {
     vi.mocked(api.approveDecision).mockRejectedValue(new Error('network down'))
-    renderWithQueryClient(<ReportsPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('report-approve-button')).toHaveLength(1))
 
     await userEvent.click(screen.getByTestId('report-approve-button'))
@@ -96,5 +101,15 @@ describe('ReportsPage', () => {
 
     await userEvent.click(screen.getByTestId('reports-action-error-dismiss'))
     expect(screen.queryByTestId('reports-action-error')).not.toBeInTheDocument()
+  })
+
+  it('renders Vietnamese labels when the language is switched to vi', async () => {
+    vi.mocked(api.getTimeline).mockResolvedValue([])
+    localStorage.setItem('civitas-language', 'vi')
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Báo cáo quyết định')).toBeInTheDocument())
+    localStorage.removeItem('civitas-language')
   })
 })
