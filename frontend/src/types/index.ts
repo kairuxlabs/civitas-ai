@@ -109,6 +109,7 @@ export interface RuntimeDecision {
   recommendation: string[];
   confidence: number;
   evidence: RuntimeEvidence[];
+  critic_notes?: string[];
 }
 
 export interface WorkflowStep {

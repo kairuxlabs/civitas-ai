@@ -4,6 +4,7 @@ import {
   Activity, AlertTriangle, Brain, CheckCircle, Loader2, Rocket, XCircle,
 } from 'lucide-react'
 import HanoiMap from '../../components/HanoiMap'
+import SimulationPanel from '../../components/SimulationPanel'
 import { api } from '../../services/api'
 import type { RuntimeRun, RuntimeTask } from '../../types'
 
@@ -124,6 +125,8 @@ export default function DecisionWorkspacePage() {
         </div>
       </div>
 
+      <SimulationPanel />
+
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-gutter">
         <section className="xl:col-span-3 glass-panel rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -158,6 +161,18 @@ export default function DecisionWorkspacePage() {
               <li className="text-xs text-on-surface-variant italic">Submit a goal to start the runtime trace.</li>
             )}
           </ul>
+          {(run?.reflection?.notes ?? []).length > 0 && (
+            <div data-testid="decision-reflection-notes" className="space-y-1.5 pt-3 border-t border-outline-variant">
+              <p className="text-[10px] uppercase text-on-surface-variant">Reflection notes</p>
+              <ul className="space-y-1.5">
+                {run!.reflection!.notes.map((note, index) => (
+                  <li key={index} className="text-xs text-on-surface-variant flex items-start gap-1.5">
+                    <Brain size={12} className="text-secondary shrink-0 mt-0.5" /> {note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {runs?.length ? (
             <div className="pt-3 border-t border-outline-variant space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
               <p className="text-[10px] uppercase text-on-surface-variant">Recent runs</p>
@@ -220,6 +235,15 @@ export default function DecisionWorkspacePage() {
               <div className="text-xs text-on-surface-variant">
                 Confidence: {Math.round(run.decision.confidence)}%
               </div>
+              {(run.decision.critic_notes ?? []).length > 0 && (
+                <ul data-testid="decision-critic-notes" className="space-y-1 border-t border-outline-variant pt-2">
+                  {run.decision.critic_notes!.map((note, index) => (
+                    <li key={index} className="text-xs text-tertiary flex items-start gap-1.5">
+                      <AlertTriangle size={12} className="shrink-0 mt-0.5" /> {note}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {run.status === 'awaiting_approval' && (
                 <div className="flex gap-2">
                   <button
