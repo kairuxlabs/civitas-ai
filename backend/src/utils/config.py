@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     qdrant_api_key: str = ""
     openrouter_api_key: str = ""
     openrouter_timeout_seconds: float = 10.0
+    # Optional — OpenAQ v3 requires an API key on every endpoint. Empty =
+    # the AQI crawl/pipeline skips itself rather than writing fabricated
+    # readings (see pipelines/aqi_pipeline.py).
+    openaq_api_key: str = ""
     # Optional — X-API-Key auth on mutating endpoints. Empty = auth disabled
     # (no-op), the default for local/dev/test.
     api_key: str = ""

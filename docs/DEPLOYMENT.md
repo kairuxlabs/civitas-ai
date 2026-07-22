@@ -96,6 +96,7 @@ In **Environment** tab, add:
 | `NEO4J_PASSWORD` | ❌ | From Aura credentials file |
 | `QDRANT_URL` | ❌ | `https://xxx.cloud.qdrant.io` — enables vector SOP/`city_knowledge` search |
 | `QDRANT_API_KEY` | ❌ | From Qdrant Cloud dashboard |
+| `OPENAQ_API_KEY` | ❌ | Free key from `https://explore.openaq.org/register` — OpenAQ v3 requires it on every endpoint. Empty = the AQI crawl/15-min pipeline skips itself rather than writing fabricated readings |
 
 ### Auto-deploy from GitHub
 
@@ -296,7 +297,7 @@ Key points:
 1. In Render dashboard: **New → Blueprint**
 2. Connect your GitHub repo
 3. Render reads `render.yaml` and creates the service
-4. Set `DATABASE_URL` and `GEMINI_API_KEY` manually in the dashboard (marked `sync: false`); add the optional `OPENROUTER_API_KEY` / `NEO4J_*` / `QDRANT_*` variables there too if used
+4. Set `DATABASE_URL` and `GEMINI_API_KEY` manually in the dashboard (marked `sync: false`); add the optional `OPENROUTER_API_KEY` / `NEO4J_*` / `QDRANT_*` / `OPENAQ_API_KEY` variables there too if used
 
 ---
 

@@ -4,8 +4,8 @@ Civitas AI has three layers of automated testing:
 
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
-| **Backend unit** | pytest + httpx | 371 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler, per-scenario Digital Twin auto-goal triggers |
-| **Frontend unit** | Vitest + Testing Library | 118 tests | React components (incl. DecisionSessionsPanel + outcome evidence, LogoMark, SimulationPanel), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
+| **Backend unit** | pytest + httpx | 377 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler, per-scenario Digital Twin auto-goal triggers, real-data weather/AQI crawl pipelines |
+| **Frontend unit** | Vitest + Testing Library | 119 tests | React components (incl. DecisionSessionsPanel + outcome evidence, LogoMark, SimulationPanel + crawl result counts), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
 | **E2E integration** | Playwright (Chromium) | 26 tests | Decision Workspace (v2 goal/approval, Digital Twin, Decision Sessions + filters), remaining Stitch screens, live-backend integration, production smoke |
 
 ---

@@ -61,6 +61,18 @@ async def test_crawl_endpoint(client, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_crawl_reports_zero_count_when_aqi_key_unconfigured(client, monkeypatch):
+    """End-to-end: without OPENAQ_API_KEY, AQIPipeline must not fabricate
+    data, and the crawl endpoint must surface that honestly as count 0
+    rather than a bare 'ok' the frontend would render as a fake success."""
+    monkeypatch.setattr(settings, "openaq_api_key", "")
+
+    resp = await client.post("/api/v2/crawl", json={"sources": ["aqi"]})
+    assert resp.status_code == 200
+    assert resp.json()["results"]["aqi"] == {"ok": True, "count": 0}
+
+
+@pytest.mark.asyncio
 async def test_crawl_defaults_to_all_sources(client, monkeypatch):
     async def ok(session):
         return 1

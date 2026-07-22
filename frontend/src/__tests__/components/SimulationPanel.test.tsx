@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithQueryClient } from '../test-utils'
 import SimulationPanel from '../../components/SimulationPanel'
 import { api } from '../../services/api'
@@ -11,6 +12,10 @@ beforeEach(() => {
     { name: 'heavy_rain', label: 'Mưa lớn' },
     { name: 'heatwave', label: 'Nắng nóng gay gắt' },
   ])
+  vi.mocked(api.getSimulationStatus).mockResolvedValue({
+    running: false, scenario: 'normal', scenario_label: 'Bình thường', interval_s: 30, auto_goal: true, tick: 0,
+    values: { rain: 0, aqi: 60, temperature: 28, humidity: 65, wind_speed: 8 }, last_auto_goal: null,
+  })
 })
 
 describe('SimulationPanel', () => {
@@ -56,5 +61,25 @@ describe('SimulationPanel', () => {
     expect(screen.getByText('Mưa 1mm').className).not.toContain('font-semibold')
     expect(screen.getByText('AQI 120').className).not.toContain('font-semibold')
     expect(screen.getByText('30°C').className).not.toContain('font-semibold')
+  })
+
+  it('shows the real per-source counts after a crawl, including a zero-count source', async () => {
+    vi.mocked(api.runCrawl).mockResolvedValue({
+      weather: { ok: true, count: 12 },
+      aqi: { ok: true, count: 0 },
+      news: { ok: false, error: 'network down' },
+    })
+
+    const user = userEvent.setup()
+    renderWithQueryClient(<SimulationPanel />)
+
+    await user.click(screen.getByTestId('sim-crawl-btn'))
+
+    const results = await screen.findByTestId('sim-crawl-results')
+    expect(results).toHaveTextContent('12 mục')
+    // A source that ran but wrote nothing (e.g. AQI with no API key
+    // configured) must show its real zero count, not a generic "OK".
+    expect(results).toHaveTextContent('0 mục')
+    expect(results).toHaveTextContent('lỗi')
   })
 })
