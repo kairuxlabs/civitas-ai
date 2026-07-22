@@ -127,6 +127,7 @@ export const en = {
   'knowledge.notConfigured3': 'unset) — the graph explorer degrades to this empty state.',
   'knowledge.sampleConnectedEntities': 'Sample connected entities',
   'knowledge.noEntitiesMatchFilter': 'No entities match this filter.',
+  'knowledge.noSampleData': 'No sample entities found for these keywords yet — try a different search term.',
   'knowledge.entities': 'Entities',
   'knowledge.relations': 'Relations',
 

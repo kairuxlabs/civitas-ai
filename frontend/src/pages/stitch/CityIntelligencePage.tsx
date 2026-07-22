@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Line, LineChart, ResponsiveContainer } from 'recharts'
 import { Building2, Info, Loader2, TrendingDown, TrendingUp, Wind } from 'lucide-react'
 import { api } from '../../services/api'
 import { useTranslation } from '../../i18n/useTranslation'
+
+const AQI_TREND_COLOR = '#4edea3'
 
 export default function CityIntelligencePage() {
   const { t } = useTranslation()
@@ -109,16 +112,27 @@ export default function CityIntelligencePage() {
             <h2 className="text-sm font-semibold">{t('cityIntelligence.airQuality')}</h2>
           </div>
           {latestAqi ? (
-            <div className="flex gap-6">
-              <div>
-                <p className="text-xs text-on-surface-variant">{t('cityIntelligence.aqiIndex')}</p>
-                <p className="text-2xl font-semibold">{Math.round(latestAqi.aqi_index)}</p>
+            <>
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-xs text-on-surface-variant">{t('cityIntelligence.aqiIndex')}</p>
+                  <p className="text-2xl font-semibold">{Math.round(latestAqi.aqi_index)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-on-surface-variant">{t('cityIntelligence.pm25')}</p>
+                  <p className="text-2xl font-semibold">{Math.round(latestAqi.pm25)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-on-surface-variant">{t('cityIntelligence.pm25')}</p>
-                <p className="text-2xl font-semibold">{Math.round(latestAqi.pm25)}</p>
-              </div>
-            </div>
+              {aqiHistory && aqiHistory.length > 1 && (
+                <div data-testid="city-intelligence-aqi-trend" className="h-14 mt-4 -mx-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={aqiHistory}>
+                      <Line type="monotone" dataKey="aqi_index" stroke={AQI_TREND_COLOR} strokeWidth={2} dot={false} isAnimationActive={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </>
           ) : (
             <p className="text-sm text-on-surface-variant italic">{t('cityIntelligence.noAqiHistory')}</p>
           )}

@@ -33,11 +33,11 @@ function SessionTimeline({ session }: { session: DecisionSession }) {
     [t('sessions.statusEvaluated'), session.evaluated_at],
   ]
   return (
-    <div data-testid="decision-session-timeline" className="flex justify-between text-[9px] text-on-surface-variant pt-1">
+    <div data-testid="decision-session-timeline" className="grid grid-cols-4 gap-1 text-[10px] text-on-surface-variant pt-1">
       {steps.map(([label, ts]) => (
-        <div key={label} className={`text-center ${ts ? 'text-on-surface' : ''}`}>
-          <div>{label}</div>
-          <div className="tabular-nums">{fmtTime(ts)}</div>
+        <div key={label} className={`min-w-0 text-center ${ts ? 'text-on-surface' : ''}`}>
+          <div className="truncate leading-tight">{label}</div>
+          <div className="tabular-nums leading-tight">{fmtTime(ts)}</div>
         </div>
       ))}
     </div>
@@ -76,15 +76,15 @@ function SessionCard({ session }: { session: DecisionSession }) {
     && session.status !== 'recommend' && session.status !== 'awaiting_approval' && session.status !== 'rejected'
 
   return (
-    <div data-testid="decision-session-card" className="bg-surface-container border border-outline-variant rounded-lg p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-on-surface">Session #{session.id}</p>
-        <span className="text-[10px] bg-surface-container-high border border-outline-variant text-on-surface-variant rounded-full px-2 py-0.5">
+    <div data-testid="decision-session-card" className="glass-panel rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-on-surface shrink-0">Session #{session.id}</p>
+        <span className="text-[10px] bg-surface-container-high border border-outline-variant text-on-surface-variant rounded-full px-2 py-0.5 shrink-0">
           {statusLabel[session.status] ?? session.status}
         </span>
       </div>
-      <p className="text-xs text-on-surface-variant">{session.goal}</p>
-      <p className="text-[10px] text-on-surface-variant">{session.run_id}</p>
+      <p className="text-xs text-on-surface-variant line-clamp-2" title={session.goal}>{session.goal}</p>
+      <p className="text-[10px] text-on-surface-variant truncate">{session.run_id}</p>
       <SessionTimeline session={session} />
 
       {showOutcome && session.baseline_scores && (
@@ -204,7 +204,7 @@ export default function DecisionSessionsPanel() {
 
   if (isLoading) {
     return (
-      <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
+      <div className="glass-panel rounded-xl p-4 space-y-3">
         {panelHeader}
         <div data-testid="decision-sessions-loading" className="flex items-center justify-center py-12">
           <Loader2 size={24} className="animate-spin text-primary" />
@@ -215,7 +215,7 @@ export default function DecisionSessionsPanel() {
 
   if (isError) {
     return (
-      <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
+      <div className="glass-panel rounded-xl p-4 space-y-3">
         {panelHeader}
         <div data-testid="decision-sessions-error" className="text-error text-sm py-4 text-center">
           {t('common.loadError')}
@@ -225,7 +225,7 @@ export default function DecisionSessionsPanel() {
   }
 
   return (
-    <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
+    <div className="glass-panel rounded-xl p-4 space-y-3">
       {panelHeader}
 
       {analytics && (
@@ -278,13 +278,13 @@ export default function DecisionSessionsPanel() {
         </div>
       )}
 
-      <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3">
         {filteredSessions.map(s => <SessionCard key={s.id} session={s} />)}
         {sessions && sessions.length === 0 && (
-          <p className="text-xs text-on-surface-variant italic text-center py-4">{t('sessions.noSessionsYet')}</p>
+          <p className="col-span-full text-xs text-on-surface-variant italic text-center py-4">{t('sessions.noSessionsYet')}</p>
         )}
         {sessions && sessions.length > 0 && filteredSessions.length === 0 && (
-          <p className="text-xs text-on-surface-variant italic text-center py-4">{t('sessions.noSessionsMatchFilters')}</p>
+          <p className="col-span-full text-xs text-on-surface-variant italic text-center py-4">{t('sessions.noSessionsMatchFilters')}</p>
         )}
       </div>
     </div>

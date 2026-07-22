@@ -5,7 +5,7 @@ Civitas AI has three layers of automated testing:
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
 | **Backend unit** | pytest + httpx | 377 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler, per-scenario Digital Twin auto-goal triggers, real-data weather/AQI crawl pipelines |
-| **Frontend unit** | Vitest + Testing Library | 119 tests | React components (incl. DecisionSessionsPanel + outcome evidence, LogoMark, SimulationPanel + crawl result counts), Stitch pages (all 8, EN/VI translated), i18n (dictionaries + LanguageContext), hooks, API service |
+| **Frontend unit** | Vitest + Testing Library | 125 tests | React components (incl. DecisionSessionsPanel responsive grid + outcome evidence, LogoMark, SimulationPanel + crawl result counts), Stitch pages (all 8, EN/VI translated, incl. Knowledge Graph empty state and City Intelligence AQI trend chart), i18n (dictionaries + LanguageContext), hooks, API service |
 | **E2E integration** | Playwright (Chromium) | 26 tests | Decision Workspace (v2 goal/approval, Digital Twin, Decision Sessions + filters), remaining Stitch screens, live-backend integration, production smoke |
 
 ---
@@ -268,6 +268,7 @@ All testable elements have `data-testid` attributes:
 | City Intelligence page | `city-intelligence-page` |
 | City Intelligence overall score | `city-intelligence-overall-score` |
 | City Intelligence district selector | `city-intelligence-district-option` |
+| City Intelligence AQI trend chart (renders once 2+ history points) | `city-intelligence-aqi-trend` |
 | Reports page | `reports-page` |
 | Report row | `report-row` |
 | Report approve/reject buttons | `report-approve-button` / `report-reject-button` |
@@ -277,6 +278,7 @@ All testable elements have `data-testid` attributes:
 | Knowledge Graph page | `knowledge-graph-page` |
 | Knowledge entity/relation counts | `knowledge-entity-count` / `knowledge-relation-count` |
 | Knowledge sample row | `knowledge-sample-row` |
+| Knowledge empty state (configured, zero sample) | `knowledge-graph-empty` |
 | Knowledge search input / label filter chip | `knowledge-search-input` / `knowledge-label-filter` |
 | Settings page | `settings-page` |
 | Settings Gemini model/temperature | `settings-gemini-model` / `settings-gemini-temperature` |

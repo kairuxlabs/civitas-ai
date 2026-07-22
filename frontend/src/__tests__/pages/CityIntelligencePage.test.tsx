@@ -43,6 +43,22 @@ describe('CityIntelligencePage', () => {
     await waitFor(() => expect(screen.getAllByTestId('city-intelligence-district-option')).toHaveLength(2))
   })
 
+  it('renders an AQI trend chart from the fetched history once there is more than one data point', async () => {
+    vi.mocked(api.getAQIHistory).mockResolvedValue([
+      { time: '2026-07-21T06:00:00Z', aqi_index: 70, pm25: 30 },
+      { time: '2026-07-21T07:00:00Z', aqi_index: 85, pm25: 40 },
+      { time: '2026-07-21T08:00:00Z', aqi_index: 90, pm25: 45 },
+    ])
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('city-intelligence-aqi-trend')).toBeInTheDocument())
+  })
+
+  it('does not render the AQI trend chart with fewer than two data points', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('city-intelligence-overall-score')).toBeInTheDocument())
+    expect(screen.queryByTestId('city-intelligence-aqi-trend')).not.toBeInTheDocument()
+  })
+
   it('shows a loading indicator before the scores query resolves', async () => {
     let resolveScores: (v: unknown) => void = () => {}
     vi.mocked(api.getScores).mockImplementation(() => new Promise(resolve => { resolveScores = resolve }))

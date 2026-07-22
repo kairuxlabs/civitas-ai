@@ -122,6 +122,7 @@ export const vi: Record<TranslationKey, string> = {
   'knowledge.notConfigured3': 'chưa đặt) — trình khám phá đồ thị chuyển về trạng thái rỗng này.',
   'knowledge.sampleConnectedEntities': 'Thực thể mẫu được liên kết',
   'knowledge.noEntitiesMatchFilter': 'Không có thực thể nào khớp bộ lọc này.',
+  'knowledge.noSampleData': 'Chưa tìm thấy thực thể mẫu nào cho từ khóa này — thử tìm với từ khóa khác.',
   'knowledge.entities': 'Thực thể',
   'knowledge.relations': 'Quan hệ',
 

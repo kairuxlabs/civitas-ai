@@ -104,7 +104,7 @@ test.describe('Remaining Stitch screens', () => {
 
   test('Knowledge Graph renders real entity/relation counts', async ({ page }) => {
     await waitForApp(page)
-    await page.route('**/api/knowledge/summary', route => route.fulfill({
+    await page.route('**/api/knowledge/summary**', route => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
         configured: true, entities: 128, relations: 426,
@@ -168,7 +168,7 @@ test.describe('Remaining Stitch screens', () => {
     await page.route('**/api/aqi/history/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
     await page.route('**/api/timeline**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
     await page.route('**/api/system/status', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(SYSTEM_STATUS) }))
-    await page.route('**/api/knowledge/summary', route => route.fulfill({
+    await page.route('**/api/knowledge/summary**', route => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ configured: false, entities: 0, relations: 0, sample: [] }),
     }))

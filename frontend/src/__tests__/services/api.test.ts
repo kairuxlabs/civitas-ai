@@ -71,6 +71,20 @@ describe('api.rejectDecision', () => {
   })
 })
 
+describe('api.getKnowledgeSummary', () => {
+  it('sends a higher default limit even without a search query, so the default view is not capped at 5 samples', async () => {
+    mockHttp.get.mockResolvedValueOnce({ data: { configured: true, entities: 1, relations: 1, sample: [] } })
+    await api.getKnowledgeSummary()
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 15 } })
+  })
+
+  it('includes the search query alongside the limit when provided', async () => {
+    mockHttp.get.mockResolvedValueOnce({ data: { configured: true, entities: 1, relations: 1, sample: [] } })
+    await api.getKnowledgeSummary('Cau Giay')
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 15, q: 'Cau Giay' } })
+  })
+})
+
 describe('createWebSocket', () => {
   it('creates ws:// URL when page is http', () => {
     Object.defineProperty(window, 'location', {

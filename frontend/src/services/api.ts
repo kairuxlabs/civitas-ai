@@ -67,7 +67,7 @@ export const api = {
 
   getSystemStatus: () => http.get<SystemStatus>('/api/system/status').then(r => r.data),
   getKnowledgeSummary: (q?: string) =>
-    http.get<KnowledgeSummary>('/api/knowledge/summary', { params: q ? { q, limit: 10 } : undefined })
+    http.get<KnowledgeSummary>('/api/knowledge/summary', { params: { limit: 15, ...(q ? { q } : {}) } })
       .then(r => r.data),
 }
 

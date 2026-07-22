@@ -110,12 +110,14 @@ export default function KnowledgeGraphPage() {
             </div>
           </div>
 
-          {summary && summary.sample.length > 0 && (
+          {summary?.configured && (
             <div className="glass-panel rounded-xl overflow-hidden">
               <div className="p-4 border-b border-outline-variant bg-surface-container-low">
                 <h3 className="text-sm font-semibold">{t('knowledge.sampleConnectedEntities')}</h3>
               </div>
-              {visibleSample.length === 0 ? (
+              {summary.sample.length === 0 ? (
+                <p data-testid="knowledge-graph-empty" className="px-6 py-8 text-center text-outline italic text-xs">{t('knowledge.noSampleData')}</p>
+              ) : visibleSample.length === 0 ? (
                 <p className="px-6 py-8 text-center text-outline italic text-xs">{t('knowledge.noEntitiesMatchFilter')}</p>
               ) : (
                 <div className="divide-y divide-outline-variant/30">

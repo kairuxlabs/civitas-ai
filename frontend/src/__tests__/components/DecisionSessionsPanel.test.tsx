@@ -61,6 +61,15 @@ describe('DecisionSessionsPanel', () => {
     await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
   })
 
+  it('lays out session cards in a responsive grid instead of a height-capped scroll box', async () => {
+    renderPanel()
+    await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(2))
+    const grid = screen.getAllByTestId('decision-session-card')[0].parentElement!
+    expect(grid.className).toContain('grid')
+    expect(grid.className).not.toContain('max-h-96')
+    expect(grid.className).not.toContain('overflow-y-auto')
+  })
+
   it('renders a timeline stepper on each card', async () => {
     renderPanel()
     await waitFor(() => expect(screen.getAllByTestId('decision-session-timeline')).toHaveLength(2))

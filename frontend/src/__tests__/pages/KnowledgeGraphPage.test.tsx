@@ -44,6 +44,15 @@ describe('KnowledgeGraphPage', () => {
     await waitFor(() => expect(screen.getByText(/not configured/i)).toBeInTheDocument())
   })
 
+  it('shows an empty-state message when Neo4j is configured but the sample is empty', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
+      configured: true, entities: 0, relations: 0, sample: [],
+    })
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('knowledge-graph-empty')).toBeInTheDocument())
+    expect(screen.queryByTestId('knowledge-sample-row')).not.toBeInTheDocument()
+  })
+
   it('typing in the search box re-queries the real Neo4j-backed API with the search term', async () => {
     vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
       configured: true, entities: 128, relations: 426, sample: twoLabelSample,
