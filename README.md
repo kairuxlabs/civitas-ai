@@ -28,7 +28,7 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 | |                                                                                                                                                                                                                    |
 |---|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Live deployment** | Frontend: [frontend-eta-six-46.vercel.app](https://frontend-eta-six-46.vercel.app) · Backend: [civitas-ai-backend.onrender.com](https://civitas-ai-backend.onrender.com)                                           |
-| **Demo video** | `docs/demo/cityos_demo_recording.webm` — an unnarrated Playwright screen capture walking the live production app: Overview → language switch (EN/VI) → Decision Workspace (map metric toggle) → Decision Sessions → Data Sources → Knowledge Graph (search) → City Intelligence (district switch) → Reports (search + status filter) → Settings. Read-only against production — no goals submitted, nothing approved/rejected. |
+| **Demo video** | `docs/demo/cityos_demo_recording.webm` — an unnarrated Playwright screen capture walking the live production app: Overview → language switch (EN/VI) → Decision Workspace (district map click updates City Score, map metric toggle, Evidence & Explanation modal) → Decision Sessions (responsive card grid, outcome evidence) → Data Sources → Knowledge Graph (search) → City Intelligence (district switch, AQI trend chart) → Reports (search + status filter) → Settings. Read-only against production — no goals submitted, nothing approved/rejected; the Evidence modal segment replays one real completed decision via a client-side response mock so no new goal is posted. |
 | **Scenario shown** | Heavy rain triggers flash-flood risk in Hanoi → Planner dispatches Traffic + Emergency + Knowledge agents in parallel → Decision recommends road closures + shelter alerts → operator approves from Decision Workspace → Decision Session captures baseline CityScores and can **Check Outcome Now** |
 
 ---
@@ -42,11 +42,11 @@ CityOS ingests real-time weather, air quality, traffic, and citizen data, reason
 - **Knowledge graph queries** — the Neo4j entity/relation graph is queried live: the Knowledge Agent extracts keywords, looks up related entities/relations (with edge metadata), and folds them into reasoning context and cited evidence
 - **RAG knowledge layer** — OpenStreetMap, Wikipedia, Wikidata, GeoJSON boundaries, and government PDFs are chunked, embedded, and indexed into **Neo4j** (entity graph) + **Qdrant** (vector search), retrieved via an embed → search → rerank pipeline
 - **NVIDIA Nemotron AI Gateway** — planning, embedding, reranking, and content-safety all route through NVIDIA Nemotron models via **OpenRouter**, behind a single gateway so the backing model can change without touching any agent; falls back to Google Gemini automatically for resilience
-- **Real-time monitoring** — Weather and AQI data fetched every 15 minutes from Open-Meteo and OpenAQ across all 12 Hanoi districts
+- **Real-time monitoring** — Weather and AQI data fetched every 15 minutes from Open-Meteo (per-district, via a batched multi-location request against each district's real centroid) and OpenAQ (nearest live station assigned per district by distance) across all 12 Hanoi districts; AQI skips itself rather than writing fabricated readings when `OPENAQ_API_KEY` is unset
 - **8-agent v1 pipeline** — Sequential graph (traffic → environment → event → citizen → knowledge → decision → critic → explanation) powered by Google Gemini
 - **Live WebSocket streaming** — Agent pipeline progress broadcast in real time; operators watch each step complete
 - **Stitch UI shell — 8 pages, real data only** — Overview, Decision Workspace, Decision Sessions, Data Sources, Knowledge Graph, City Intelligence, Reports, Settings, all driven by real backend responses; empty/error states are shown honestly instead of filled with placeholder content
-- **Decision Workspace** — goal input + preset prompts, a numbered Execution Trace timeline, an SVG district map with a live metric toggle (overall/traffic/environment/risk), a Digital Twin panel (continuous scenario simulation + manual data crawl), and a Decision card with Approve/Reject, confidence/risk/evidence tiles, and Critic/Reflection warnings
+- **Decision Workspace** — goal input + preset prompts, a numbered Execution Trace timeline, an SVG district map with a live metric toggle (overall/traffic/environment/risk) that also drives the City Score gauge for the clicked district, a Digital Twin panel (continuous scenario simulation + manual data crawl), and a Decision card with Approve/Reject, confidence/risk tiles, and an Evidence & Explanation modal presenting every citation grouped by agent with color-coded confidence
 - **English / Vietnamese UI** — every page's static chrome (nav, headings, buttons, table headers, empty/error states) is translated; a switcher in the sidebar footer toggles instantly and persists the choice, defaulting to English
 - **Human-in-the-loop** — Decisions with confidence < 75% or flood risk flagged as `high` require operator approval
 - **Decision Timeline** — Persistent log of all agent decisions with confidence scores and full explanations
@@ -370,6 +370,7 @@ Connect at `ws://localhost:8000/ws`. Events:
 | `OPENROUTER_TIMEOUT_SECONDS` | ❌ | `10.0` | Per-request timeout for OpenRouter calls |
 | `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` | ❌ | `""` | Enables the knowledge graph (entity/relation storage + live `find_related()` queries) and decision-chain memory. Falls back to in-memory/no-op behavior when unset |
 | `QDRANT_URL` / `QDRANT_API_KEY` | ❌ | `""` | Enables the `city_knowledge` vector collection and SOP semantic search. Falls back to static keyword search when unset |
+| `OPENAQ_API_KEY` | ❌ | `""` | Free key at [explore.openaq.org/register](https://explore.openaq.org/register) — OpenAQ v3 requires it on every endpoint. Empty = the AQI crawl/15-min pipeline skips itself rather than writing fabricated readings |
 | `CHROMADB_HOST` / `CHROMADB_PORT` | ❌ | `localhost` / `8001` | Declared in config but unused — superseded by Qdrant. Safe to leave unset |
 
 ---
@@ -495,6 +496,10 @@ All tables carry a `city_id` column (default `'hanoi'`) for future multi-city su
 | Overview | Decision Workspace |
 |---|---|
 | ![Overview](docs/screenshots/overview.png) | ![Decision Workspace](docs/screenshots/decision-workspace.png) |
+
+| Decision Workspace — Evidence & Explanation modal |
+|---|
+| ![Decision Workspace Evidence Modal](docs/screenshots/decision-workspace-evidence.png) |
 
 | Decision Sessions | Data Sources |
 |---|---|
