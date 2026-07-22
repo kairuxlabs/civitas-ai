@@ -257,6 +257,8 @@ All testable elements have `data-testid` attributes:
 | App shell | `app-shell` |
 | Overview page | `overview-page` |
 | Decision Workspace | `decision-workspace-page` |
+| Decision Workspace critic warnings | `decision-critic-notes` |
+| Decision Workspace reflection notes | `decision-reflection-notes` |
 | Digital Twin panel (Decision Workspace) | `digital-twin-panel` |
 | Digital Twin start/stop button | `sim-start-btn` / `sim-stop-btn` |
 | Digital Twin live status | `sim-status` |
