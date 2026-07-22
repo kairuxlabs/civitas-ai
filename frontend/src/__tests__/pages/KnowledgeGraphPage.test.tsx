@@ -63,4 +63,24 @@ describe('KnowledgeGraphPage', () => {
     await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1))
     expect(screen.getByText('Bach Mai Hospital')).toBeInTheDocument()
   })
+
+  it('shows a loading indicator before the knowledge summary query resolves, without unmounting the search input', async () => {
+    let resolveSummary: (v: unknown) => void = () => {}
+    vi.mocked(api.getKnowledgeSummary).mockImplementation(() => new Promise(resolve => { resolveSummary = resolve }))
+
+    renderWithQueryClient(<KnowledgeGraphPage />)
+    expect(screen.getByTestId('knowledge-graph-loading')).toBeInTheDocument()
+    // Search input must stay mounted during loading so typing isn't interrupted
+    expect(screen.getByTestId('knowledge-search-input')).toBeInTheDocument()
+
+    resolveSummary({ configured: true, entities: 0, relations: 0, sample: [] })
+    await waitFor(() => expect(screen.queryByTestId('knowledge-graph-loading')).not.toBeInTheDocument())
+  })
+
+  it('shows an inline error when the knowledge summary query fails', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockRejectedValue(new Error('network down'))
+
+    renderWithQueryClient(<KnowledgeGraphPage />)
+    await waitFor(() => expect(screen.getByTestId('knowledge-graph-error')).toBeInTheDocument())
+  })
 })

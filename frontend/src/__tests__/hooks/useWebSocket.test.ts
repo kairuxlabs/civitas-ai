@@ -121,4 +121,25 @@ describe('useWebSocket', () => {
 
     expect(mockWsInstance.close).toHaveBeenCalled()
   })
+
+  it('clears the pending reconnect timer on unmount so it never fires after unmount', () => {
+    const onEvent = vi.fn()
+    const { unmount } = renderHook(() => useWebSocket(onEvent))
+
+    act(() => {
+      mockWsInstance.onopen?.(new Event('open'))
+    })
+    act(() => {
+      mockWsInstance.onclose?.()
+    })
+
+    // Socket dropped, reconnect timer is scheduled — unmount before it fires.
+    unmount()
+
+    act(() => { vi.advanceTimersByTime(5000) })
+
+    // Only the original connection was ever created — the orphaned reconnect
+    // never opened a second WebSocket after unmount.
+    expect(MockWebSocket).toHaveBeenCalledTimes(1)
+  })
 })

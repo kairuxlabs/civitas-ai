@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle, FileText, Loader2, Search, XCircle } from 'lucide-react'
 import { api } from '../../services/api'
 
+const ACTION_ERROR_MESSAGE = 'Failed to update the decision. Check your connection and try again.'
+
 function fmtDate(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 }
@@ -18,11 +20,20 @@ export default function ReportsPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [actionError, setActionError] = useState<string | null>(null)
   const { data: reports } = useQuery({ queryKey: ['timeline'], queryFn: () => api.getTimeline(50) })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['timeline'] })
-  const approve = useMutation({ mutationFn: (id: number) => api.approveDecision(id), onSuccess: invalidate })
-  const reject = useMutation({ mutationFn: (id: number) => api.rejectDecision(id), onSuccess: invalidate })
+  const approve = useMutation({
+    mutationFn: (id: number) => api.approveDecision(id),
+    onSuccess: () => { setActionError(null); invalidate() },
+    onError: () => setActionError(ACTION_ERROR_MESSAGE),
+  })
+  const reject = useMutation({
+    mutationFn: (id: number) => api.rejectDecision(id),
+    onSuccess: () => { setActionError(null); invalidate() },
+    onError: () => setActionError(ACTION_ERROR_MESSAGE),
+  })
 
   const filteredReports = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -43,6 +54,23 @@ export default function ReportsPage() {
           Real decision history from the agent pipeline — approve or reject items awaiting review.
         </p>
       </div>
+
+      {actionError && (
+        <div
+          data-testid="reports-action-error"
+          className="glass-panel rounded-xl p-3 flex items-center justify-between gap-3 text-error text-sm"
+        >
+          <span>{actionError}</span>
+          <button
+            type="button"
+            data-testid="reports-action-error-dismiss"
+            onClick={() => setActionError(null)}
+            className="text-error hover:opacity-70 shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <div className="glass-panel rounded-xl p-2 flex items-center gap-2 flex-1 min-w-[200px]">

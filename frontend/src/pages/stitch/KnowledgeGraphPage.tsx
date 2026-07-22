@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Network, Search, Share2 } from 'lucide-react'
+import { Loader2, Network, Search, Share2 } from 'lucide-react'
 import { api } from '../../services/api'
 
 function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -24,7 +24,7 @@ export default function KnowledgeGraphPage() {
   const [search, setSearch] = useState('')
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
 
-  const { data: summary } = useQuery({
+  const { data: summary, isLoading, isError } = useQuery({
     queryKey: ['knowledge-summary', search],
     queryFn: () => api.getKnowledgeSummary(search || undefined),
   })
@@ -66,60 +66,76 @@ export default function KnowledgeGraphPage() {
         />
       </div>
 
-      {labels.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <FilterChip label="All" active={activeLabel === null} onClick={() => setActiveLabel(null)} />
-          {labels.map(label => (
-            <FilterChip key={label} label={label} active={activeLabel === label} onClick={() => setActiveLabel(label)} />
-          ))}
+      {isLoading && (
+        <div data-testid="knowledge-graph-loading" className="flex items-center justify-center py-16">
+          <Loader2 size={28} className="animate-spin text-primary" />
         </div>
       )}
 
-      {!summary?.configured && (
-        <div className="glass-panel rounded-xl p-6 text-sm text-on-surface-variant">
-          Neo4j is <span className="text-tertiary font-semibold">not configured</span> in this environment
-          (<code className="text-xs">NEO4J_URI</code> unset) — the graph explorer degrades to this empty state.
+      {isError && (
+        <div data-testid="knowledge-graph-error" className="glass-panel rounded-xl p-6 text-error text-sm">
+          Failed to load — check your connection.
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-        <div className="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-2">
-          <Network size={28} className="text-primary" />
-          <span data-testid="knowledge-entity-count" className="text-4xl font-black">{summary?.entities ?? 0}</span>
-          <span className="text-xs text-outline uppercase tracking-wide">Entities</span>
-        </div>
-        <div className="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-2">
-          <Share2 size={28} className="text-secondary" />
-          <span data-testid="knowledge-relation-count" className="text-4xl font-black">{summary?.relations ?? 0}</span>
-          <span className="text-xs text-outline uppercase tracking-wide">Relations</span>
-        </div>
-      </div>
-
-      {summary && summary.sample.length > 0 && (
-        <div className="glass-panel rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-outline-variant bg-surface-container-low">
-            <h3 className="text-sm font-semibold">Sample connected entities</h3>
-          </div>
-          {visibleSample.length === 0 ? (
-            <p className="px-6 py-8 text-center text-outline italic text-xs">No entities match this filter.</p>
-          ) : (
-            <div className="divide-y divide-outline-variant/30">
-              {visibleSample.map((item, i) => (
-                <div key={i} data-testid="knowledge-sample-row" className="px-6 py-3 flex items-center justify-between text-sm">
-                  <div>
-                    <span className="font-semibold">{item.name}</span>
-                    <span className="text-outline text-xs ml-2">{item.label}</span>
-                  </div>
-                  {item.relation && item.related_name && (
-                    <span className="text-xs text-on-surface-variant">
-                      {item.relation} → {item.related_name}
-                    </span>
-                  )}
-                </div>
+      {!isLoading && !isError && (
+        <>
+          {labels.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <FilterChip label="All" active={activeLabel === null} onClick={() => setActiveLabel(null)} />
+              {labels.map(label => (
+                <FilterChip key={label} label={label} active={activeLabel === label} onClick={() => setActiveLabel(label)} />
               ))}
             </div>
           )}
-        </div>
+
+          {!summary?.configured && (
+            <div className="glass-panel rounded-xl p-6 text-sm text-on-surface-variant">
+              Neo4j is <span className="text-tertiary font-semibold">not configured</span> in this environment
+              (<code className="text-xs">NEO4J_URI</code> unset) — the graph explorer degrades to this empty state.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+            <div className="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-2">
+              <Network size={28} className="text-primary" />
+              <span data-testid="knowledge-entity-count" className="text-4xl font-black">{summary?.entities ?? 0}</span>
+              <span className="text-xs text-outline uppercase tracking-wide">Entities</span>
+            </div>
+            <div className="glass-panel rounded-xl p-6 flex flex-col items-center justify-center gap-2">
+              <Share2 size={28} className="text-secondary" />
+              <span data-testid="knowledge-relation-count" className="text-4xl font-black">{summary?.relations ?? 0}</span>
+              <span className="text-xs text-outline uppercase tracking-wide">Relations</span>
+            </div>
+          </div>
+
+          {summary && summary.sample.length > 0 && (
+            <div className="glass-panel rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-outline-variant bg-surface-container-low">
+                <h3 className="text-sm font-semibold">Sample connected entities</h3>
+              </div>
+              {visibleSample.length === 0 ? (
+                <p className="px-6 py-8 text-center text-outline italic text-xs">No entities match this filter.</p>
+              ) : (
+                <div className="divide-y divide-outline-variant/30">
+                  {visibleSample.map((item, i) => (
+                    <div key={i} data-testid="knowledge-sample-row" className="px-6 py-3 flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-semibold">{item.name}</span>
+                        <span className="text-outline text-xs ml-2">{item.label}</span>
+                      </div>
+                      {item.relation && item.related_name && (
+                        <span className="text-xs text-on-surface-variant">
+                          {item.relation} → {item.related_name}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

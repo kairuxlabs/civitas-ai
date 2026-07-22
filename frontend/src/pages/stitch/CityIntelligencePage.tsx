@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Building2, Info, TrendingDown, TrendingUp, Wind } from 'lucide-react'
+import { Building2, Info, Loader2, TrendingDown, TrendingUp, Wind } from 'lucide-react'
 import { api } from '../../services/api'
 
 const CATEGORY_META = [
@@ -14,7 +14,7 @@ export default function CityIntelligencePage() {
   const [selectedDistrictId, setSelectedDistrictId] = useState(1)
 
   const { data: districts } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
-  const { data: scores } = useQuery({ queryKey: ['scores'], queryFn: api.getScores, refetchInterval: 15000 })
+  const { data: scores, isLoading, isError } = useQuery({ queryKey: ['scores'], queryFn: api.getScores, refetchInterval: 15000 })
   const { data: aqiHistory } = useQuery({
     queryKey: ['aqi-history', selectedDistrictId],
     queryFn: () => api.getAQIHistory(selectedDistrictId, 12),
@@ -29,6 +29,26 @@ export default function CityIntelligencePage() {
     [districts, selectedDistrictId],
   )
   const latestAqi = aqiHistory && aqiHistory.length > 0 ? aqiHistory[aqiHistory.length - 1] : null
+
+  if (isLoading) {
+    return (
+      <div data-testid="city-intelligence-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="city-intelligence-loading" className="flex items-center justify-center py-24">
+          <Loader2 size={28} className="animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div data-testid="city-intelligence-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="city-intelligence-error" className="glass-panel rounded-xl p-6 text-error text-sm">
+          Failed to load — check your connection.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div data-testid="city-intelligence-page" className="p-margin-desktop space-y-gutter pb-16">
