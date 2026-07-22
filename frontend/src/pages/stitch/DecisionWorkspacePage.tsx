@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Activity, AlertTriangle, Brain, CheckCircle, Clock, Layers, Loader2,
+  Activity, AlertTriangle, Brain, CheckCircle, ChevronDown, ChevronUp, Clock, Layers, Loader2,
   MapPin, Rocket, ShieldAlert, XCircle,
 } from 'lucide-react'
 import HanoiMap, { type MapMetric } from '../../components/HanoiMap'
@@ -35,6 +35,7 @@ export default function DecisionWorkspacePage() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState(1)
   const [mapMetric, setMapMetric] = useState<MapMetric>('overall_score')
+  const [showEvidence, setShowEvidence] = useState(false)
   const queryClient = useQueryClient()
 
   const goalPresets = [
@@ -193,7 +194,7 @@ export default function DecisionWorkspacePage() {
           <p className="text-[10px] uppercase text-on-surface-variant">
             {t('workspace.runtimePrefix')} {monitor?.active_runs ?? 0} {t('workspace.active')} / {monitor?.total_runs ?? 0} {t('workspace.total')}
           </p>
-          <ul className="space-y-0">
+          <ul className="space-y-0 max-h-72 overflow-y-auto custom-scrollbar pr-1">
             {(run?.tasks ?? []).map((task: RuntimeTask, index) => (
               <li key={task.id} className="relative pl-7 pb-4 last:pb-0">
                 {index < (run?.tasks.length ?? 0) - 1 && (
@@ -353,11 +354,39 @@ export default function DecisionWorkspacePage() {
                     <p className="text-[10px] text-outline">{t('workspace.risk')}</p>
                     <p className="text-sm font-bold capitalize">{riskLabel[run.decision.risk]}</p>
                   </div>
-                  <div className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant">
-                    <p className="text-[10px] text-outline">{t('workspace.evidence')}</p>
+                  <button
+                    type="button"
+                    data-testid="decision-evidence-toggle"
+                    disabled={run.decision.evidence.length === 0}
+                    onClick={() => setShowEvidence(v => !v)}
+                    className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant text-left hover:bg-surface-container-high disabled:cursor-default disabled:hover:bg-surface-container-high/60"
+                  >
+                    <p className="text-[10px] text-outline flex items-center gap-1">
+                      {t('workspace.evidence')}
+                      {run.decision.evidence.length > 0 && (
+                        showEvidence ? <ChevronUp size={10} /> : <ChevronDown size={10} />
+                      )}
+                    </p>
                     <p className="text-sm font-bold">{run.decision.evidence.length}</p>
-                  </div>
+                  </button>
                 </div>
+                {showEvidence && run.decision.evidence.length > 0 && (
+                  <ul data-testid="decision-evidence-list" className="space-y-2 border-t border-outline-variant pt-2">
+                    {run.decision.evidence.map((item, index) => (
+                      <li key={index} className="text-xs bg-surface-container-high/40 rounded-lg p-2 space-y-0.5">
+                        <div className="flex items-center justify-between text-on-surface-variant">
+                          <span className="font-semibold text-on-surface">{item.agent}</span>
+                          <span className="font-mono text-[10px]">
+                            {item.source ?? '—'}
+                            {item.confidence != null && ` · ${Math.round(item.confidence * 100)}%`}
+                          </span>
+                        </div>
+                        <p className="text-on-surface-variant">{item.content ?? item.summary ?? '—'}</p>
+                        {item.time && <p className="text-[10px] text-outline">{item.time}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {(run.decision.critic_notes ?? []).length > 0 && (
                   <ul data-testid="decision-critic-notes" className="space-y-1 border-t border-outline-variant pt-2">
                     {run.decision.critic_notes!.map((note, index) => (

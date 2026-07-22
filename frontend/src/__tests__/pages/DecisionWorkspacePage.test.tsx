@@ -175,4 +175,76 @@ describe('DecisionWorkspacePage', () => {
     expect(screen.getByPlaceholderText('Giảm ùn tắc sau mưa lớn…')).toBeInTheDocument()
     localStorage.removeItem('civitas-language')
   })
+
+  it('expands and collapses the detailed evidence list when the Evidence tile is clicked', async () => {
+    const runWithEvidence: RuntimeRun = {
+      ...activeRun,
+      decision: {
+        ...activeRun.decision!,
+        evidence: [
+          { agent: 'traffic', source: 'Open-Meteo', type: 'sensor', content: 'Rain 45mm/h driving congestion risk', confidence: 0.9, time: '2026-07-21T08:00:00Z' },
+          { agent: 'knowledge', source: 'SOP', type: 'sop', content: 'Flood Emergency SOP: activate drainage pumps.', confidence: 0.85, time: 'static' },
+        ],
+      },
+    }
+    vi.mocked(api.submitGoal).mockResolvedValue(runWithEvidence)
+    vi.mocked(api.getRun).mockResolvedValue(runWithEvidence)
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
+    await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
+    await user.click(screen.getByRole('button', { name: /Execute Decision|Submit|Run/i }))
+
+    await waitFor(() => expect(screen.getByTestId('decision-evidence-toggle')).toBeInTheDocument())
+    expect(screen.queryByTestId('decision-evidence-list')).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId('decision-evidence-toggle'))
+
+    await waitFor(() => expect(screen.getByTestId('decision-evidence-list')).toBeInTheDocument())
+    expect(screen.getByText('Rain 45mm/h driving congestion risk')).toBeInTheDocument()
+    expect(screen.getByText('Flood Emergency SOP: activate drainage pumps.')).toBeInTheDocument()
+    const evidenceList = screen.getByTestId('decision-evidence-list')
+    expect(evidenceList).toHaveTextContent('Open-Meteo')
+    expect(evidenceList).toHaveTextContent('90%')
+
+    await user.click(screen.getByTestId('decision-evidence-toggle'))
+    expect(screen.queryByTestId('decision-evidence-list')).not.toBeInTheDocument()
+  })
+
+  it('keeps the Execution Trace list in a bounded, scrollable container regardless of task count', async () => {
+    const manyTasksRun: RuntimeRun = {
+      ...activeRun,
+      tasks: Array.from({ length: 15 }, (_, i) => ({
+        id: `t${i}`,
+        agent: `worker-${i}`,
+        depends_on: [],
+        priority: 1,
+        status: 'done' as const,
+        attempts: 1,
+        result: null,
+        error: null,
+        started_at: '2026-07-21T09:00:00Z',
+        finished_at: '2026-07-21T09:00:10Z',
+        latency_ms: 10,
+      })),
+    }
+    vi.mocked(api.submitGoal).mockResolvedValue(manyTasksRun)
+    vi.mocked(api.getRun).mockResolvedValue(manyTasksRun)
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
+    await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
+    await user.click(screen.getByRole('button', { name: /Execute Decision|Submit|Run/i }))
+
+    await waitFor(() => expect(screen.getByText(/worker-14/)).toBeInTheDocument())
+    // All 15 tasks render in the DOM (not truncated) inside a height-bounded,
+    // independently scrollable container — the page itself never grows tall.
+    const taskList = screen.getByText(/worker-0$/).closest('ul')!
+    expect(taskList.className).toContain('max-h-72')
+    expect(taskList.className).toContain('overflow-y-auto')
+  })
 })

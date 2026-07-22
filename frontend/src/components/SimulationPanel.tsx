@@ -10,6 +10,22 @@ const CRAWL_SOURCES: { key: string; label: string }[] = [
   { key: 'news', label: 'Tin tức (VnExpress RSS)' },
 ]
 
+// Which reading is the actual auto-goal trigger signal for each scenario,
+// matching backend/src/simulation/profiles.py's per-scenario goal_trigger.
+// major_event/normal have no weather-based trigger (major_event fires on a
+// crowd-event probability instead), so neither metric is highlighted for them.
+const PRIMARY_METRIC: Record<string, 'rain' | 'aqi' | 'temperature' | null> = {
+  normal: null,
+  heavy_rain: 'rain',
+  air_pollution: 'aqi',
+  heatwave: 'temperature',
+  major_event: null,
+}
+
+function metricClass(metric: 'rain' | 'aqi' | 'temperature', activeScenario: string): string {
+  return PRIMARY_METRIC[activeScenario] === metric ? 'text-amber-300 font-semibold' : 'text-slate-400'
+}
+
 export default function SimulationPanel() {
   const [scenario, setScenario] = useState('heavy_rain')
   const [autoGoal, setAutoGoal] = useState(true)
@@ -101,8 +117,12 @@ export default function SimulationPanel() {
             {status.running ? `Đang mô phỏng: ${status.scenario_label} · tick ${status.tick}` : 'Mô phỏng đang tắt'}
           </span>
           {status.running && (
-            <span className="text-slate-400 tabular-nums">
-              Mưa {status.values.rain}mm · AQI {status.values.aqi} · {status.values.temperature}°C
+            <span className="tabular-nums" data-testid="sim-values">
+              <span className={metricClass('rain', status.scenario)}>Mưa {status.values.rain}mm</span>
+              {' · '}
+              <span className={metricClass('aqi', status.scenario)}>AQI {status.values.aqi}</span>
+              {' · '}
+              <span className={metricClass('temperature', status.scenario)}>{status.values.temperature}°C</span>
             </span>
           )}
           {status.last_auto_goal && (
