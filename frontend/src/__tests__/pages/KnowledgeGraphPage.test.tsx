@@ -4,8 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { renderWithQueryClient } from '../test-utils'
 import KnowledgeGraphPage from '../../pages/stitch/KnowledgeGraphPage'
 import { api } from '../../services/api'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../services/api')
+
+function renderPage() {
+  return renderWithQueryClient(<LanguageProvider><KnowledgeGraphPage /></LanguageProvider>)
+}
 
 const twoLabelSample = [
   {
@@ -24,7 +29,7 @@ describe('KnowledgeGraphPage', () => {
       configured: true, entities: 128, relations: 426,
       sample: [twoLabelSample[0]],
     })
-    renderWithQueryClient(<KnowledgeGraphPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByTestId('knowledge-entity-count')).toHaveTextContent('128'))
     expect(screen.getByTestId('knowledge-relation-count')).toHaveTextContent('426')
     expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1)
@@ -34,7 +39,7 @@ describe('KnowledgeGraphPage', () => {
     vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
       configured: false, entities: 0, relations: 0, sample: [],
     })
-    renderWithQueryClient(<KnowledgeGraphPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByTestId('knowledge-graph-page')).toBeInTheDocument())
     await waitFor(() => expect(screen.getByText(/not configured/i)).toBeInTheDocument())
   })
@@ -43,7 +48,7 @@ describe('KnowledgeGraphPage', () => {
     vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
       configured: true, entities: 128, relations: 426, sample: twoLabelSample,
     })
-    renderWithQueryClient(<KnowledgeGraphPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(2))
 
     await userEvent.type(screen.getByTestId('knowledge-search-input'), 'Cau Giay')
@@ -55,7 +60,7 @@ describe('KnowledgeGraphPage', () => {
     vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
       configured: true, entities: 128, relations: 426, sample: twoLabelSample,
     })
-    renderWithQueryClient(<KnowledgeGraphPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(2))
 
     await userEvent.click(screen.getByRole('button', { name: 'Hospital' }))
@@ -68,7 +73,7 @@ describe('KnowledgeGraphPage', () => {
     let resolveSummary: (v: unknown) => void = () => {}
     vi.mocked(api.getKnowledgeSummary).mockImplementation(() => new Promise(resolve => { resolveSummary = resolve }))
 
-    renderWithQueryClient(<KnowledgeGraphPage />)
+    renderPage()
     expect(screen.getByTestId('knowledge-graph-loading')).toBeInTheDocument()
     // Search input must stay mounted during loading so typing isn't interrupted
     expect(screen.getByTestId('knowledge-search-input')).toBeInTheDocument()
@@ -80,7 +85,17 @@ describe('KnowledgeGraphPage', () => {
   it('shows an inline error when the knowledge summary query fails', async () => {
     vi.mocked(api.getKnowledgeSummary).mockRejectedValue(new Error('network down'))
 
-    renderWithQueryClient(<KnowledgeGraphPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByTestId('knowledge-graph-error')).toBeInTheDocument())
+  })
+
+  it('renders Vietnamese labels when the language is switched to vi', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockResolvedValue({ configured: false, entities: 0, relations: 0, sample: [] })
+    localStorage.setItem('civitas-language', 'vi')
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Đồ thị tri thức')).toBeInTheDocument())
+    localStorage.removeItem('civitas-language')
   })
 })
