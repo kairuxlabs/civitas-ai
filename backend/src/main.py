@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from src.api.routes import districts, scores, chat, simulator, timeline, aqi
 from src.api.routes import decisions
@@ -24,6 +25,30 @@ from src.utils.config import settings
 from src.scheduler.main import run_all
 from src.scheduler.registry import scheduler
 from src.knowledge_pipeline import scheduler as knowledge_scheduler
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+async def _ensure_hot_path_indexes():
+    """create_all() only creates missing tables — it never retroactively adds
+    indexes/columns to tables that already exist (e.g. the already-deployed
+    Render Postgres database). Weather/AQI didn't have composite indexes when
+    they were first deployed, so add them here idempotently on every startup.
+    CREATE INDEX IF NOT EXISTS works on both Postgres and SQLite (the test
+    suite's dialect). The whole operation (including transaction commit) is
+    wrapped so a failure here — e.g. a poisoned Postgres transaction — never
+    blocks app startup."""
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_weather_district_ts ON weather (district_id, timestamp)")
+            )
+            await conn.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_aqi_district_ts ON aqi (district_id, timestamp)")
+            )
+    except Exception as e:
+        logger.warning(f"Failed to ensure hot-path indexes, continuing startup: {e}")
 
 
 async def _seed_districts(session):
@@ -47,7 +72,12 @@ async def lifespan(app: FastAPI):
     # Tự động tạo các bảng và seed dữ liệu quận huyện
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
+    # Separate transaction from create_all so an index failure can't abort
+    # the table-creation commit (relevant on Postgres, where an error inside
+    # a transaction poisons it until rollback).
+    await _ensure_hot_path_indexes()
+
     async with AsyncSessionLocal() as session:
         await _seed_districts(session)
 
