@@ -65,4 +65,36 @@ describe('ReportsPage', () => {
     await waitFor(() => expect(screen.getAllByTestId('report-row')).toHaveLength(1))
     expect(screen.getByText('Air pollution response')).toBeInTheDocument()
   })
+
+  it('shows an inline error when approving a report fails', async () => {
+    vi.mocked(api.approveDecision).mockRejectedValue(new Error('network down'))
+    renderWithQueryClient(<ReportsPage />)
+    await waitFor(() => expect(screen.getAllByTestId('report-approve-button')).toHaveLength(1))
+
+    await userEvent.click(screen.getByTestId('report-approve-button'))
+
+    await waitFor(() => expect(screen.getByTestId('reports-action-error')).toBeInTheDocument())
+  })
+
+  it('shows an inline error when rejecting a report fails', async () => {
+    vi.mocked(api.rejectDecision).mockRejectedValue(new Error('network down'))
+    renderWithQueryClient(<ReportsPage />)
+    await waitFor(() => expect(screen.getAllByTestId('report-reject-button')).toHaveLength(1))
+
+    await userEvent.click(screen.getByTestId('report-reject-button'))
+
+    await waitFor(() => expect(screen.getByTestId('reports-action-error')).toBeInTheDocument())
+  })
+
+  it('dismisses the action error banner when Dismiss is clicked', async () => {
+    vi.mocked(api.approveDecision).mockRejectedValue(new Error('network down'))
+    renderWithQueryClient(<ReportsPage />)
+    await waitFor(() => expect(screen.getAllByTestId('report-approve-button')).toHaveLength(1))
+
+    await userEvent.click(screen.getByTestId('report-approve-button'))
+    await waitFor(() => expect(screen.getByTestId('reports-action-error')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByTestId('reports-action-error-dismiss'))
+    expect(screen.queryByTestId('reports-action-error')).not.toBeInTheDocument()
+  })
 })
