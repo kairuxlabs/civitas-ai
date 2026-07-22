@@ -16,9 +16,9 @@ from src.reasoning.critic import CONFIDENCE_FLOOR
 
 # Rain (mm/h) above which flood_risk is "high". 20mm/h is the value used by
 # the v1 pipeline and is a standard meteorological "heavy rain" threshold —
-# it's also independently used as src/simulation/engine.py's
-# _RAIN_GOAL_THRESHOLD for "heavy rain" scenario goals, corroborating it as
-# the right value to unify on (rather than v2's old 50mm/h).
+# it's also reused directly by src/simulation/profiles.py's heavy_rain
+# scenario's auto-goal trigger, corroborating it as the right value to unify
+# on (rather than v2's old 50mm/h).
 FLOOD_RISK_HIGH_RAIN_MM = 20.0
 
 # Rain (mm/h) above which flood_risk is "moderate" (a.k.a. "medium"), below

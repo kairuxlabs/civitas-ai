@@ -19,9 +19,6 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-_RAIN_GOAL_THRESHOLD = 20.0
-_AQI_GOAL_THRESHOLD = 150.0
-
 
 class SimulationEngine:
     def __init__(self, submit_goal=None, broadcast=None, persist: bool = True):
@@ -180,18 +177,18 @@ class SimulationEngine:
     async def _maybe_auto_goal(self) -> None:
         if not self.auto_goal:
             return
-        rain, aqi = self.values["rain"], self.values["aqi"]
-        if rain <= _RAIN_GOAL_THRESHOLD and aqi <= _AQI_GOAL_THRESHOLD:
+        profile = PROFILES[self.scenario]
+        if profile.goal_trigger is None or profile.goal_text is None:
+            return
+        if not profile.goal_trigger(self.values, profile):
             return
         now = time.monotonic()
         if self.last_auto_goal_ts and now - self.last_auto_goal_ts < self.auto_goal_cooldown_s:
             return
         self.last_auto_goal_ts = now
 
-        if rain > _RAIN_GOAL_THRESHOLD:
-            goal = f"Ứng phó mưa lớn {rain:.0f}mm/h và nguy cơ ngập úng tại Hà Nội (mô phỏng tự động)"
-        else:
-            goal = f"Ứng phó ô nhiễm không khí AQI {aqi:.0f} tại Hà Nội (mô phỏng tự động)"
+        goal = profile.goal_text(self.values)
+        rain, aqi = self.values["rain"], self.values["aqi"]
 
         overrides = {
             "weather_data": {

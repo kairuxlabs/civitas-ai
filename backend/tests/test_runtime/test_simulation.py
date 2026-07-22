@@ -57,6 +57,37 @@ async def test_auto_goal_triggers_over_threshold_with_cooldown():
 
 
 @pytest.mark.asyncio
+async def test_heatwave_auto_goal_triggers_on_temperature_not_rain_or_aqi():
+    eng = _engine()
+    await eng.start("heatwave", interval_s=999, auto_goal=True)
+    await eng.stop()
+    eng.auto_goal_cooldown_s = 9999
+    for _ in range(40):
+        await eng.tick()
+    assert len(eng._goal_calls) == 1
+    call = eng._goal_calls[0]
+    assert "nắng nóng" in call["goal"].lower()
+    assert call["overrides"]["weather_data"]["temperature"] > 38
+
+
+@pytest.mark.asyncio
+async def test_major_event_auto_goal_triggers_via_event_chance_not_weather():
+    eng = _engine()
+    await eng.start("major_event", interval_s=999, auto_goal=True)
+    await eng.stop()
+    eng.auto_goal_cooldown_s = 9999
+    for _ in range(60):
+        await eng.tick()
+    assert len(eng._goal_calls) == 1
+    call = eng._goal_calls[0]
+    assert "an ninh" in call["goal"].lower() or "sự kiện" in call["goal"].lower()
+    # major_event's rain/AQI ranges never cross the flood/pollution thresholds,
+    # proving the trigger came from event_chance, not a weather reading.
+    assert call["overrides"]["weather_data"]["rain"] < 20
+    assert call["overrides"]["aqi_data"]["aqi_index"] < 150
+
+
+@pytest.mark.asyncio
 async def test_no_auto_goal_when_disabled_or_calm():
     eng = _engine()
     await eng.start("heavy_rain", interval_s=999, auto_goal=False)
