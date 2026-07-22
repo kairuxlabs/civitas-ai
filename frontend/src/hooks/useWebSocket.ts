@@ -6,9 +6,14 @@ export function useWebSocket(onEvent: (e: AgentEvent) => void) {
   const wsRef = useRef<WebSocket | null>(null)
   const onEventRef = useRef(onEvent)
   onEventRef.current = onEvent
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [connected, setConnected] = useState(false)
 
   const connect = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current)
+      reconnectTimerRef.current = null
+    }
     if (wsRef.current?.readyState === WebSocket.OPEN) return
     const ws = createWebSocket()
     wsRef.current = ws
@@ -16,7 +21,7 @@ export function useWebSocket(onEvent: (e: AgentEvent) => void) {
     ws.onopen = () => setConnected(true)
     ws.onclose = () => {
       setConnected(false)
-      setTimeout(connect, 3000)
+      reconnectTimerRef.current = setTimeout(connect, 3000)
     }
     ws.onerror = () => ws.close()
     ws.onmessage = (e) => {
@@ -30,6 +35,10 @@ export function useWebSocket(onEvent: (e: AgentEvent) => void) {
   useEffect(() => {
     connect()
     return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
       wsRef.current?.close()
     }
   }, [connect])
