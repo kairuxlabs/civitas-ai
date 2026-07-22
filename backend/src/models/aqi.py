@@ -1,12 +1,13 @@
 # backend/src/models/aqi.py
 from datetime import datetime
-from sqlalchemy import Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy import Integer, String, Float, ForeignKey, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database.connection import Base
 
 
 class AQI(Base):
     __tablename__ = "aqi"
+    __table_args__ = (Index("idx_aqi_district_ts", "district_id", "timestamp"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     city_id: Mapped[str] = mapped_column(String(50), default="hanoi")
     district_id: Mapped[int | None] = mapped_column(ForeignKey("districts.id"), nullable=True)

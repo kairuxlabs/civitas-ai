@@ -13,9 +13,12 @@ router = APIRouter(prefix="/api/scores", tags=["scores"])
 @router.get("", response_model=list[CityScoreOut])
 async def get_all_scores(session: AsyncSession = Depends(get_db)):
     districts = await DistrictRepo.get_all(session)
+    latest_by_district = {
+        s.district_id: s for s in await CityScoreRepo.get_city_overview(session)
+    }
     scores = []
     for d in districts:
-        score = await CityScoreRepo.get_latest_by_district(session, d.id)
+        score = latest_by_district.get(d.id)
         if score is None:
             score = await CityScoreService.calculate_and_save(session, d.id)
         scores.append(CityScoreOut.model_validate(score))

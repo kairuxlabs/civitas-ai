@@ -125,22 +125,24 @@ class DecisionMemory:
         driver = GraphDatabase.driver(
             settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password)
         )
-        with driver.session() as session:
-            session.run(
-                """
-                CREATE (i:Incident {data: $incident, ts: $ts})
-                CREATE (d:Decision {data: $decision})
-                CREATE (w:Workflow {data: $workflow})
-                CREATE (o:Outcome {value: $outcome})
-                CREATE (i)-[:LED_TO]->(d)-[:EXECUTED_AS]->(w)-[:RESULTED_IN]->(o)
-                """,
-                incident=json.dumps(chain["incident"]),
-                decision=json.dumps(chain["decision"]),
-                workflow=json.dumps(chain["workflow"]),
-                outcome=chain["outcome"],
-                ts=chain["ts"],
-            )
-        driver.close()
+        try:
+            with driver.session() as session:
+                session.run(
+                    """
+                    CREATE (i:Incident {data: $incident, ts: $ts})
+                    CREATE (d:Decision {data: $decision})
+                    CREATE (w:Workflow {data: $workflow})
+                    CREATE (o:Outcome {value: $outcome})
+                    CREATE (i)-[:LED_TO]->(d)-[:EXECUTED_AS]->(w)-[:RESULTED_IN]->(o)
+                    """,
+                    incident=json.dumps(chain["incident"]),
+                    decision=json.dumps(chain["decision"]),
+                    workflow=json.dumps(chain["workflow"]),
+                    outcome=chain["outcome"],
+                    ts=chain["ts"],
+                )
+        finally:
+            driver.close()
 
 
 knowledge_memory = KnowledgeMemory()

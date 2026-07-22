@@ -1,3 +1,4 @@
+import asyncio
 import random
 from datetime import datetime, timezone
 import aiohttp
@@ -14,13 +15,26 @@ OPENAQ_URL = (
     "?coordinates=21.0285,105.8542&radius=50000&limit=10"
 )
 
+HTTP_TIMEOUT_SECONDS = 10
+
 
 class AQIPipeline:
     @staticmethod
     async def run(session: AsyncSession) -> None:
-        async with aiohttp.ClientSession() as http:
-            async with http.get(OPENAQ_URL) as resp:
-                data = await resp.json()
+        timeout = aiohttp.ClientTimeout(total=HTTP_TIMEOUT_SECONDS)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as http:
+                async with http.get(OPENAQ_URL) as resp:
+                    data = await resp.json()
+        except asyncio.TimeoutError:
+            logger.warning(f"OpenAQ call timed out after {HTTP_TIMEOUT_SECONDS}s")
+            return
+        except aiohttp.ContentTypeError as e:
+            logger.warning(f"OpenAQ returned a non-JSON response: {e}")
+            return
+        except Exception as e:
+            logger.warning(f"OpenAQ call failed: {e}")
+            return
 
         timestamp = datetime.now(timezone.utc)
         districts = await DistrictRepo.get_all(session)

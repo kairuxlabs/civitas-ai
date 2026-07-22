@@ -68,6 +68,59 @@ def test_decision_memory_recent_limit_and_order():
     assert recent[0]["incident"]["i"] == 4  # newest first
 
 
+def test_neo4j_store_closes_driver_even_when_run_fails(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "user")
+    monkeypatch.setattr(settings, "neo4j_password", "pass")
+
+    fake_session = MagicMock()
+    fake_session.run = MagicMock(side_effect=RuntimeError("neo4j write failed"))
+    fake_session.__enter__ = MagicMock(return_value=fake_session)
+    fake_session.__exit__ = MagicMock(return_value=None)
+
+    fake_driver = MagicMock()
+    fake_driver.session = MagicMock(return_value=fake_session)
+
+    with patch("neo4j.GraphDatabase.driver", return_value=fake_driver):
+        memory = DecisionMemory()
+        # store_chain already catches the exception _neo4j_store raises —
+        # this must not propagate, and the driver must still be closed
+        # (regression test for the connection-pool leak on write failure).
+        memory.store_chain(
+            incident={"type": "heavy_rain", "district_id": 1},
+            decision={"summary": "deploy pumps", "confidence": 90},
+            workflow={"steps": ["notify"]},
+            outcome="approved",
+        )
+
+    fake_driver.close.assert_called_once()
+
+
+def test_neo4j_store_closes_driver_on_success(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "user")
+    monkeypatch.setattr(settings, "neo4j_password", "pass")
+
+    memory = DecisionMemory()
+    fake_session = MagicMock()
+    fake_session.run = MagicMock(return_value=None)
+    fake_session.__enter__ = MagicMock(return_value=fake_session)
+    fake_session.__exit__ = MagicMock(return_value=None)
+
+    fake_driver = MagicMock()
+    fake_driver.session = MagicMock(return_value=fake_session)
+
+    with patch("neo4j.GraphDatabase.driver", return_value=fake_driver):
+        memory.store_chain(
+            incident={"type": "heavy_rain"},
+            decision={"summary": "deploy pumps"},
+            workflow={"steps": ["notify"]},
+            outcome="approved",
+        )
+
+    fake_driver.close.assert_called_once()
+
+
 def test_qdrant_search_reranks_when_openrouter_key_set(monkeypatch):
     monkeypatch.setattr(settings, "qdrant_url", "https://fake.qdrant.io")
     monkeypatch.setattr(settings, "openrouter_api_key", "fake-key")

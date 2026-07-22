@@ -1,4 +1,6 @@
+import asyncio
 import pytest
+import aiohttp
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timezone
 from src.pipelines.weather_pipeline import WeatherPipeline
@@ -45,3 +47,47 @@ async def test_weather_pipeline_saves_records(db_session):
     records = result.scalars().all()
     assert len(records) == 1
     assert records[0].temperature == 32.5
+
+
+@pytest.mark.asyncio
+async def test_weather_pipeline_returns_gracefully_on_timeout(db_session):
+    district = District(city_id="hanoi", name="Test District")
+    db_session.add(district)
+    await db_session.flush()
+
+    with patch("src.pipelines.weather_pipeline.aiohttp.ClientSession") as mock_client:
+        mock_session = MagicMock()
+        mock_session.get = MagicMock(side_effect=asyncio.TimeoutError())
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        mock_client.return_value = mock_session
+
+        # Must not raise — the pipeline should log and return gracefully.
+        await WeatherPipeline.run(db_session)
+
+    from sqlalchemy import select
+    from src.models.weather import Weather
+    result = await db_session.execute(select(Weather))
+    assert result.scalars().all() == []
+
+
+@pytest.mark.asyncio
+async def test_weather_pipeline_returns_gracefully_on_connection_error(db_session):
+    district = District(city_id="hanoi", name="Test District")
+    db_session.add(district)
+    await db_session.flush()
+
+    with patch("src.pipelines.weather_pipeline.aiohttp.ClientSession") as mock_client:
+        mock_session = MagicMock()
+        mock_session.get = MagicMock(side_effect=aiohttp.ClientConnectionError("boom"))
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        mock_client.return_value = mock_session
+
+        # Must not raise — one bad pipeline step shouldn't kill the 15-min cycle.
+        await WeatherPipeline.run(db_session)
+
+    from sqlalchemy import select
+    from src.models.weather import Weather
+    result = await db_session.execute(select(Weather))
+    assert result.scalars().all() == []
