@@ -2,6 +2,7 @@ import pytest
 
 from src.crawlers import crawl_service
 from src.simulation.engine import simulation
+from src.utils.config import settings
 
 
 @pytest.fixture(autouse=True)
@@ -70,3 +71,50 @@ async def test_crawl_defaults_to_all_sources(client, monkeypatch):
     resp = await client.post("/api/v2/crawl", json={})
     assert resp.status_code == 200
     assert set(resp.json()["results"]) == set(crawl_service.ALL_SOURCES)
+
+
+@pytest.mark.asyncio
+async def test_simulation_start_stop_and_crawl_require_api_key_when_configured(monkeypatch, client):
+    monkeypatch.setattr(settings, "api_key", "secret123")
+    monkeypatch.setattr(simulation, "_persist_enabled", False)
+
+    start_no_header = await client.post(
+        "/api/v2/simulation/start", json={"scenario": "heavy_rain", "interval_s": 60}
+    )
+    assert start_no_header.status_code == 401
+
+    start_wrong_header = await client.post(
+        "/api/v2/simulation/start",
+        json={"scenario": "heavy_rain", "interval_s": 60},
+        headers={"X-API-Key": "wrong"},
+    )
+    assert start_wrong_header.status_code == 401
+
+    start_ok = await client.post(
+        "/api/v2/simulation/start",
+        json={"scenario": "heavy_rain", "interval_s": 60},
+        headers={"X-API-Key": "secret123"},
+    )
+    assert start_ok.status_code == 200
+
+    stop_no_header = await client.post("/api/v2/simulation/stop")
+    assert stop_no_header.status_code == 401
+
+    stop_ok = await client.post(
+        "/api/v2/simulation/stop", headers={"X-API-Key": "secret123"}
+    )
+    assert stop_ok.status_code == 200
+
+    crawl_no_header = await client.post("/api/v2/crawl", json={})
+    assert crawl_no_header.status_code == 401
+
+    async def ok(session):
+        return 1
+
+    for src in list(crawl_service.CRAWLERS):
+        monkeypatch.setitem(crawl_service.CRAWLERS, src, ok)
+
+    crawl_ok = await client.post(
+        "/api/v2/crawl", json={}, headers={"X-API-Key": "secret123"}
+    )
+    assert crawl_ok.status_code == 200

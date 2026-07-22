@@ -3,6 +3,7 @@ from src.models.district import District
 from src.models.aqi import AQI
 from src.models.weather import Weather
 from src.services.decision_session_service import DecisionSessionService
+from src.utils.config import settings
 
 
 async def _seed_district(db_session, aqi_index=100):
@@ -80,3 +81,19 @@ async def test_observe_success_after_approval(client, db_session):
 
     second = await client.post(f"/api/decision-sessions/{session_id}/observe")
     assert second.status_code == 409  # already evaluated
+
+
+async def test_observe_requires_api_key_when_configured(monkeypatch, client, db_session):
+    monkeypatch.setattr(settings, "api_key", "secret123")
+    district = await _seed_district(db_session, aqi_index=200)
+    await DecisionSessionService.create(db_session, "run-api-key", "goal", district.id)
+    list_resp = await client.get("/api/decision-sessions")
+    session_id = list_resp.json()[0]["id"]
+
+    no_header = await client.post(f"/api/decision-sessions/{session_id}/observe")
+    assert no_header.status_code == 401
+
+    wrong_header = await client.post(
+        f"/api/decision-sessions/{session_id}/observe", headers={"X-API-Key": "wrong"}
+    )
+    assert wrong_header.status_code == 401

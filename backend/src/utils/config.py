@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     qdrant_api_key: str = ""
     openrouter_api_key: str = ""
     openrouter_timeout_seconds: float = 10.0
+    # Optional — X-API-Key auth on mutating endpoints. Empty = auth disabled
+    # (no-op), the default for local/dev/test.
+    api_key: str = ""
+    # Allowed CORS origins, comma-separated. Defaults cover the Vite dev
+    # server and the deployed Vercel frontend.
+    cors_origins: str = "http://localhost:3000,https://frontend-eta-six-46.vercel.app"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

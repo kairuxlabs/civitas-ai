@@ -5,12 +5,13 @@ from sqlalchemy import select
 
 from src.database.connection import get_db
 from src.models.decision import AgentDecision
+from src.utils.auth import require_api_key
 from src.ws.manager import manager
 
 router = APIRouter(prefix="/api/decisions", tags=["decisions"])
 
 
-@router.post("/{decision_id}/approve")
+@router.post("/{decision_id}/approve", dependencies=[Depends(require_api_key)])
 async def approve_decision(decision_id: int, session: AsyncSession = Depends(get_db)):
     result = await session.execute(select(AgentDecision).where(AgentDecision.id == decision_id))
     decision = result.scalar_one_or_none()
@@ -28,7 +29,7 @@ async def approve_decision(decision_id: int, session: AsyncSession = Depends(get
     return {"id": decision_id, "approved": True}
 
 
-@router.post("/{decision_id}/reject")
+@router.post("/{decision_id}/reject", dependencies=[Depends(require_api_key)])
 async def reject_decision(decision_id: int, session: AsyncSession = Depends(get_db)):
     result = await session.execute(select(AgentDecision).where(AgentDecision.id == decision_id))
     decision = result.scalar_one_or_none()
