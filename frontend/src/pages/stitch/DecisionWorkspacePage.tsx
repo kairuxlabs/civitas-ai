@@ -8,13 +8,8 @@ import HanoiMap, { type MapMetric } from '../../components/HanoiMap'
 import SimulationPanel from '../../components/SimulationPanel'
 import { api } from '../../services/api'
 import { averageOverallScore } from '../../utils/scores'
+import { useTranslation } from '../../i18n/useTranslation'
 import type { RuntimeRun, RuntimeTask } from '../../types'
-
-const GOAL_PRESETS = [
-  'Prepare the city for heavy rain tonight',
-  'Respond to severe air pollution tomorrow',
-  'Ensure safety for the weekend festival at Hoan Kiem',
-]
 
 const ACTIVE_STATUSES = new Set([
   'planning',
@@ -30,23 +25,36 @@ const RISK_STYLES: Record<string, string> = {
   high: 'bg-error/10 text-error border-error/20',
 }
 
-const MAP_METRICS: { key: MapMetric; label: string }[] = [
-  { key: 'overall_score', label: 'Overall' },
-  { key: 'traffic_score', label: 'Traffic' },
-  { key: 'environment_score', label: 'Environment' },
-  { key: 'risk_score', label: 'Risk' },
-]
-
 function fmtTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'
 }
 
 export default function DecisionWorkspacePage() {
+  const { t } = useTranslation()
   const [goal, setGoal] = useState('')
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState(1)
   const [mapMetric, setMapMetric] = useState<MapMetric>('overall_score')
   const queryClient = useQueryClient()
+
+  const goalPresets = [
+    t('workspace.goalPreset1'),
+    t('workspace.goalPreset2'),
+    t('workspace.goalPreset3'),
+  ]
+
+  const mapMetrics: { key: MapMetric; label: string }[] = [
+    { key: 'overall_score', label: t('workspace.metricOverall') },
+    { key: 'traffic_score', label: t('workspace.metricTraffic') },
+    { key: 'environment_score', label: t('workspace.metricEnvironment') },
+    { key: 'risk_score', label: t('workspace.metricRisk') },
+  ]
+
+  const riskLabel: Record<string, string> = {
+    low: t('workspace.riskLow'),
+    medium: t('workspace.riskMedium'),
+    high: t('workspace.riskHigh'),
+  }
 
   const { data: run } = useQuery<RuntimeRun>({
     queryKey: ['v2-run', activeRunId],
@@ -111,9 +119,9 @@ export default function DecisionWorkspacePage() {
     <div data-testid="decision-workspace-page" className="p-margin-desktop space-y-gutter pb-16">
       <div className={`space-y-3 ${run ? 'border-l-4 border-primary pl-4 py-2 bg-surface-container/20 rounded-r-xl' : ''}`}>
         <p className="text-[10px] uppercase tracking-widest text-primary font-semibold">
-          {run ? `Active mission: ${run.run_id}` : 'No active mission'}
+          {run ? `${t('workspace.activeMission')} ${run.run_id}` : t('workspace.noActiveMission')}
         </p>
-        <h1 className="text-2xl font-bold tracking-tight">{run?.goal ?? 'Decision Workspace'}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{run?.goal ?? t('workspace.title')}</h1>
 
         {run && (
           <div className="flex flex-wrap gap-2">
@@ -124,11 +132,11 @@ export default function DecisionWorkspacePage() {
             )}
             {run.decision?.risk && (
               <span className={`text-xs px-2.5 py-1 rounded border flex items-center gap-1.5 ${RISK_STYLES[run.decision.risk]}`}>
-                <ShieldAlert size={12} /> {run.decision.risk} risk
+                <ShieldAlert size={12} /> {riskLabel[run.decision.risk]} {t('workspace.riskSuffix')}
               </span>
             )}
             <span className="text-xs px-2.5 py-1 rounded border border-outline-variant text-on-surface-variant flex items-center gap-1.5">
-              <Clock size={12} /> Started {fmtTime(run.created_at)}
+              <Clock size={12} /> {t('workspace.started')} {fmtTime(run.created_at)}
             </span>
           </div>
         )}
@@ -138,7 +146,7 @@ export default function DecisionWorkspacePage() {
             value={goal}
             onChange={event => setGoal(event.target.value)}
             onKeyDown={event => event.key === 'Enter' && submitGoal(goal)}
-            placeholder="Reduce congestion after heavy rain…"
+            placeholder={t('workspace.goalPlaceholder')}
             className="flex-1 min-w-[240px] bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
           />
           <button
@@ -148,11 +156,11 @@ export default function DecisionWorkspacePage() {
             className="bg-primary text-on-primary font-semibold text-sm px-4 py-2 rounded-lg disabled:opacity-40 flex items-center gap-2"
           >
             {submit.isPending ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
-            Execute Decision
+            {t('workspace.executeDecision')}
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {GOAL_PRESETS.map(preset => (
+          {goalPresets.map(preset => (
             <button
               key={preset}
               type="button"
@@ -174,16 +182,16 @@ export default function DecisionWorkspacePage() {
         <section className="xl:col-span-3 glass-panel rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold flex items-center gap-2 text-sm">
-              <Activity size={16} className="text-primary" /> Execution Trace
+              <Activity size={16} className="text-primary" /> {t('workspace.executionTrace')}
             </h2>
             {run && ACTIVE_STATUSES.has(run.status) && (
               <span className="text-[10px] text-secondary border border-secondary/30 bg-secondary/10 px-2 py-0.5 rounded-full">
-                Live
+                {t('workspace.live')}
               </span>
             )}
           </div>
           <p className="text-[10px] uppercase text-on-surface-variant">
-            Runtime: {monitor?.active_runs ?? 0} active / {monitor?.total_runs ?? 0} total
+            {t('workspace.runtimePrefix')} {monitor?.active_runs ?? 0} {t('workspace.active')} / {monitor?.total_runs ?? 0} {t('workspace.total')}
           </p>
           <ul className="space-y-0">
             {(run?.tasks ?? []).map((task: RuntimeTask, index) => (
@@ -207,12 +215,12 @@ export default function DecisionWorkspacePage() {
               </li>
             ))}
             {!run?.tasks.length && (
-              <li className="text-xs text-on-surface-variant italic">Submit a goal to start the runtime trace.</li>
+              <li className="text-xs text-on-surface-variant italic">{t('workspace.submitGoalPrompt')}</li>
             )}
           </ul>
           {(run?.reflection?.notes ?? []).length > 0 && (
             <div data-testid="decision-reflection-notes" className="space-y-1.5 pt-3 border-t border-outline-variant">
-              <p className="text-[10px] uppercase text-on-surface-variant">Reflection notes</p>
+              <p className="text-[10px] uppercase text-on-surface-variant">{t('workspace.reflectionNotes')}</p>
               <ul className="space-y-1.5">
                 {run!.reflection!.notes.map((note, index) => (
                   <li key={index} className="text-xs text-on-surface-variant flex items-start gap-1.5">
@@ -224,7 +232,7 @@ export default function DecisionWorkspacePage() {
           )}
           {runs?.length ? (
             <div className="pt-3 border-t border-outline-variant space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
-              <p className="text-[10px] uppercase text-on-surface-variant">Recent runs</p>
+              <p className="text-[10px] uppercase text-on-surface-variant">{t('workspace.recentRuns')}</p>
               {runs.map(recentRun => (
                 <button
                   key={recentRun.run_id}
@@ -247,10 +255,10 @@ export default function DecisionWorkspacePage() {
         <section className="xl:col-span-5 glass-panel rounded-xl overflow-hidden">
           <div className="p-3 border-b border-outline-variant flex items-center justify-between gap-2 flex-wrap">
             <span className="text-sm font-semibold flex items-center gap-2">
-              <Layers size={15} className="text-primary" /> District map
+              <Layers size={15} className="text-primary" /> {t('workspace.districtMap')}
             </span>
             <div className="flex gap-1.5" data-testid="map-metric-toggle">
-              {MAP_METRICS.map(m => (
+              {mapMetrics.map(m => (
                 <button
                   key={m.key}
                   type="button"
@@ -276,13 +284,13 @@ export default function DecisionWorkspacePage() {
           </div>
           {selectedScore && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border-t border-outline-variant text-xs">
-              <div>Traffic <span className="font-mono text-on-surface">{Math.round(selectedScore.traffic_score)}</span></div>
-              <div>Environment <span className="font-mono text-on-surface">{Math.round(selectedScore.environment_score)}</span></div>
-              <div>Risk <span className="font-mono text-on-surface">{Math.round(selectedScore.risk_score)}</span></div>
+              <div>{t('workspace.metricTraffic')} <span className="font-mono text-on-surface">{Math.round(selectedScore.traffic_score)}</span></div>
+              <div>{t('workspace.metricEnvironment')} <span className="font-mono text-on-surface">{Math.round(selectedScore.environment_score)}</span></div>
+              <div>{t('workspace.metricRisk')} <span className="font-mono text-on-surface">{Math.round(selectedScore.risk_score)}</span></div>
               {latestAqi ? (
-                <div>AQI <span className="font-mono text-on-surface">{Math.round(latestAqi.aqi_index)}</span></div>
+                <div>{t('workspace.aqi')} <span className="font-mono text-on-surface">{Math.round(latestAqi.aqi_index)}</span></div>
               ) : (
-                <div>Overall <span className="font-mono text-on-surface">{Math.round(selectedScore.overall_score)}</span></div>
+                <div>{t('workspace.metricOverall')} <span className="font-mono text-on-surface">{Math.round(selectedScore.overall_score)}</span></div>
               )}
             </div>
           )}
@@ -290,7 +298,7 @@ export default function DecisionWorkspacePage() {
 
         <section className="xl:col-span-4 space-y-gutter">
           <div className="glass-panel rounded-xl p-4">
-            <div className="text-xs text-on-surface-variant mb-3">City Score</div>
+            <div className="text-xs text-on-surface-variant mb-3">{t('workspace.cityScore')}</div>
             <div className="flex items-center gap-4">
               <div className="relative w-16 h-16 shrink-0">
                 <svg viewBox="0 0 60 60" className="w-full h-full -rotate-90">
@@ -306,9 +314,9 @@ export default function DecisionWorkspacePage() {
               {selectedScore && (
                 <div className="flex-1 space-y-1.5">
                   {([
-                    ['Traffic', selectedScore.traffic_score],
-                    ['Environment', selectedScore.environment_score],
-                    ['Citizen', selectedScore.citizen_score],
+                    [t('workspace.metricTraffic'), selectedScore.traffic_score],
+                    [t('workspace.metricEnvironment'), selectedScore.environment_score],
+                    [t('workspace.citizen'), selectedScore.citizen_score],
                   ] as const).map(([label, value]) => (
                     <div key={label}>
                       <div className="flex justify-between text-[11px]">
@@ -328,7 +336,7 @@ export default function DecisionWorkspacePage() {
             <div className="glass-panel rounded-xl overflow-hidden">
               <div className="p-4 space-y-3">
                 <h2 className="text-sm font-bold flex items-center gap-2">
-                  <Brain size={16} className="text-primary" /> Runtime Decision
+                  <Brain size={16} className="text-primary" /> {t('workspace.runtimeDecision')}
                 </h2>
                 <p className="text-sm text-on-surface-variant">{run.decision.summary}</p>
                 <ul className="space-y-1">
@@ -338,15 +346,15 @@ export default function DecisionWorkspacePage() {
                 </ul>
                 <div className="grid grid-cols-3 gap-2 pt-2">
                   <div className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant">
-                    <p className="text-[10px] text-outline">Confidence</p>
+                    <p className="text-[10px] text-outline">{t('workspace.confidence')}</p>
                     <p className="text-sm font-bold">{Math.round(run.decision.confidence)}%</p>
                   </div>
                   <div className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant">
-                    <p className="text-[10px] text-outline">Risk</p>
-                    <p className="text-sm font-bold capitalize">{run.decision.risk}</p>
+                    <p className="text-[10px] text-outline">{t('workspace.risk')}</p>
+                    <p className="text-sm font-bold capitalize">{riskLabel[run.decision.risk]}</p>
                   </div>
                   <div className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant">
-                    <p className="text-[10px] text-outline">Evidence</p>
+                    <p className="text-[10px] text-outline">{t('workspace.evidence')}</p>
                     <p className="text-sm font-bold">{run.decision.evidence.length}</p>
                   </div>
                 </div>
@@ -368,7 +376,7 @@ export default function DecisionWorkspacePage() {
                     onClick={() => resolve.mutate(true)}
                     className="flex-1 bg-secondary-container text-on-secondary-container text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1"
                   >
-                    <CheckCircle size={14} /> Approve
+                    <CheckCircle size={14} /> {t('workspace.approve')}
                   </button>
                   <button
                     type="button"
@@ -376,14 +384,14 @@ export default function DecisionWorkspacePage() {
                     onClick={() => resolve.mutate(false)}
                     className="flex-1 bg-error-container/40 text-error text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1"
                   >
-                    <XCircle size={14} /> Reject
+                    <XCircle size={14} /> {t('workspace.reject')}
                   </button>
                 </div>
               )}
             </div>
           ) : (
             <div className="glass-panel rounded-xl p-4 text-xs text-on-surface-variant italic">
-              Decision card appears when the runtime finishes planning.
+              {t('workspace.decisionCardEmpty')}
             </div>
           )}
         </section>

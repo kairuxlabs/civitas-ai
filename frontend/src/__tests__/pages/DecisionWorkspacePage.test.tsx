@@ -5,6 +5,11 @@ import { renderWithQueryClient } from '../test-utils'
 import DecisionWorkspacePage from '../../pages/stitch/DecisionWorkspacePage'
 import { api } from '../../services/api'
 import type { RuntimeMonitor, RuntimeRun } from '../../types'
+import { LanguageProvider } from '../../i18n/LanguageContext'
+
+function renderPage() {
+  return renderWithQueryClient(<LanguageProvider><DecisionWorkspacePage /></LanguageProvider>)
+}
 
 vi.mock('../../services/api')
 
@@ -81,7 +86,7 @@ beforeEach(() => {
 describe('DecisionWorkspacePage', () => {
   it('submits a goal and shows approve controls', async () => {
     const user = userEvent.setup()
-    renderWithQueryClient(<DecisionWorkspacePage />)
+    renderPage()
 
     await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
     await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
@@ -93,7 +98,7 @@ describe('DecisionWorkspacePage', () => {
 
   it('renders the Digital Twin panel and starts the simulation from its Start button', async () => {
     const user = userEvent.setup()
-    renderWithQueryClient(<DecisionWorkspacePage />)
+    renderPage()
 
     await waitFor(() => expect(screen.getByTestId('digital-twin-panel')).toBeInTheDocument())
     const startButton = await screen.findByTestId('sim-start-btn')
@@ -112,7 +117,7 @@ describe('DecisionWorkspacePage', () => {
     vi.mocked(api.getRun).mockResolvedValue(runWithNotes)
 
     const user = userEvent.setup()
-    renderWithQueryClient(<DecisionWorkspacePage />)
+    renderPage()
 
     await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
     await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
@@ -126,7 +131,7 @@ describe('DecisionWorkspacePage', () => {
 
   it('omits critic notes and reflection sections when absent from the run', async () => {
     const user = userEvent.setup()
-    renderWithQueryClient(<DecisionWorkspacePage />)
+    renderPage()
 
     await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
     await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
@@ -139,7 +144,7 @@ describe('DecisionWorkspacePage', () => {
 
   it('shows the real district name and risk level in the mission header once a run is active', async () => {
     const user = userEvent.setup()
-    renderWithQueryClient(<DecisionWorkspacePage />)
+    renderPage()
 
     await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
     await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
@@ -154,11 +159,20 @@ describe('DecisionWorkspacePage', () => {
       { id: 1, city_id: 'hanoi', district_id: 1, timestamp: '2026-07-21T09:00:00Z', traffic_score: 40, environment_score: 90, citizen_score: 70, risk_score: 20, overall_score: 60 },
     ])
     const user = userEvent.setup()
-    renderWithQueryClient(<DecisionWorkspacePage />)
+    renderPage()
 
     await waitFor(() => expect(screen.getByTestId('map-metric-toggle')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Traffic' }))
 
     await waitFor(() => expect(screen.getAllByText('40').length).toBeGreaterThan(0))
+  })
+
+  it('renders Vietnamese labels when the language is switched to vi', async () => {
+    localStorage.setItem('civitas-language', 'vi')
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Chưa có nhiệm vụ nào đang chạy')).toBeInTheDocument())
+    expect(screen.getByPlaceholderText('Giảm ùn tắc sau mưa lớn…')).toBeInTheDocument()
+    localStorage.removeItem('civitas-language')
   })
 })
