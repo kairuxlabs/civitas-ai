@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Database } from 'lucide-react'
+import { Database, Loader2 } from 'lucide-react'
 import { api } from '../../services/api'
 import type { SystemStatus } from '../../types'
 
@@ -15,7 +15,27 @@ function sourceRows(status: SystemStatus | undefined) {
 
 export default function DataSourcesPage() {
   const { data: health } = useQuery({ queryKey: ['health'], queryFn: api.getHealth, refetchInterval: 15000 })
-  const { data: status } = useQuery({ queryKey: ['system-status'], queryFn: api.getSystemStatus, refetchInterval: 15000 })
+  const { data: status, isLoading, isError } = useQuery({ queryKey: ['system-status'], queryFn: api.getSystemStatus, refetchInterval: 15000 })
+
+  if (isLoading) {
+    return (
+      <div data-testid="data-sources-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="data-sources-loading" className="flex items-center justify-center py-24">
+          <Loader2 size={28} className="animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div data-testid="data-sources-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="data-sources-error" className="glass-panel rounded-xl p-6 text-error text-sm">
+          Failed to load — check your connection.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div data-testid="data-sources-page" className="p-margin-desktop space-y-gutter pb-16">

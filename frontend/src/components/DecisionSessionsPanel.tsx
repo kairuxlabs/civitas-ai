@@ -2,6 +2,12 @@ import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { Loader2, TrendingUp } from 'lucide-react'
 import { api } from '../services/api'
+
+const PANEL_HEADER = (
+  <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+    <TrendingUp size={15} className="text-primary" /> Decision Sessions
+  </h3>
+)
 import type { DecisionSession } from '../types'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -119,7 +125,7 @@ export default function DecisionSessionsPanel() {
   const [districtFilter, setDistrictFilter] = useState<number | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
-  const { data: sessions } = useQuery({
+  const { data: sessions, isLoading, isError } = useQuery({
     queryKey: ['decision-sessions'],
     queryFn: () => api.getDecisionSessions(),
     refetchInterval: 5000,
@@ -147,11 +153,31 @@ export default function DecisionSessionsPanel() {
     [sessions, districtFilter, statusFilter],
   )
 
+  if (isLoading) {
+    return (
+      <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
+        {PANEL_HEADER}
+        <div data-testid="decision-sessions-loading" className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
+        {PANEL_HEADER}
+        <div data-testid="decision-sessions-error" className="text-error text-sm py-4 text-center">
+          Failed to load — check your connection.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-surface-container border border-outline-variant rounded-lg p-4 space-y-3">
-      <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
-        <TrendingUp size={15} className="text-primary" /> Decision Sessions
-      </h3>
+      {PANEL_HEADER}
 
       {analytics && (
         <div data-testid="decision-analytics" className="grid grid-cols-3 gap-2 text-center">

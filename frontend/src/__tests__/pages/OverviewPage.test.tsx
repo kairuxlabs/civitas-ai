@@ -34,4 +34,30 @@ describe('OverviewPage', () => {
     await waitFor(() => expect(screen.getByTestId('overview-page')).toBeInTheDocument())
     await waitFor(() => expect(screen.getByTestId('overview-overall-score')).toHaveTextContent('74'))
   })
+
+  it('shows a loading indicator before the scores query resolves', async () => {
+    let resolveScores: (v: unknown) => void = () => {}
+    vi.mocked(api.getScores).mockImplementation(() => new Promise(resolve => { resolveScores = resolve }))
+
+    renderWithQueryClient(
+      <MemoryRouter>
+        <OverviewPage />
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('overview-loading')).toBeInTheDocument()
+
+    resolveScores([])
+    await waitFor(() => expect(screen.queryByTestId('overview-loading')).not.toBeInTheDocument())
+  })
+
+  it('shows an inline error when the scores query fails', async () => {
+    vi.mocked(api.getScores).mockRejectedValue(new Error('network down'))
+
+    renderWithQueryClient(
+      <MemoryRouter>
+        <OverviewPage />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(screen.getByTestId('overview-error')).toBeInTheDocument())
+  })
 })

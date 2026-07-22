@@ -37,4 +37,22 @@ describe('CityIntelligencePage', () => {
     renderWithQueryClient(<CityIntelligencePage />)
     await waitFor(() => expect(screen.getAllByTestId('city-intelligence-district-option')).toHaveLength(2))
   })
+
+  it('shows a loading indicator before the scores query resolves', async () => {
+    let resolveScores: (v: unknown) => void = () => {}
+    vi.mocked(api.getScores).mockImplementation(() => new Promise(resolve => { resolveScores = resolve }))
+
+    renderWithQueryClient(<CityIntelligencePage />)
+    expect(screen.getByTestId('city-intelligence-loading')).toBeInTheDocument()
+
+    resolveScores([])
+    await waitFor(() => expect(screen.queryByTestId('city-intelligence-loading')).not.toBeInTheDocument())
+  })
+
+  it('shows an inline error when the scores query fails', async () => {
+    vi.mocked(api.getScores).mockRejectedValue(new Error('network down'))
+
+    renderWithQueryClient(<CityIntelligencePage />)
+    await waitFor(() => expect(screen.getByTestId('city-intelligence-error')).toBeInTheDocument())
+  })
 })

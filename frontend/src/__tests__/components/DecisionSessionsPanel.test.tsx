@@ -107,4 +107,22 @@ describe('DecisionSessionsPanel', () => {
     await waitFor(() => expect(screen.getAllByTestId('decision-session-card')).toHaveLength(1))
     expect(screen.getByText('run-2')).toBeInTheDocument()
   })
+
+  it('shows a loading indicator before the sessions query resolves', async () => {
+    let resolveSessions: (v: unknown) => void = () => {}
+    vi.mocked(api.getDecisionSessions).mockImplementation(() => new Promise(resolve => { resolveSessions = resolve }))
+
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    expect(screen.getByTestId('decision-sessions-loading')).toBeInTheDocument()
+
+    resolveSessions([])
+    await waitFor(() => expect(screen.queryByTestId('decision-sessions-loading')).not.toBeInTheDocument())
+  })
+
+  it('shows an inline error when the sessions query fails', async () => {
+    vi.mocked(api.getDecisionSessions).mockRejectedValue(new Error('network down'))
+
+    renderWithQueryClient(<DecisionSessionsPanel />)
+    await waitFor(() => expect(screen.getByTestId('decision-sessions-error')).toBeInTheDocument())
+  })
 })

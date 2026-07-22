@@ -1,9 +1,29 @@
 import { useQuery } from '@tanstack/react-query'
-import { Settings as SettingsIcon } from 'lucide-react'
+import { Loader2, Settings as SettingsIcon } from 'lucide-react'
 import { api } from '../../services/api'
 
 export default function SettingsPage() {
-  const { data: status } = useQuery({ queryKey: ['system-status'], queryFn: api.getSystemStatus })
+  const { data: status, isLoading, isError } = useQuery({ queryKey: ['system-status'], queryFn: api.getSystemStatus })
+
+  if (isLoading) {
+    return (
+      <div data-testid="settings-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="settings-loading" className="flex items-center justify-center py-24">
+          <Loader2 size={28} className="animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div data-testid="settings-page" className="p-margin-desktop space-y-gutter pb-16">
+        <div data-testid="settings-error" className="glass-panel rounded-xl p-6 text-error text-sm">
+          Failed to load — check your connection.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div data-testid="settings-page" className="p-margin-desktop space-y-gutter pb-16">

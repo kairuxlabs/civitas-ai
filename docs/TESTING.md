@@ -294,6 +294,14 @@ All testable elements have `data-testid` attributes:
 | Decision Session timeline | `decision-session-timeline` |
 | Check Outcome Now button | `check-outcome-now-button` |
 | Decision Sessions district/status filter | `decision-sessions-district-filter` / `decision-sessions-status-filter` |
+| Overview loading/error | `overview-loading` / `overview-error` |
+| City Intelligence loading/error | `city-intelligence-loading` / `city-intelligence-error` |
+| Data Sources loading/error | `data-sources-loading` / `data-sources-error` |
+| Knowledge Graph loading/error | `knowledge-graph-loading` / `knowledge-graph-error` |
+| Settings loading/error | `settings-loading` / `settings-error` |
+| Decision Sessions panel loading/error | `decision-sessions-loading` / `decision-sessions-error` |
+| Simulator inline error | `simulator-error` |
+| Reports action error banner / dismiss | `reports-action-error` / `reports-action-error-dismiss` |
 
 ### Playwright config highlights
 
