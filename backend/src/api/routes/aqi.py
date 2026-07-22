@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,7 @@ class AQIPoint(BaseModel):
 
 
 @router.get("/history/{district_id}", response_model=list[AQIPoint])
-async def get_aqi_history(district_id: int, limit: int = 24, session: AsyncSession = Depends(get_db)):
+async def get_aqi_history(district_id: int, limit: int = Query(default=24, le=100), session: AsyncSession = Depends(get_db)):
     rows = await AQIRepo.get_recent(session, district_id, limit)
     return [
         AQIPoint(
