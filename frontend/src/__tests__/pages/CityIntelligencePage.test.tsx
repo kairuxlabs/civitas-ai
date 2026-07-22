@@ -3,8 +3,13 @@ import { screen, waitFor } from '@testing-library/react'
 import { renderWithQueryClient } from '../test-utils'
 import CityIntelligencePage from '../../pages/stitch/CityIntelligencePage'
 import { api } from '../../services/api'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../services/api')
+
+function renderPage() {
+  return renderWithQueryClient(<LanguageProvider><CityIntelligencePage /></LanguageProvider>)
+}
 
 beforeEach(() => {
   vi.mocked(api.getDistricts).mockResolvedValue([
@@ -28,13 +33,13 @@ beforeEach(() => {
 
 describe('CityIntelligencePage', () => {
   it('renders the overall score for the selected district from real scores data', async () => {
-    renderWithQueryClient(<CityIntelligencePage />)
+    renderPage()
     await waitFor(() => expect(screen.getByTestId('city-intelligence-page')).toBeInTheDocument())
     await waitFor(() => expect(screen.getByTestId('city-intelligence-overall-score')).toHaveTextContent('76'))
   })
 
   it('lists all districts as selectable', async () => {
-    renderWithQueryClient(<CityIntelligencePage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('city-intelligence-district-option')).toHaveLength(2))
   })
 
@@ -42,7 +47,7 @@ describe('CityIntelligencePage', () => {
     let resolveScores: (v: unknown) => void = () => {}
     vi.mocked(api.getScores).mockImplementation(() => new Promise(resolve => { resolveScores = resolve }))
 
-    renderWithQueryClient(<CityIntelligencePage />)
+    renderPage()
     expect(screen.getByTestId('city-intelligence-loading')).toBeInTheDocument()
 
     resolveScores([])
@@ -52,7 +57,15 @@ describe('CityIntelligencePage', () => {
   it('shows an inline error when the scores query fails', async () => {
     vi.mocked(api.getScores).mockRejectedValue(new Error('network down'))
 
-    renderWithQueryClient(<CityIntelligencePage />)
+    renderPage()
     await waitFor(() => expect(screen.getByTestId('city-intelligence-error')).toBeInTheDocument())
+  })
+
+  it('renders Vietnamese labels when the language is switched to vi', async () => {
+    localStorage.setItem('civitas-language', 'vi')
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Thông tin thành phố')).toBeInTheDocument())
+    localStorage.removeItem('civitas-language')
   })
 })

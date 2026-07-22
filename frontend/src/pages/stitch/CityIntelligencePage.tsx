@@ -2,16 +2,18 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Building2, Info, Loader2, TrendingDown, TrendingUp, Wind } from 'lucide-react'
 import { api } from '../../services/api'
-
-const CATEGORY_META = [
-  { key: 'traffic_score', label: 'Traffic', border: 'border-l-primary', icon: 'text-primary', invert: false },
-  { key: 'environment_score', label: 'Environment', border: 'border-l-secondary', icon: 'text-secondary', invert: false },
-  { key: 'citizen_score', label: 'Citizen', border: 'border-l-tertiary', icon: 'text-tertiary', invert: false },
-  { key: 'risk_score', label: 'Risk', border: 'border-l-error', icon: 'text-error', invert: true },
-] as const
+import { useTranslation } from '../../i18n/useTranslation'
 
 export default function CityIntelligencePage() {
+  const { t } = useTranslation()
   const [selectedDistrictId, setSelectedDistrictId] = useState(1)
+
+  const categoryMeta = [
+    { key: 'traffic_score', label: t('cityIntelligence.traffic'), border: 'border-l-primary', icon: 'text-primary', invert: false },
+    { key: 'environment_score', label: t('cityIntelligence.environment'), border: 'border-l-secondary', icon: 'text-secondary', invert: false },
+    { key: 'citizen_score', label: t('cityIntelligence.citizen'), border: 'border-l-tertiary', icon: 'text-tertiary', invert: false },
+    { key: 'risk_score', label: t('cityIntelligence.risk'), border: 'border-l-error', icon: 'text-error', invert: true },
+  ] as const
 
   const { data: districts } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
   const { data: scores, isLoading, isError } = useQuery({ queryKey: ['scores'], queryFn: api.getScores, refetchInterval: 15000 })
@@ -44,7 +46,7 @@ export default function CityIntelligencePage() {
     return (
       <div data-testid="city-intelligence-page" className="p-margin-desktop space-y-gutter pb-16">
         <div data-testid="city-intelligence-error" className="glass-panel rounded-xl p-6 text-error text-sm">
-          Failed to load — check your connection.
+          {t('common.loadError')}
         </div>
       </div>
     )
@@ -55,9 +57,9 @@ export default function CityIntelligencePage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 size={22} className="text-primary" /> City Intelligence
+            <Building2 size={22} className="text-primary" /> {t('cityIntelligence.title')}
           </h1>
-          <p className="text-on-surface-variant text-sm mt-1">Per-district score deep-dive, driven by live pipeline data.</p>
+          <p className="text-on-surface-variant text-sm mt-1">{t('cityIntelligence.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {(districts ?? []).map(d => (
@@ -82,8 +84,8 @@ export default function CityIntelligencePage() {
         <section className="lg:col-span-5 glass-panel rounded-xl p-6 flex flex-col">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xs uppercase tracking-wide text-on-surface-variant">Overall City Score</h2>
-              <p className="text-xs text-secondary mt-1">{selectedDistrict?.name ?? 'Hanoi Metropolitan Area'}</p>
+              <h2 className="text-xs uppercase tracking-wide text-on-surface-variant">{t('cityIntelligence.overallCityScore')}</h2>
+              <p className="text-xs text-secondary mt-1">{selectedDistrict?.name ?? t('cityIntelligence.hanoiMetroArea')}</p>
             </div>
             <Info size={16} className="text-outline" />
           </div>
@@ -104,27 +106,27 @@ export default function CityIntelligencePage() {
         <section className="lg:col-span-7 glass-panel rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <Wind size={16} className="text-secondary" />
-            <h2 className="text-sm font-semibold">Air Quality (latest reading)</h2>
+            <h2 className="text-sm font-semibold">{t('cityIntelligence.airQuality')}</h2>
           </div>
           {latestAqi ? (
             <div className="flex gap-6">
               <div>
-                <p className="text-xs text-on-surface-variant">AQI Index</p>
+                <p className="text-xs text-on-surface-variant">{t('cityIntelligence.aqiIndex')}</p>
                 <p className="text-2xl font-semibold">{Math.round(latestAqi.aqi_index)}</p>
               </div>
               <div>
-                <p className="text-xs text-on-surface-variant">PM2.5</p>
+                <p className="text-xs text-on-surface-variant">{t('cityIntelligence.pm25')}</p>
                 <p className="text-2xl font-semibold">{Math.round(latestAqi.pm25)}</p>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-on-surface-variant italic">No AQI history yet for this district.</p>
+            <p className="text-sm text-on-surface-variant italic">{t('cityIntelligence.noAqiHistory')}</p>
           )}
         </section>
       </div>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        {CATEGORY_META.map(cat => {
+        {categoryMeta.map(cat => {
           const value = selectedScore ? Math.round(selectedScore[cat.key]) : null
           const good = cat.invert ? (value ?? 0) < 40 : (value ?? 0) >= 60
           return (
