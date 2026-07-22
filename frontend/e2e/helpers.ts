@@ -55,16 +55,6 @@ export async function waitForApp(page: Page) {
   await expect(page.getByTestId('overview-page')).toBeVisible({ timeout: 8_000 })
 }
 
-/**
- * Overview mocks + navigate to Command Center (chat / map / simulator live here, not on `/`).
- */
-export async function waitForCommandCenter(page: Page) {
-  await waitForApp(page)
-  await page.goto('/command-center')
-  await expect(page.getByTestId('command-center-route')).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByTestId('app-header')).toBeVisible({ timeout: 15_000 })
-}
-
 /** Returns true if backend is reachable. */
 export async function backendReachable(page: Page): Promise<boolean> {
   try {

@@ -442,20 +442,16 @@ civitas-ai/
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/
-│   │   │   ├── CommandCenterPage.tsx   # v1 Mission Control layout — map, AI Copilot chat, Decision Report
-│   │   │   └── MissionControlPage.tsx  # v2 runtime UI — goal input, DAG view, Digital Twin, Decision Sessions
+│   │   ├── pages/stitch/               # 8 Stitch shell pages (Overview, Decision Workspace, Decision Sessions, Data Sources, Knowledge Graph, City Intelligence, Reports, Settings)
+│   │   ├── layout/AppShell.tsx         # sidebar + <Outlet /> shell
 │   │   ├── components/
 │   │   │   ├── HanoiMap.tsx            # SVG district map with click handlers
-│   │   │   ├── SimulatorModal.tsx      # scenario selector + Before/After comparison modal
-│   │   │   ├── EvidenceModal.tsx       # evidence viewer (gap badge + freshness)
 │   │   │   ├── DecisionSessionsPanel.tsx # session KPI tiles, timeline, Check Outcome Now
-│   │   │   ├── AgentGraph.tsx          # live pipeline progress SVG
-│   │   │   └── SimulationPanel.tsx     # v2 Digital Twin controls + crawl trigger
+│   │   │   └── SimulationPanel.tsx     # v2 Digital Twin controls + crawl trigger (mounted in Decision Workspace)
 │   │   ├── hooks/useWebSocket.ts       # auto-reconnecting WebSocket hook
 │   │   ├── services/api.ts             # Axios client
 │   │   └── types/index.ts             # shared TypeScript interfaces
-│   ├── e2e/                            # Playwright suites 01-06
+│   ├── e2e/                            # Playwright suites 05-08
 │   ├── playwright.config.ts
 │   └── vercel.json                     # SPA rewrite + build config
 │

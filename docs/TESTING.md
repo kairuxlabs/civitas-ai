@@ -4,9 +4,9 @@ Civitas AI has three layers of automated testing:
 
 | Layer | Tool | Count | What it covers |
 |---|---|---|---|
-| **Backend unit** | pytest + httpx | 331 tests | API routes (incl. system status, knowledge summary), services (incl. Decision Session), repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline |
-| **Frontend unit** | Vitest + Testing Library | 103 tests | React components (incl. DecisionSessionsPanel, EvidenceModal gap/freshness), Stitch pages (City Intelligence, Reports, Data Sources, Knowledge Graph, Settings), hooks, API service |
-| **E2E integration** | Playwright (Chromium) | 58 tests | Full UI flows, map, simulator, chat, evidence viewer, Mission Control v2 + Decision Sessions panel, remaining Stitch screens |
+| **Backend unit** | pytest + httpx | 369 tests | API routes, services, repositories, agents, runtime, reasoning (critic + gap), AI gateway, knowledge pipeline, auth, scheduler |
+| **Frontend unit** | Vitest + Testing Library | 91 tests | React components (incl. DecisionSessionsPanel), Stitch pages (all 8), hooks, API service |
+| **E2E integration** | Playwright (Chromium) | 26 tests | Decision Workspace (v2 goal/approval, Digital Twin, Decision Sessions + filters), remaining Stitch screens, live-backend integration, production smoke |
 
 ---
 
@@ -131,14 +131,10 @@ frontend/src/__tests__/
 ├── setup.ts                          # global mocks (axios, matchMedia, ResizeObserver)
 ├── components/
 │   ├── HanoiMap.test.tsx             # SVG rendering, district nodes, legend items
-│   ├── SimulatorModal.test.tsx       # modal open/close, scenarios, Before/After, evidence click
-│   ├── EvidenceModal.test.tsx        # grouped evidence, confidence, gap badge, freshness label
 │   ├── DecisionSessionsPanel.test.tsx # KPI tiles, session cards, timeline, Check Outcome Now
 │   ├── DecisionPanel.test.tsx        # confidence bar, prediction, recommendations, explanation
-│   ├── ScoreGauge.test.tsx
-│   └── AgentGraph.test.tsx           # agent node rendering, status indicators
+│   └── ScoreGauge.test.tsx
 ├── pages/
-│   ├── CommandCenterPage.test.tsx    # v1 layout smoke (E2E remains primary coverage)
 │   └── MissionControlPage.test.tsx   # v2 goal/DAG smoke + Decision Sessions panel mount
 ├── hooks/
 │   └── useWebSocket.test.ts         # connection, reconnect, message parsing
@@ -185,7 +181,7 @@ npm run e2e:headed
 npm run e2e:ui
 
 # Run a specific suite
-npx playwright test e2e/01-layout.spec.ts
+npx playwright test e2e/06-mission-control.spec.ts
 
 # Run with trace on failure
 npx playwright test --trace on
@@ -205,32 +201,25 @@ npm run e2e
 
 | File | Tests | Backend required | Description |
 |---|---|---|---|
-| `01-layout.spec.ts` | 9 | No | Header, tabs, map SVG, panels, KPI cards |
-| `02-map-interaction.spec.ts` | 15 | No | All 12 district nodes, click → info bar update |
-| `03-simulator.spec.ts` | 7 | No | Modal open/close, scenarios, Run button state, Before/After comparison |
-| `04-chat.spec.ts` | 8 | No | Chat input, Enter key, AI response, report update, evidence modal |
-| `05-integration.spec.ts` | 7 | Yes (auto-skip) | Real health check, real districts, real chat, real simulator |
-| `06-mission-control.spec.ts` | 6 | No | v2 goal submit, approval, Digital Twin, Decision Sessions panel |
+| `05-integration.spec.ts` | 2 | Yes (auto-skip) | Real health check, real districts endpoint |
+| `06-mission-control.spec.ts` | 7 | No | v2 goal submit, approval, Digital Twin (ported into Decision Workspace), Decision Sessions panel + filters |
 | `07-stitch-screens.spec.ts` | 6 | No | City Intelligence, Reports, Data Sources, Knowledge Graph, Settings, sidebar nav |
-| `08-production-smoke.spec.ts` | 10 | No (hits live prod) | Read-only smoke test against the deployed Vercel frontend + Render backend, all 9 screens |
+| `08-production-smoke.spec.ts` | 9 | No (hits live prod) | Read-only smoke test against the deployed Vercel frontend + Render backend, all 8 screens |
 
-Suites 01–04 and 06 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable. `waitForApp` / Mission Control helpers also stub `**/api/decision-sessions` and `**/api/decision-sessions/analytics`.
+Suites 06 and 07 mock all API calls via `page.route()` — they work without a running backend. Suite 05 auto-skips if `http://localhost:8000/health` is unreachable. `waitForApp` / Decision Workspace helpers also stub `**/api/decision-sessions` and `**/api/decision-sessions/analytics`.
+
+There is no Command Center / v1 chat-and-map UI anymore — it was removed from the app (route, nav, and page component) in favor of Decision Workspace as the single v2-driven operator screen. The v1 backend pipeline (`/api/chat`, `/api/simulate`) still exists and is still backend-tested, but has no frontend entry point.
 
 ### API mocking pattern
 
 All mocked tests use the shared `waitForApp()` helper from `e2e/helpers.ts`. Mocks must be registered **before** `page.goto()`:
 
 ```ts
-import { waitForApp, waitForCommandCenter, switchToMissionControl } from './helpers'
+import { waitForApp, switchToMissionControl } from './helpers'
 
 test('overview shell', async ({ page }) => {
   await waitForApp(page) // mocks + `/` Overview
   await expect(page.getByTestId('overview-page')).toBeVisible()
-})
-
-test('command center chrome', async ({ page }) => {
-  await waitForCommandCenter(page) // waitForApp then `/command-center`
-  await expect(page.getByTestId('app-header')).toBeVisible()
 })
 
 test('decision workspace', async ({ page }) => {
@@ -246,7 +235,7 @@ test('decision workspace', async ({ page }) => {
 - `**/health` → `{ status: 'ok' }`
 - empty decision-sessions + analytics stubs
 
-It then waits for `data-testid="app-shell"` and `overview-page`. Suites that need chat/map/simulator call `waitForCommandCenter` (Command Center lives at `/command-center`, not `/`).
+It then waits for `data-testid="app-shell"` and `overview-page`. Suites that need the Decision Workspace / Digital Twin call `switchToMissionControl` (opens `/workspace`, not `/`).
 
 ### data-testid reference
 
@@ -264,7 +253,6 @@ All testable elements have `data-testid` attributes:
 | Digital Twin live status | `sim-status` |
 | Digital Twin crawl button/results | `sim-crawl-btn` / `sim-crawl-results` |
 | Decision Sessions page | `decision-sessions-page` |
-| Command Center route wrap | `command-center-route` |
 | City Intelligence page | `city-intelligence-page` |
 | City Intelligence overall score | `city-intelligence-overall-score` |
 | City Intelligence district selector | `city-intelligence-district-option` |
@@ -281,20 +269,7 @@ All testable elements have `data-testid` attributes:
 | Settings page | `settings-page` |
 | Settings Gemini model/temperature | `settings-gemini-model` / `settings-gemini-temperature` |
 | Settings fallback model row | `settings-fallback-model` |
-| Page wrapper (Command Center) | `mission-control` |
-| Header bar | `app-header` |
-| Connection badge | `connection-status` |
-| Chat messages | `chat-messages` |
-| Chat input | `chat-input` |
-| Send button | `chat-send` |
-| Simulator open button | `simulator-btn` |
-| Simulator modal | `simulator-modal` |
-| Scenario card | `scenario-{key}` (e.g. `scenario-heavy_rain`) |
-| Simulator run button | `simulator-run-btn` |
 | District node (map) | `district-{id}` (e.g. `district-1`) |
-| Evidence modal | `evidence-modal` |
-| Evidence gap badge | `evidence-gap-badge` |
-| Evidence freshness label | `evidence-freshness` |
 | Decision Sessions KPI strip | `decision-analytics` |
 | Decision Session card | `decision-session-card` |
 | Decision Session timeline | `decision-session-timeline` |
@@ -338,7 +313,7 @@ In GitHub Actions, all three test layers run in parallel on every push:
 jobs:
   backend:          # pytest --tb=short
   frontend-unit:    # vitest run
-  frontend-e2e:     # playwright test (suites 01-04 + 06, no backend)
+  frontend-e2e:     # playwright test (suites 06-07, no backend)
   frontend-build:   # npm run build (TypeScript + Vite)
 ```
 

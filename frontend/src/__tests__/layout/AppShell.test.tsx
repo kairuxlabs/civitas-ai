@@ -17,7 +17,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Decision Workspace' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Decision Sessions' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Command Center' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Command Center' })).not.toBeInTheDocument()
     expect(screen.getByTestId('app-shell')).toBeInTheDocument()
   })
 })

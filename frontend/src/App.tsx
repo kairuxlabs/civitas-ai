@@ -4,7 +4,6 @@ import AppShell from './layout/AppShell'
 import OverviewPage from './pages/stitch/OverviewPage'
 import DecisionWorkspacePage from './pages/stitch/DecisionWorkspacePage'
 import DecisionSessionsPage from './pages/stitch/DecisionSessionsPage'
-import CommandCenterRoute from './pages/stitch/CommandCenterRoute'
 import DataSourcesPage from './pages/stitch/DataSourcesPage'
 import KnowledgeGraphPage from './pages/stitch/KnowledgeGraphPage'
 import CityIntelligencePage from './pages/stitch/CityIntelligencePage'
@@ -31,7 +30,6 @@ export default function App() {
             <Route index element={<OverviewPage />} />
             <Route path="workspace" element={<DecisionWorkspacePage />} />
             <Route path="sessions" element={<DecisionSessionsPage />} />
-            <Route path="command-center" element={<CommandCenterRoute />} />
             <Route path="data-sources" element={<DataSourcesPage />} />
             <Route path="knowledge" element={<KnowledgeGraphPage />} />
             <Route path="intelligence" element={<CityIntelligencePage />} />

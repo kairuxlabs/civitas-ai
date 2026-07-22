@@ -33,12 +33,6 @@ test.describe('Production smoke test', () => {
     await expect(page.getByTestId('decision-session-card').first()).toBeVisible({ timeout: 15_000 })
   })
 
-  test('Command Center loads inside the shell', async ({ page }) => {
-    await page.goto(`${PROD_URL}/command-center`)
-    await expect(page.getByTestId('command-center-route')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('app-header')).toBeVisible({ timeout: 15_000 })
-  })
-
   test('Data Sources shows all integrations as configured', async ({ page }) => {
     await page.goto(`${PROD_URL}/data-sources`)
     await expect(page.getByTestId('data-sources-page')).toBeVisible({ timeout: 15_000 })

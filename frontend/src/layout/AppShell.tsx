@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, LineChart, History, Terminal, Database, Share2,
+  LayoutDashboard, LineChart, History, Database, Share2,
   Building2, FileBarChart, Settings, Rocket,
 } from 'lucide-react'
 
@@ -8,7 +8,6 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; end?: bool
   { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/workspace', label: 'Decision Workspace', icon: LineChart },
   { to: '/sessions', label: 'Decision Sessions', icon: History },
-  { to: '/command-center', label: 'Command Center', icon: Terminal },
   { to: '/data-sources', label: 'Data Sources', icon: Database },
   { to: '/knowledge', label: 'Knowledge Graph', icon: Share2 },
   { to: '/intelligence', label: 'City Intelligence', icon: Building2 },
