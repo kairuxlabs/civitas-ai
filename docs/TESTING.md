@@ -244,6 +244,7 @@ All testable elements have `data-testid` attributes:
 | Component | `data-testid` |
 |---|---|
 | App shell | `app-shell` |
+| Language switcher (EN/VI) | `lang-switch-en` / `lang-switch-vi` |
 | Overview page | `overview-page` |
 | Decision Workspace | `decision-workspace-page` |
 | Decision Workspace critic warnings | `decision-critic-notes` |

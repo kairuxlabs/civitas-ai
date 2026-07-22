@@ -4,16 +4,19 @@ import {
   Building2, FileBarChart, Settings, Rocket,
 } from 'lucide-react'
 import LogoMark from '../components/LogoMark'
+import { useTranslation } from '../i18n/useTranslation'
+import { useLanguage } from '../i18n/LanguageContext'
+import type { TranslationKey } from '../i18n/en'
 
-const NAV: { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean }[] = [
-  { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: '/workspace', label: 'Decision Workspace', icon: LineChart },
-  { to: '/sessions', label: 'Decision Sessions', icon: History },
-  { to: '/data-sources', label: 'Data Sources', icon: Database },
-  { to: '/knowledge', label: 'Knowledge Graph', icon: Share2 },
-  { to: '/intelligence', label: 'City Intelligence', icon: Building2 },
-  { to: '/reports', label: 'Reports', icon: FileBarChart },
-  { to: '/settings', label: 'Settings', icon: Settings },
+const NAV: { to: string; labelKey: TranslationKey; icon: typeof LayoutDashboard; end?: boolean }[] = [
+  { to: '/', labelKey: 'nav.overview', icon: LayoutDashboard, end: true },
+  { to: '/workspace', labelKey: 'nav.decisionWorkspace', icon: LineChart },
+  { to: '/sessions', labelKey: 'nav.decisionSessions', icon: History },
+  { to: '/data-sources', labelKey: 'nav.dataSources', icon: Database },
+  { to: '/knowledge', labelKey: 'nav.knowledgeGraph', icon: Share2 },
+  { to: '/intelligence', labelKey: 'nav.cityIntelligence', icon: Building2 },
+  { to: '/reports', labelKey: 'nav.reports', icon: FileBarChart },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ]
 
 function navClass({ isActive }: { isActive: boolean }) {
@@ -27,6 +30,9 @@ function navClass({ isActive }: { isActive: boolean }) {
 
 export default function AppShell() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  const { language, setLanguage } = useLanguage()
+
   return (
     <div data-testid="app-shell" className="min-h-screen bg-background text-on-surface">
       <aside className="h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant flex flex-col z-50">
@@ -35,27 +41,51 @@ export default function AppShell() {
             <LogoMark size={22} />
             Civitas AI
           </div>
-          <div className="text-[10px] text-on-surface-variant mt-0.5">Hanoi City System Operator</div>
+          <div className="text-[10px] text-on-surface-variant mt-0.5">{t('nav.subtitle')}</div>
         </div>
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {NAV.map(({ to, labelKey, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} className={navClass}>
               <Icon size={18} />
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="p-3 border-t border-outline-variant">
+        <div className="p-3 border-t border-outline-variant space-y-3">
           <button
             type="button"
             onClick={() => navigate('/workspace')}
             className="w-full bg-primary text-on-primary font-semibold py-2.5 rounded-lg hover:brightness-110 transition flex items-center justify-center gap-2 text-sm"
           >
-            <Rocket size={16} /> Run Decision
+            <Rocket size={16} /> {t('common.runDecision')}
           </button>
-          <p className="text-[10px] text-secondary flex items-center gap-1.5 mt-3 px-1">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex gap-1">
+              <button
+                type="button"
+                data-testid="lang-switch-en"
+                onClick={() => setLanguage('en')}
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                  language === 'en' ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:bg-surface-container-highest'
+                }`}
+              >
+                {t('nav.langEn')}
+              </button>
+              <button
+                type="button"
+                data-testid="lang-switch-vi"
+                onClick={() => setLanguage('vi')}
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                  language === 'vi' ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:bg-surface-container-highest'
+                }`}
+              >
+                {t('nav.langVi')}
+              </button>
+            </div>
+          </div>
+          <p className="text-[10px] text-secondary flex items-center gap-1.5 px-1">
             <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-            AI Runtime: Active
+            {t('nav.aiRuntimeActive')}
           </p>
         </div>
       </aside>
