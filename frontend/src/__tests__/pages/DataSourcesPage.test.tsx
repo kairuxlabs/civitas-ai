@@ -3,8 +3,13 @@ import { screen, waitFor } from '@testing-library/react'
 import { renderWithQueryClient } from '../test-utils'
 import DataSourcesPage from '../../pages/stitch/DataSourcesPage'
 import { api } from '../../services/api'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../services/api')
+
+function renderPage() {
+  return renderWithQueryClient(<LanguageProvider><DataSourcesPage /></LanguageProvider>)
+}
 
 beforeEach(() => {
   vi.mocked(api.getHealth).mockResolvedValue({ status: 'ok' })
@@ -22,7 +27,7 @@ beforeEach(() => {
 
 describe('DataSourcesPage', () => {
   it('renders real configured/not-configured status for each integration', async () => {
-    renderWithQueryClient(<DataSourcesPage />)
+    renderPage()
     await waitFor(() => expect(screen.getAllByTestId('data-source-row')).toHaveLength(5))
     // Match the source-name cell exactly — the Gemini row's own type column now
     // legitimately contains the model slug "gemini-2.0-flash", which a loose
@@ -37,7 +42,7 @@ describe('DataSourcesPage', () => {
     let resolveStatus: (v: unknown) => void = () => {}
     vi.mocked(api.getSystemStatus).mockImplementation(() => new Promise(resolve => { resolveStatus = resolve }))
 
-    renderWithQueryClient(<DataSourcesPage />)
+    renderPage()
     expect(screen.getByTestId('data-sources-loading')).toBeInTheDocument()
 
     resolveStatus({
@@ -52,7 +57,15 @@ describe('DataSourcesPage', () => {
   it('shows an inline error when the system status query fails', async () => {
     vi.mocked(api.getSystemStatus).mockRejectedValue(new Error('network down'))
 
-    renderWithQueryClient(<DataSourcesPage />)
+    renderPage()
     await waitFor(() => expect(screen.getByTestId('data-sources-error')).toBeInTheDocument())
+  })
+
+  it('renders Vietnamese labels when the language is switched to vi', async () => {
+    localStorage.setItem('civitas-language', 'vi')
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Nguồn dữ liệu & Tình trạng')).toBeInTheDocument())
+    localStorage.removeItem('civitas-language')
   })
 })
