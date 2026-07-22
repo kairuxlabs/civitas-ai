@@ -1,9 +1,22 @@
+import re
+
 from neo4j import GraphDatabase
 
 from src.utils.config import settings
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Neo4j doesn't support parameterized relationship types or labels, so
+# `upsert_nodes`/`merge_relation_by_name` interpolate them directly into the
+# Cypher query text. `rel_type`/`label` can trace back to raw LLM-extracted
+# JSON or scraped OSM tag values, so validate them against this identifier
+# pattern before interpolation to prevent Cypher injection.
+_SAFE_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _is_safe_identifier(value: str) -> bool:
+    return bool(_SAFE_IDENTIFIER.match(value))
 
 
 class Neo4jLoader:
@@ -31,6 +44,9 @@ class Neo4jLoader:
         see graph_builder.to_node_row for the CityEntity -> row conversion."""
         if not self._driver or not rows:
             return 0
+        if not _is_safe_identifier(label):
+            logger.warning(f"Neo4j upsert_nodes: rejected unsafe label {label!r}")
+            return 0
         query = f"UNWIND $rows AS row MERGE (n:{label} {{id: row.id}}) SET n += row"
         try:
             with self._driver.session() as session:
@@ -50,6 +66,16 @@ class Neo4jLoader:
         Edge Metadata"). Used for entity-extraction-derived relations, which
         reference concepts by name, not by OSM id."""
         if not self._driver:
+            return False
+        if not (
+            _is_safe_identifier(from_label)
+            and _is_safe_identifier(rel_type)
+            and _is_safe_identifier(to_label)
+        ):
+            logger.warning(
+                "Neo4j merge_relation_by_name: rejected unsafe identifier(s) "
+                f"from_label={from_label!r} rel_type={rel_type!r} to_label={to_label!r}"
+            )
             return False
         query = (
             f"MERGE (a:{from_label} {{name: $from_name}}) "

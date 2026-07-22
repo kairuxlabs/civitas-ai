@@ -217,3 +217,85 @@ def test_find_related_returns_empty_list_on_driver_error(monkeypatch):
         result = loader.find_related(["Metro"])
 
     assert result == []
+
+
+# --- Cypher injection guard: unsafe label/rel_type rejection ---------------
+
+def test_upsert_nodes_rejects_unsafe_label(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_driver = MagicMock()
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        count = loader.upsert_nodes("Hospital}) DETACH DELETE n //", [{"id": "h1"}])
+
+    assert count == 0
+    mock_driver.session.assert_not_called()
+
+
+def test_upsert_nodes_accepts_known_valid_labels(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_session = MagicMock()
+    mock_driver = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_driver.session.return_value.__exit__.return_value = None
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        for label in ("District", "Hospital"):
+            count = loader.upsert_nodes(label, [{"id": "x1"}])
+            assert count == 1
+
+
+def test_merge_relation_by_name_rejects_unsafe_rel_type(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_driver = MagicMock()
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        ok = loader.merge_relation_by_name(
+            "Flood", "Flood", "IMPACTS]->(b) DETACH DELETE b //", "Hospital", "Bach Mai",
+        )
+
+    assert ok is False
+    mock_driver.session.assert_not_called()
+
+
+def test_merge_relation_by_name_rejects_unsafe_from_or_to_label(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_driver = MagicMock()
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        ok = loader.merge_relation_by_name(
+            "Flood}) DETACH DELETE (a", "Flood", "IMPACTS", "Hospital", "Bach Mai",
+        )
+
+    assert ok is False
+    mock_driver.session.assert_not_called()
+
+
+def test_merge_relation_by_name_accepts_valid_identifiers(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_session = MagicMock()
+    mock_driver = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_driver.session.return_value.__exit__.return_value = None
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        ok = loader.merge_relation_by_name("District", "Hoan Kiem", "NEAR", "Hospital", "Bach Mai")
+
+    assert ok is True

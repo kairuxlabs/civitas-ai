@@ -59,3 +59,9 @@ async def test_knowledge_summary_search_uses_query_as_keyword(monkeypatch, clien
 
     assert response.status_code == 200
     mock_find_related.assert_called_once_with(["Cau Giay"], 10)
+
+
+@pytest.mark.asyncio
+async def test_knowledge_summary_limit_over_cap_rejected(client):
+    response = await client.get("/api/knowledge/summary?limit=99999")
+    assert response.status_code == 422

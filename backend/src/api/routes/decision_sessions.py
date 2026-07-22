@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.connection import get_db
 from src.services.decision_session_service import DecisionSessionService
+from src.utils.auth import require_api_key
 
 router = APIRouter(prefix="/api/decision-sessions", tags=["decision-sessions"])
 
@@ -30,7 +31,7 @@ async def get_session(session_id: int, session: AsyncSession = Depends(get_db)):
     return record.to_dict()
 
 
-@router.post("/{session_id}/observe")
+@router.post("/{session_id}/observe", dependencies=[Depends(require_api_key)])
 async def observe_session(session_id: int, session: AsyncSession = Depends(get_db)):
     record = await DecisionSessionService.observe(session, session_id)
     if record is None:

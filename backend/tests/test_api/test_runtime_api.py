@@ -56,3 +56,42 @@ async def test_monitor_shape(client):
 async def test_goal_validation(client):
     resp = await client.post("/api/v2/goal", json={"goal": "ab"})
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_goal_and_approval_require_api_key_when_configured(monkeypatch, client):
+    monkeypatch.setattr(settings, "api_key", "secret123")
+
+    no_header = await client.post(
+        "/api/v2/goal", json={"goal": "Prepare the city for tonight's heavy rain"}
+    )
+    assert no_header.status_code == 401
+
+    wrong_header = await client.post(
+        "/api/v2/goal",
+        json={"goal": "Prepare the city for tonight's heavy rain"},
+        headers={"X-API-Key": "wrong"},
+    )
+    assert wrong_header.status_code == 401
+
+    ok = await client.post(
+        "/api/v2/goal",
+        json={"goal": "Prepare the city for tonight's heavy rain"},
+        headers={"X-API-Key": "secret123"},
+    )
+    assert ok.status_code == 202
+    run_id = ok.json()["run_id"]
+
+    await engine.wait_for(run_id)
+
+    approval_no_header = await client.post(
+        f"/api/v2/runs/{run_id}/approval", json={"approved": True}
+    )
+    assert approval_no_header.status_code == 401
+
+    approval_ok = await client.post(
+        f"/api/v2/runs/{run_id}/approval",
+        json={"approved": True},
+        headers={"X-API-Key": "secret123"},
+    )
+    assert approval_ok.status_code == 200

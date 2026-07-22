@@ -1,6 +1,6 @@
 import asyncio
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from src.knowledge_pipeline.loaders.neo4j_loader import Neo4jLoader
 from src.schemas.knowledge import KnowledgeSummaryOut
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
 
 @router.get("/summary", response_model=KnowledgeSummaryOut)
-async def knowledge_summary(q: str | None = None, limit: int = 5):
+async def knowledge_summary(q: str | None = None, limit: int = Query(default=5, le=100)):
     if not settings.neo4j_uri:
         return KnowledgeSummaryOut(configured=False, entities=0, relations=0, sample=[])
 

@@ -1,10 +1,11 @@
 # backend/src/api/routes/runtime.py
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from src.runtime import monitor
 from src.runtime.engine import engine
 from src.runtime.state import run_store
+from src.utils.auth import require_api_key
 
 router = APIRouter(prefix="/api/v2", tags=["runtime"])
 
@@ -19,7 +20,7 @@ class ApprovalIn(BaseModel):
     approved: bool
 
 
-@router.post("/goal", status_code=202)
+@router.post("/goal", status_code=202, dependencies=[Depends(require_api_key)])
 async def submit_goal(body: GoalIn):
     run = await engine.submit_goal(
         goal=body.goal,
@@ -42,7 +43,7 @@ async def get_run(run_id: str):
     return run.to_dict()
 
 
-@router.post("/runs/{run_id}/approval")
+@router.post("/runs/{run_id}/approval", dependencies=[Depends(require_api_key)])
 async def resolve_run(run_id: str, body: ApprovalIn):
     run = await engine.resolve(run_id, approved=body.approved)
     if run is None:
