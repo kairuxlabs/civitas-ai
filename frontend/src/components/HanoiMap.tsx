@@ -25,10 +25,12 @@ const DISTRICT_NODES: DistrictNode[] = [
   { id: 12, name: 'Hà Đông',      cx: 165, cy: 320, r: 32 },
 ]
 
-function scoreToColor(score: number | undefined): string {
+function scoreToColor(score: number | undefined, invert = false): string {
   if (!score) return '#334155'
-  if (score >= 80) return '#22c55e'
-  if (score >= 60) return '#eab308'
+  const good = invert ? score < 30 : score >= 80
+  const fair = invert ? score < 60 : score >= 60
+  if (good) return '#22c55e'
+  if (fair) return '#eab308'
   return '#ef4444'
 }
 
@@ -39,13 +41,16 @@ function riskToGlow(riskScore: number | undefined): string {
   return 'none'
 }
 
+export type MapMetric = 'overall_score' | 'traffic_score' | 'environment_score' | 'risk_score'
+
 interface Props {
   scores: CityScore[]
   selectedDistrictId: number | null
   onSelectDistrict: (id: number) => void
+  metric?: MapMetric
 }
 
-export default function HanoiMap({ scores, selectedDistrictId, onSelectDistrict }: Props) {
+export default function HanoiMap({ scores, selectedDistrictId, onSelectDistrict, metric = 'overall_score' }: Props) {
   const scoreMap = new Map(scores.map(s => [s.district_id, s]))
   const [hovered, setHovered] = useState<number | null>(null)
 
@@ -94,9 +99,10 @@ export default function HanoiMap({ scores, selectedDistrictId, onSelectDistrict 
         {/* District nodes */}
         {DISTRICT_NODES.map(node => {
           const score = scoreMap.get(node.id)
+          const metricValue = score?.[metric]
           const isSelected = selectedDistrictId === node.id
           const isHovered = hovered === node.id
-          const fill = scoreToColor(score?.overall_score)
+          const fill = scoreToColor(metricValue, metric === 'risk_score')
           const glow = riskToGlow(score?.risk_score)
 
           return (
@@ -156,7 +162,7 @@ export default function HanoiMap({ scores, selectedDistrictId, onSelectDistrict 
                   fontWeight="700"
                   fontFamily="monospace"
                 >
-                  {Math.round(score.overall_score)}
+                  {Math.round(metricValue ?? score.overall_score)}
                 </text>
               )}
 

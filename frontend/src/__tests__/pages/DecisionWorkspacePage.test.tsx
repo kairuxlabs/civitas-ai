@@ -74,6 +74,8 @@ beforeEach(() => {
   vi.mocked(api.startSimulation).mockResolvedValue({ ...simStatusIdle, running: true, tick: 1 })
   vi.mocked(api.stopSimulation).mockResolvedValue(simStatusIdle)
   vi.mocked(api.runCrawl).mockResolvedValue({ weather: { ok: true, count: 5 } })
+  vi.mocked(api.getDistricts).mockResolvedValue([{ id: 1, city_id: 'hanoi', name: 'Hoan Kiem' }])
+  vi.mocked(api.getAQIHistory).mockResolvedValue([])
 })
 
 describe('DecisionWorkspacePage', () => {
@@ -133,5 +135,30 @@ describe('DecisionWorkspacePage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /Approve/i })).toBeInTheDocument())
     expect(screen.queryByTestId('decision-critic-notes')).not.toBeInTheDocument()
     expect(screen.queryByTestId('decision-reflection-notes')).not.toBeInTheDocument()
+  })
+
+  it('shows the real district name and risk level in the mission header once a run is active', async () => {
+    const user = userEvent.setup()
+    renderWithQueryClient(<DecisionWorkspacePage />)
+
+    await waitFor(() => expect(screen.getByTestId('decision-workspace-page')).toBeInTheDocument())
+    await user.type(screen.getByPlaceholderText(/Reduce congestion/i), 'Reduce congestion after rain')
+    await user.click(screen.getByRole('button', { name: /Execute Decision|Submit|Run/i }))
+
+    await waitFor(() => expect(screen.getByText('Hoan Kiem')).toBeInTheDocument())
+    expect(screen.getByText(/medium risk/i)).toBeInTheDocument()
+  })
+
+  it('switching the map metric toggle re-renders the map with the selected metric', async () => {
+    vi.mocked(api.getScores).mockResolvedValue([
+      { id: 1, city_id: 'hanoi', district_id: 1, timestamp: '2026-07-21T09:00:00Z', traffic_score: 40, environment_score: 90, citizen_score: 70, risk_score: 20, overall_score: 60 },
+    ])
+    const user = userEvent.setup()
+    renderWithQueryClient(<DecisionWorkspacePage />)
+
+    await waitFor(() => expect(screen.getByTestId('map-metric-toggle')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Traffic' }))
+
+    await waitFor(() => expect(screen.getAllByText('40').length).toBeGreaterThan(0))
   })
 })

@@ -31,7 +31,7 @@ test.describe('Decision Workspace', () => {
     await page.getByPlaceholder(/Reduce congestion/i).fill('Test goal')
     await page.getByRole('button', { name: /Execute Decision/i }).click()
 
-    await expect(page.getByText('Active run: run-1')).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByText('Active mission: run-1')).toBeVisible({ timeout: 8_000 })
     await expect(page.getByRole('heading', { name: 'Test goal' })).toBeVisible()
   })
 

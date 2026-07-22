@@ -248,6 +248,7 @@ All testable elements have `data-testid` attributes:
 | Decision Workspace | `decision-workspace-page` |
 | Decision Workspace critic warnings | `decision-critic-notes` |
 | Decision Workspace reflection notes | `decision-reflection-notes` |
+| Decision Workspace map metric toggle | `map-metric-toggle` |
 | Digital Twin panel (Decision Workspace) | `digital-twin-panel` |
 | Digital Twin start/stop button | `sim-start-btn` / `sim-stop-btn` |
 | Digital Twin live status | `sim-status` |

@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Activity, AlertTriangle, Brain, CheckCircle, Loader2, Rocket, XCircle,
+  Activity, AlertTriangle, Brain, CheckCircle, Clock, Layers, Loader2,
+  MapPin, Rocket, ShieldAlert, XCircle,
 } from 'lucide-react'
-import HanoiMap from '../../components/HanoiMap'
+import HanoiMap, { type MapMetric } from '../../components/HanoiMap'
 import SimulationPanel from '../../components/SimulationPanel'
 import { api } from '../../services/api'
+import { averageOverallScore } from '../../utils/scores'
 import type { RuntimeRun, RuntimeTask } from '../../types'
 
 const GOAL_PRESETS = [
@@ -22,10 +24,28 @@ const ACTIVE_STATUSES = new Set([
   'executing_workflow',
 ])
 
+const RISK_STYLES: Record<string, string> = {
+  low: 'bg-secondary/10 text-secondary border-secondary/20',
+  medium: 'bg-tertiary/10 text-tertiary border-tertiary/20',
+  high: 'bg-error/10 text-error border-error/20',
+}
+
+const MAP_METRICS: { key: MapMetric; label: string }[] = [
+  { key: 'overall_score', label: 'Overall' },
+  { key: 'traffic_score', label: 'Traffic' },
+  { key: 'environment_score', label: 'Environment' },
+  { key: 'risk_score', label: 'Risk' },
+]
+
+function fmtTime(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'
+}
+
 export default function DecisionWorkspacePage() {
   const [goal, setGoal] = useState('')
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [selectedDistrict, setSelectedDistrict] = useState(1)
+  const [mapMetric, setMapMetric] = useState<MapMetric>('overall_score')
   const queryClient = useQueryClient()
 
   const { data: run } = useQuery<RuntimeRun>({
@@ -53,6 +73,11 @@ export default function DecisionWorkspacePage() {
     queryFn: api.getScores,
     refetchInterval: 15000,
   })
+  const { data: districts } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
+  const { data: aqiHistory } = useQuery({
+    queryKey: ['aqi-history', selectedDistrict],
+    queryFn: () => api.getAQIHistory(selectedDistrict, 1),
+  })
 
   const submit = useMutation({
     mutationFn: (newGoal: string) => api.submitGoal(newGoal, selectedDistrict),
@@ -72,11 +97,10 @@ export default function DecisionWorkspacePage() {
     },
   })
 
-  const avgOverall = useMemo(() => {
-    if (!scores?.length) return null
-    return Math.round(scores.reduce((sum, score) => sum + score.overall_score, 0) / scores.length)
-  }, [scores])
+  const avgOverall = useMemo(() => averageOverallScore(scores), [scores])
   const selectedScore = scores?.find(score => score.district_id === selectedDistrict)
+  const runDistrictName = districts?.find(d => d.id === run?.district_id)?.name
+  const latestAqi = aqiHistory && aqiHistory.length > 0 ? aqiHistory[aqiHistory.length - 1] : null
 
   function submitGoal(value: string) {
     const trimmedGoal = value.trim()
@@ -85,11 +109,30 @@ export default function DecisionWorkspacePage() {
 
   return (
     <div data-testid="decision-workspace-page" className="p-margin-desktop space-y-gutter pb-16">
-      <div className="space-y-2">
-        <p className="text-[10px] uppercase tracking-widest text-on-surface-variant">
-          {run ? `Active run: ${run.run_id}` : 'No active mission'}
+      <div className={`space-y-3 ${run ? 'border-l-4 border-primary pl-4 py-2 bg-surface-container/20 rounded-r-xl' : ''}`}>
+        <p className="text-[10px] uppercase tracking-widest text-primary font-semibold">
+          {run ? `Active mission: ${run.run_id}` : 'No active mission'}
         </p>
         <h1 className="text-2xl font-bold tracking-tight">{run?.goal ?? 'Decision Workspace'}</h1>
+
+        {run && (
+          <div className="flex flex-wrap gap-2">
+            {runDistrictName && (
+              <span className="text-xs px-2.5 py-1 rounded border border-outline-variant text-on-surface-variant flex items-center gap-1.5">
+                <MapPin size={12} /> {runDistrictName}
+              </span>
+            )}
+            {run.decision?.risk && (
+              <span className={`text-xs px-2.5 py-1 rounded border flex items-center gap-1.5 ${RISK_STYLES[run.decision.risk]}`}>
+                <ShieldAlert size={12} /> {run.decision.risk} risk
+              </span>
+            )}
+            <span className="text-xs px-2.5 py-1 rounded border border-outline-variant text-on-surface-variant flex items-center gap-1.5">
+              <Clock size={12} /> Started {fmtTime(run.created_at)}
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
           <input
             value={goal}
@@ -142,19 +185,25 @@ export default function DecisionWorkspacePage() {
           <p className="text-[10px] uppercase text-on-surface-variant">
             Runtime: {monitor?.active_runs ?? 0} active / {monitor?.total_runs ?? 0} total
           </p>
-          <ul className="space-y-3">
-            {(run?.tasks ?? []).map((task: RuntimeTask) => (
-              <li key={task.id} className="flex gap-2 text-xs">
-                {task.status === 'done' ? <CheckCircle size={14} className="text-primary shrink-0" />
-                  : task.status === 'failed' ? <AlertTriangle size={14} className="text-tertiary shrink-0" />
-                    : task.status === 'running' ? <Loader2 size={14} className="text-primary animate-spin shrink-0" />
-                      : <span className="w-3.5 h-3.5 rounded-full border border-outline-variant shrink-0" />}
-                <div>
-                  <div className="font-semibold text-on-surface">{task.agent}</div>
-                  <div className="text-on-surface-variant">
-                    {task.status}{task.latency_ms != null ? ` · ${Math.round(task.latency_ms)}ms` : ''}
-                  </div>
+          <ul className="space-y-0">
+            {(run?.tasks ?? []).map((task: RuntimeTask, index) => (
+              <li key={task.id} className="relative pl-7 pb-4 last:pb-0">
+                {index < (run?.tasks.length ?? 0) - 1 && (
+                  <span className="absolute left-[10px] top-5 bottom-0 w-px bg-outline-variant" />
+                )}
+                <span className="absolute left-0 top-0.5">
+                  {task.status === 'done' ? <CheckCircle size={20} className="text-primary bg-background rounded-full" />
+                    : task.status === 'failed' ? <AlertTriangle size={20} className="text-tertiary bg-background rounded-full" />
+                      : task.status === 'running' ? <Loader2 size={20} className="text-primary animate-spin bg-background rounded-full" />
+                        : <span className="block w-5 h-5 rounded-full border border-outline-variant bg-background" />}
+                </span>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-semibold text-on-surface">{index + 1}. {task.agent}</span>
+                  <span className="font-mono text-[10px] text-outline">{fmtTime(task.started_at)}</span>
                 </div>
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  {task.status}{task.latency_ms != null ? ` · ${Math.round(task.latency_ms)}ms` : ''}
+                </p>
               </li>
             ))}
             {!run?.tasks.length && (
@@ -196,56 +245,123 @@ export default function DecisionWorkspacePage() {
         </section>
 
         <section className="xl:col-span-5 glass-panel rounded-xl overflow-hidden">
-          <div className="p-3 border-b border-outline-variant text-sm font-semibold">District map</div>
+          <div className="p-3 border-b border-outline-variant flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-sm font-semibold flex items-center gap-2">
+              <Layers size={15} className="text-primary" /> District map
+            </span>
+            <div className="flex gap-1.5" data-testid="map-metric-toggle">
+              {MAP_METRICS.map(m => (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => setMapMetric(m.key)}
+                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                    mapMetric === m.key
+                      ? 'bg-primary/20 border-primary text-primary font-semibold'
+                      : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="p-3 bg-surface-container-lowest">
             <HanoiMap
               scores={scores ?? []}
               selectedDistrictId={selectedDistrict}
               onSelectDistrict={setSelectedDistrict}
+              metric={mapMetric}
             />
           </div>
           {selectedScore && (
-            <div className="grid grid-cols-2 gap-2 p-3 border-t border-outline-variant text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border-t border-outline-variant text-xs">
               <div>Traffic <span className="font-mono text-on-surface">{Math.round(selectedScore.traffic_score)}</span></div>
               <div>Environment <span className="font-mono text-on-surface">{Math.round(selectedScore.environment_score)}</span></div>
               <div>Risk <span className="font-mono text-on-surface">{Math.round(selectedScore.risk_score)}</span></div>
-              <div>Overall <span className="font-mono text-on-surface">{Math.round(selectedScore.overall_score)}</span></div>
+              {latestAqi ? (
+                <div>AQI <span className="font-mono text-on-surface">{Math.round(latestAqi.aqi_index)}</span></div>
+              ) : (
+                <div>Overall <span className="font-mono text-on-surface">{Math.round(selectedScore.overall_score)}</span></div>
+              )}
             </div>
           )}
         </section>
 
         <section className="xl:col-span-4 space-y-gutter">
           <div className="glass-panel rounded-xl p-4">
-            <div className="text-xs text-on-surface-variant mb-2">City Score</div>
-            <div className="text-3xl font-semibold">
-              {avgOverall ?? '—'}<span className="text-sm text-on-surface-variant"> / 100</span>
+            <div className="text-xs text-on-surface-variant mb-3">City Score</div>
+            <div className="flex items-center gap-4">
+              <div className="relative w-16 h-16 shrink-0">
+                <svg viewBox="0 0 60 60" className="w-full h-full -rotate-90">
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="currentColor" className="text-outline-variant" strokeWidth="6" />
+                  <circle
+                    cx="30" cy="30" r="26" fill="none" stroke="currentColor" className="text-secondary"
+                    strokeWidth="6" strokeLinecap="round"
+                    strokeDasharray={`${((avgOverall ?? 0) / 100) * (2 * Math.PI * 26)} ${2 * Math.PI * 26}`}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">{avgOverall ?? '—'}</span>
+              </div>
+              {selectedScore && (
+                <div className="flex-1 space-y-1.5">
+                  {([
+                    ['Traffic', selectedScore.traffic_score],
+                    ['Environment', selectedScore.environment_score],
+                    ['Citizen', selectedScore.citizen_score],
+                  ] as const).map(([label, value]) => (
+                    <div key={label}>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-on-surface-variant">{label}</span>
+                        <span className="text-secondary">{Math.round(value)}%</span>
+                      </div>
+                      <div className="w-full bg-outline-variant h-1 rounded-full overflow-hidden">
+                        <div className="bg-secondary h-full" style={{ width: `${Math.round(value)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           {run?.decision ? (
-            <div className="glass-panel rounded-xl p-4 space-y-3">
-              <h2 className="text-sm font-bold flex items-center gap-2">
-                <Brain size={16} className="text-primary" /> Runtime Decision
-              </h2>
-              <p className="text-sm text-on-surface-variant">{run.decision.summary}</p>
-              <ul className="space-y-1">
-                {run.decision.recommendation.map((recommendation, index) => (
-                  <li key={index} className="text-xs text-on-surface">• {recommendation}</li>
-                ))}
-              </ul>
-              <div className="text-xs text-on-surface-variant">
-                Confidence: {Math.round(run.decision.confidence)}%
-              </div>
-              {(run.decision.critic_notes ?? []).length > 0 && (
-                <ul data-testid="decision-critic-notes" className="space-y-1 border-t border-outline-variant pt-2">
-                  {run.decision.critic_notes!.map((note, index) => (
-                    <li key={index} className="text-xs text-tertiary flex items-start gap-1.5">
-                      <AlertTriangle size={12} className="shrink-0 mt-0.5" /> {note}
-                    </li>
+            <div className="glass-panel rounded-xl overflow-hidden">
+              <div className="p-4 space-y-3">
+                <h2 className="text-sm font-bold flex items-center gap-2">
+                  <Brain size={16} className="text-primary" /> Runtime Decision
+                </h2>
+                <p className="text-sm text-on-surface-variant">{run.decision.summary}</p>
+                <ul className="space-y-1">
+                  {run.decision.recommendation.map((recommendation, index) => (
+                    <li key={index} className="text-xs text-on-surface">• {recommendation}</li>
                   ))}
                 </ul>
-              )}
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  <div className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant">
+                    <p className="text-[10px] text-outline">Confidence</p>
+                    <p className="text-sm font-bold">{Math.round(run.decision.confidence)}%</p>
+                  </div>
+                  <div className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant">
+                    <p className="text-[10px] text-outline">Risk</p>
+                    <p className="text-sm font-bold capitalize">{run.decision.risk}</p>
+                  </div>
+                  <div className="bg-surface-container-high/60 rounded-lg p-2 border border-outline-variant">
+                    <p className="text-[10px] text-outline">Evidence</p>
+                    <p className="text-sm font-bold">{run.decision.evidence.length}</p>
+                  </div>
+                </div>
+                {(run.decision.critic_notes ?? []).length > 0 && (
+                  <ul data-testid="decision-critic-notes" className="space-y-1 border-t border-outline-variant pt-2">
+                    {run.decision.critic_notes!.map((note, index) => (
+                      <li key={index} className="text-xs text-tertiary flex items-start gap-1.5">
+                        <AlertTriangle size={12} className="shrink-0 mt-0.5" /> {note}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               {run.status === 'awaiting_approval' && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 p-4 pt-0">
                   <button
                     type="button"
                     disabled={resolve.isPending}
