@@ -16,3 +16,13 @@ class KnowledgeSummaryOut(BaseModel):
     entities: int
     relations: int
     sample: list[KnowledgeRelatedItem]
+
+
+class KnowledgeLabelCount(BaseModel):
+    label: str
+    count: int
+
+
+class KnowledgeEntityRef(BaseModel):
+    name: str | None
+    display_name: str | None

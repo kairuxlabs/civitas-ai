@@ -65,3 +65,60 @@ async def test_knowledge_summary_search_uses_query_as_keyword(monkeypatch, clien
 async def test_knowledge_summary_limit_over_cap_rejected(client):
     response = await client.get("/api/knowledge/summary?limit=99999")
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_knowledge_labels_not_configured(monkeypatch, client):
+    monkeypatch.setattr(settings, "neo4j_uri", "")
+    response = await client.get("/api/knowledge/labels")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_knowledge_labels_configured_returns_counts(monkeypatch, client):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+
+    with patch(
+        "src.api.routes.knowledge.Neo4jLoader.list_labels",
+        return_value=[{"label": "District", "count": 12}, {"label": "Hospital", "count": 8}],
+    ):
+        response = await client.get("/api/knowledge/labels")
+
+    assert response.status_code == 200
+    assert response.json() == [{"label": "District", "count": 12}, {"label": "Hospital", "count": 8}]
+
+
+@pytest.mark.asyncio
+async def test_knowledge_entities_not_configured(monkeypatch, client):
+    monkeypatch.setattr(settings, "neo4j_uri", "")
+    response = await client.get("/api/knowledge/entities?label=District")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_knowledge_entities_configured_passes_label_and_limit(monkeypatch, client):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+
+    with patch(
+        "src.api.routes.knowledge.Neo4jLoader.list_entities_by_label",
+        return_value=[{"name": "Hoan Kiem", "display_name": "Hoan Kiem District"}],
+    ) as mock_list:
+        response = await client.get("/api/knowledge/entities?label=District&limit=10")
+
+    assert response.status_code == 200
+    assert response.json() == [{"name": "Hoan Kiem", "display_name": "Hoan Kiem District"}]
+    mock_list.assert_called_once_with("District", 10)
+
+
+@pytest.mark.asyncio
+async def test_knowledge_entities_limit_over_cap_rejected(client):
+    response = await client.get("/api/knowledge/entities?label=District&limit=99999")
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_knowledge_entities_missing_label_rejected(client):
+    response = await client.get("/api/knowledge/entities")
+    assert response.status_code == 422
