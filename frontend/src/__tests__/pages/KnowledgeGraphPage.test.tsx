@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithQueryClient } from '../test-utils'
 import KnowledgeGraphPage from '../../pages/stitch/KnowledgeGraphPage'
@@ -169,5 +169,43 @@ describe('KnowledgeGraphPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await waitFor(() => expect(screen.queryByTestId('knowledge-entity-modal')).not.toBeInTheDocument())
+  })
+
+  it('shows the no-relations empty state instead of a blank row when the entity has no real relations', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockImplementation(async (q) => {
+      if (q === 'Hoan Kiem') {
+        return {
+          configured: true, entities: 128, relations: 426,
+          sample: [
+            {
+              name: 'Hoan Kiem', label: 'District', relation: null, related_name: null,
+              rel_source: null, rel_confidence: null, rel_created_at: null,
+            },
+          ],
+        }
+      }
+      return { configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]] }
+    })
+
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1))
+
+    await user.click(screen.getByText('Hoan Kiem'))
+
+    await waitFor(() => expect(screen.getByTestId('knowledge-entity-empty')).toBeInTheDocument())
+    expect(screen.queryByTestId('knowledge-entity-relation-row')).not.toBeInTheDocument()
+    const modal = within(screen.getByTestId('knowledge-entity-modal'))
+    expect(modal.queryByText('—', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('shows a per-label icon next to each sample entity row', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
+      configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]],
+    })
+    renderPage()
+    await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1))
+    const row = screen.getByTestId('knowledge-sample-row')
+    expect(row.querySelector('svg')).toBeInTheDocument()
   })
 })

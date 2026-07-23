@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, Network, Search, Share2 } from 'lucide-react'
+import {
+  Loader2, Network, Search, Share2,
+  MapPin, Hospital, Flame, Shield, GraduationCap, Route, Bus, Trees, Waves,
+  Droplet, Building2, CloudRain, AlertTriangle, Car, Home, Tag,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Modal from '../../components/Modal'
 import { api } from '../../services/api'
 import { useTranslation } from '../../i18n/useTranslation'
@@ -20,6 +25,29 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       {label}
     </button>
   )
+}
+
+const ICON_BY_LABEL: Record<string, LucideIcon> = {
+  District: MapPin, Hospital: Hospital, FireStation: Flame, PoliceStation: Shield,
+  School: GraduationCap, Road: Route, BusStop: Bus, Park: Trees, River: Waves,
+  Lake: Droplet, Building: Building2, Flood: CloudRain, Emergency: AlertTriangle,
+  Traffic: Car, Shelter: Home, Concept: Tag,
+}
+
+function iconForLabel(label: string | null): LucideIcon {
+  return (label && ICON_BY_LABEL[label]) || Tag
+}
+
+// Three existing neutral accent colors already used elsewhere on this page/site.
+// Never text-error here — that color means "problem" for scores/status
+// elsewhere in the app, and would misleadingly flag a normal entity type.
+const LABEL_COLORS = ['text-primary', 'text-secondary', 'text-tertiary'] as const
+
+function colorForLabel(label: string | null): string {
+  if (!label) return 'text-outline'
+  let hash = 0
+  for (let i = 0; i < label.length; i++) hash = (hash * 31 + label.charCodeAt(i)) >>> 0
+  return LABEL_COLORS[hash % LABEL_COLORS.length]
 }
 
 export default function KnowledgeGraphPage() {
@@ -46,6 +74,10 @@ export default function KnowledgeGraphPage() {
   const visibleSample = useMemo(
     () => (activeLabel ? (summary?.sample ?? []).filter(item => item.label === activeLabel) : summary?.sample ?? []),
     [summary, activeLabel],
+  )
+  const detailRelations = useMemo(
+    () => (detailQuery.data?.sample ?? []).filter(item => item.relation != null || item.related_name != null),
+    [detailQuery.data],
   )
 
   function handleSearchChange(value: string) {
@@ -129,28 +161,32 @@ export default function KnowledgeGraphPage() {
                 <p className="px-6 py-8 text-center text-outline italic text-xs">{t('knowledge.noEntitiesMatchFilter')}</p>
               ) : (
                 <div className="divide-y divide-outline-variant/30">
-                  {visibleSample.map((item, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      data-testid="knowledge-sample-row"
-                      disabled={!item.name}
-                      onClick={() => item.name && setDetailEntity(item.name)}
-                      className={`w-full px-6 py-3 flex items-center justify-between text-sm text-left transition-colors ${
-                        item.name ? 'hover:bg-surface-container-high/40 cursor-pointer' : 'cursor-default'
-                      }`}
-                    >
-                      <div>
-                        <span className="font-semibold">{item.name}</span>
-                        <span className="text-outline text-xs ml-2">{item.label}</span>
-                      </div>
-                      {item.relation && item.related_name && (
-                        <span className="text-xs text-on-surface-variant">
-                          {item.relation} → {item.related_name}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                  {visibleSample.map((item, i) => {
+                    const RowIcon = iconForLabel(item.label)
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        data-testid="knowledge-sample-row"
+                        disabled={!item.name}
+                        onClick={() => item.name && setDetailEntity(item.name)}
+                        className={`w-full px-6 py-3 flex items-center justify-between text-sm text-left transition-colors ${
+                          item.name ? 'hover:bg-surface-container-high/40 cursor-pointer' : 'cursor-default'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <RowIcon size={14} className={colorForLabel(item.label)} />
+                          <span className="font-semibold">{item.name}</span>
+                          <span className="text-outline text-xs">{item.label}</span>
+                        </div>
+                        {item.relation && item.related_name && (
+                          <span className="text-xs text-on-surface-variant">
+                            {item.relation} → {item.related_name}
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -172,14 +208,14 @@ export default function KnowledgeGraphPage() {
               <Loader2 size={24} className="animate-spin text-primary" />
             </div>
           )}
-          {!detailQuery.isLoading && (detailQuery.data?.sample.length ?? 0) === 0 && (
+          {!detailQuery.isLoading && detailRelations.length === 0 && (
             <p data-testid="knowledge-entity-empty" className="text-xs text-outline italic text-center py-6">
               {t('knowledge.noRelationsForEntity')}
             </p>
           )}
-          {!detailQuery.isLoading && (detailQuery.data?.sample.length ?? 0) > 0 && (
+          {!detailQuery.isLoading && detailRelations.length > 0 && (
             <ul className="space-y-3">
-              {detailQuery.data!.sample.map((item, i) => {
+              {detailRelations.map((item, i) => {
                 const pct = item.rel_confidence != null ? Math.round(item.rel_confidence * 100) : null
                 const confidenceClass = pct == null
                   ? 'text-on-surface-variant bg-surface-container-high border-outline-variant'
