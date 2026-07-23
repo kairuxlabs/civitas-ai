@@ -63,6 +63,32 @@ describe('SimulationPanel', () => {
     expect(screen.getByText('30°C').className).not.toContain('font-semibold')
   })
 
+  it('shows the auto-goal cooldown remaining while one is active', async () => {
+    vi.mocked(api.getSimulationStatus).mockResolvedValue({
+      running: true, scenario: 'heavy_rain', scenario_label: 'Mưa lớn', interval_s: 30, auto_goal: true, tick: 5,
+      values: { rain: 42, aqi: 80, temperature: 27, humidity: 80, wind_speed: 10 },
+      last_auto_goal: 'run-123', auto_goal_cooldown_remaining_s: 180,
+    })
+
+    renderWithQueryClient(<SimulationPanel />)
+
+    await waitFor(() => expect(screen.getByTestId('sim-cooldown')).toBeInTheDocument())
+    expect(screen.getByTestId('sim-cooldown')).toHaveTextContent('180')
+  })
+
+  it('does not show a cooldown indicator when no cooldown is active', async () => {
+    vi.mocked(api.getSimulationStatus).mockResolvedValue({
+      running: true, scenario: 'heavy_rain', scenario_label: 'Mưa lớn', interval_s: 30, auto_goal: true, tick: 5,
+      values: { rain: 42, aqi: 80, temperature: 27, humidity: 80, wind_speed: 10 },
+      last_auto_goal: null, auto_goal_cooldown_remaining_s: 0,
+    })
+
+    renderWithQueryClient(<SimulationPanel />)
+
+    await waitFor(() => expect(screen.getByTestId('sim-values')).toBeInTheDocument())
+    expect(screen.queryByTestId('sim-cooldown')).not.toBeInTheDocument()
+  })
+
   it('starts the simulation targeting the district passed in via props', async () => {
     vi.mocked(api.startSimulation).mockResolvedValue({
       running: true, scenario: 'heavy_rain', scenario_label: 'Mưa lớn', interval_s: 30, auto_goal: true, tick: 1,

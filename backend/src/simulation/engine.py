@@ -69,6 +69,10 @@ class SimulationEngine:
         return self.status()
 
     def status(self) -> dict:
+        cooldown_remaining = 0.0
+        if self.last_auto_goal_ts is not None:
+            elapsed = time.monotonic() - self.last_auto_goal_ts
+            cooldown_remaining = max(0.0, self.auto_goal_cooldown_s - elapsed)
         return {
             "running": self.running,
             "scenario": self.scenario,
@@ -79,6 +83,7 @@ class SimulationEngine:
             "tick": self.tick_count,
             "values": {k: round(v, 1) for k, v in self.values.items()},
             "last_auto_goal": self.last_auto_goal_run,
+            "auto_goal_cooldown_remaining_s": round(cooldown_remaining, 1),
         }
 
     async def _loop(self) -> None:

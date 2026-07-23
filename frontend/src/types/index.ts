@@ -166,6 +166,7 @@ export interface SimulationStatus {
   tick: number;
   values: { rain: number; aqi: number; temperature: number; humidity: number; wind_speed: number };
   last_auto_goal: string | null;
+  auto_goal_cooldown_remaining_s?: number;
 }
 
 export interface ScenarioInfo {

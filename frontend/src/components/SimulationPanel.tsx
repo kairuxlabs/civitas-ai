@@ -121,6 +121,11 @@ export default function SimulationPanel({ districtId = 1 }: Props) {
           {status.last_auto_goal && (
             <span className="text-emerald-500">Đã tự kích hoạt run: {status.last_auto_goal}</span>
           )}
+          {(status.auto_goal_cooldown_remaining_s ?? 0) > 0 && (
+            <span data-testid="sim-cooldown" className="text-slate-500">
+              Đang chờ cooldown tự động: còn {Math.ceil(status.auto_goal_cooldown_remaining_s!)}s
+            </span>
+          )}
         </div>
       )}
 

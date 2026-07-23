@@ -159,6 +159,22 @@ async def test_start_resets_auto_goal_cooldown_from_a_previous_run():
 
 
 @pytest.mark.asyncio
+async def test_status_reports_auto_goal_cooldown_remaining():
+    eng = _engine()
+    await eng.start("heavy_rain", interval_s=999, auto_goal=True)
+    await eng.stop()
+
+    assert eng.status()["auto_goal_cooldown_remaining_s"] == 0  # no auto-goal fired yet
+
+    for _ in range(40):
+        await eng.tick()
+    assert len(eng._goal_calls) == 1  # cooldown now active
+
+    remaining = eng.status()["auto_goal_cooldown_remaining_s"]
+    assert 0 < remaining <= eng.auto_goal_cooldown_s
+
+
+@pytest.mark.asyncio
 async def test_unknown_scenario_raises():
     eng = _engine()
     with pytest.raises(ValueError):
