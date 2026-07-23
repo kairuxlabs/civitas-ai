@@ -117,6 +117,7 @@ export const en = {
   'dataSources.typeNeo4j': 'Knowledge graph store',
   'dataSources.typeQdrant': 'Vector search index',
   'dataSources.typeOpenRouter': 'Fallback AI gateway',
+  'dataSources.crawlSectionTitle': 'Manual data crawl',
 
   // knowledge
   'knowledge.title': 'Knowledge Graph',

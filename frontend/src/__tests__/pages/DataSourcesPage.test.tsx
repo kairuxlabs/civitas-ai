@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithQueryClient } from '../test-utils'
 import DataSourcesPage from '../../pages/stitch/DataSourcesPage'
 import { api } from '../../services/api'
@@ -36,6 +37,24 @@ describe('DataSourcesPage', () => {
     expect(neo4jRow).toHaveTextContent(/not configured/i)
     const geminiRow = screen.getByText('Gemini').closest('[data-testid="data-source-row"]')!
     expect(geminiRow).toHaveTextContent(/configured/i)
+  })
+
+  it('renders the crawl panel and runs a crawl when its button is clicked', async () => {
+    vi.mocked(api.runCrawl).mockResolvedValue({
+      weather: { ok: true, count: 5 },
+      aqi: { ok: true, count: 0 },
+      news: { ok: false, error: 'network down' },
+    })
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('sim-crawl-btn')).toBeInTheDocument())
+    await user.click(screen.getByTestId('sim-crawl-btn'))
+
+    const results = await screen.findByTestId('sim-crawl-results')
+    expect(results).toHaveTextContent('5 mục')
+    expect(api.runCrawl).toHaveBeenCalled()
   })
 
   it('shows a loading indicator before the system status query resolves', async () => {

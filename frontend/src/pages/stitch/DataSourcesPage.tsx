@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Database, Loader2 } from 'lucide-react'
 import { api } from '../../services/api'
 import { useTranslation } from '../../i18n/useTranslation'
+import CrawlPanel from '../../components/CrawlPanel'
 import type { SystemStatus } from '../../types'
 import type { TranslationKey } from '../../i18n/en'
 
@@ -83,6 +84,11 @@ export default function DataSourcesPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="glass-panel rounded-xl p-4">
+        <h3 className="text-sm font-semibold mb-3">{t('dataSources.crawlSectionTitle')}</h3>
+        <CrawlPanel />
       </div>
     </div>
   )

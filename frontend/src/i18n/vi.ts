@@ -113,6 +113,7 @@ export const vi: Record<TranslationKey, string> = {
   'dataSources.typeNeo4j': 'Kho đồ thị tri thức',
   'dataSources.typeQdrant': 'Chỉ mục tìm kiếm vector',
   'dataSources.typeOpenRouter': 'Cổng AI dự phòng',
+  'dataSources.crawlSectionTitle': 'Thu thập dữ liệu thủ công',
 
   'knowledge.title': 'Đồ thị tri thức',
   'knowledge.subtitle': 'Số lượng thực thể/quan hệ thực từ Neo4j — bố cục chỉ mang tính minh họa, số liệu và thực thể mẫu là dữ liệu thật.',
