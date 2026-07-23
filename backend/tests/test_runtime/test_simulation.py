@@ -140,6 +140,25 @@ async def test_auto_goal_targets_the_district_selected_at_start():
 
 
 @pytest.mark.asyncio
+async def test_start_resets_auto_goal_cooldown_from_a_previous_run():
+    eng = _engine()
+    await eng.start("heavy_rain", interval_s=999, auto_goal=True)
+    await eng.stop()
+    for _ in range(40):
+        await eng.tick()
+    assert len(eng._goal_calls) == 1  # first auto-goal fired, cooldown now active
+
+    # Restarting the simulation is a fresh run — it must not inherit the
+    # previous run's cooldown timestamp, or a bad-weather scenario that keeps
+    # crossing the threshold would silently stay quiet after every restart.
+    await eng.start("heavy_rain", interval_s=999, auto_goal=True)
+    await eng.stop()
+    for _ in range(40):
+        await eng.tick()
+    assert len(eng._goal_calls) == 2, "restarting the simulation must reset the auto-goal cooldown"
+
+
+@pytest.mark.asyncio
 async def test_unknown_scenario_raises():
     eng = _engine()
     with pytest.raises(ValueError):

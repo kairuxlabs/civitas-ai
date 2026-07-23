@@ -50,6 +50,8 @@ class SimulationEngine:
         self.interval_s = float(interval_s)  # minimum enforced at the API layer
         self.auto_goal = auto_goal
         self.district_id = district_id
+        self.last_auto_goal_ts = None
+        self.last_auto_goal_run = None
         self.running = True
         self._task = asyncio.create_task(self._loop())
         logger.info(f"Simulation started: {scenario} every {self.interval_s}s (auto_goal={auto_goal})")
