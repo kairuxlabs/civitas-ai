@@ -144,3 +144,37 @@ class Neo4jLoader:
         except Exception as e:
             logger.warning(f"Neo4j count_summary failed: {e}")
             return {"entities": 0, "relations": 0}
+
+    def list_labels(self) -> list[dict]:
+        """All distinct entity labels in the graph with their node counts,
+        ordered by count descending. No-ops to [] when Neo4j isn't
+        configured or the driver fails."""
+        if not self._driver:
+            return []
+        query = "MATCH (n) RETURN labels(n)[0] AS label, count(n) AS count ORDER BY count DESC"
+        try:
+            with self._driver.session() as session:
+                result = session.run(query)
+                return [{"label": row["label"], "count": row["count"]} for row in result]
+        except Exception as e:
+            logger.warning(f"Neo4j list_labels failed: {e}")
+            return []
+
+    def list_entities_by_label(self, label: str, limit: int = 50) -> list[dict]:
+        """Entity names for one label. `label` is interpolated into the
+        Cypher (Neo4j doesn't support parameterized labels), so it's
+        validated against the same _is_safe_identifier pattern as
+        upsert_nodes before use."""
+        if not self._driver:
+            return []
+        if not _is_safe_identifier(label):
+            logger.warning(f"Neo4j list_entities_by_label: rejected unsafe label {label!r}")
+            return []
+        query = f"MATCH (n:{label}) RETURN n.name AS name, n.display_name AS display_name LIMIT $limit"
+        try:
+            with self._driver.session() as session:
+                result = session.run(query, limit=limit)
+                return [{"name": row["name"], "display_name": row["display_name"]} for row in result]
+        except Exception as e:
+            logger.warning(f"Neo4j list_entities_by_label failed: {e}")
+            return []

@@ -219,6 +219,108 @@ def test_find_related_returns_empty_list_on_driver_error(monkeypatch):
     assert result == []
 
 
+def test_list_labels_no_op_when_not_configured(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "")
+    loader = Neo4jLoader()
+    assert loader.list_labels() == []
+
+
+def test_list_labels_runs_query_and_maps_rows(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_session = MagicMock()
+    mock_session.run.return_value = [
+        {"label": "District", "count": 12},
+        {"label": "Hospital", "count": 8},
+    ]
+    mock_driver = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_driver.session.return_value.__exit__.return_value = None
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        result = loader.list_labels()
+
+    assert result == [{"label": "District", "count": 12}, {"label": "Hospital", "count": 8}]
+    args, _ = mock_session.run.call_args
+    assert "ORDER BY count DESC" in args[0]
+
+
+def test_list_labels_returns_empty_list_on_driver_error(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_driver = MagicMock()
+    mock_driver.session.side_effect = RuntimeError("connection refused")
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        result = loader.list_labels()
+
+    assert result == []
+
+
+def test_list_entities_by_label_no_op_when_not_configured(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "")
+    loader = Neo4jLoader()
+    assert loader.list_entities_by_label("District") == []
+
+
+def test_list_entities_by_label_runs_query_and_maps_rows(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_session = MagicMock()
+    mock_session.run.return_value = [
+        {"name": "Hoan Kiem", "display_name": "Hoan Kiem District"},
+    ]
+    mock_driver = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_driver.session.return_value.__exit__.return_value = None
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        result = loader.list_entities_by_label("District", limit=10)
+
+    assert result == [{"name": "Hoan Kiem", "display_name": "Hoan Kiem District"}]
+    args, kwargs = mock_session.run.call_args
+    assert "MATCH (n:District)" in args[0]
+    assert kwargs == {"limit": 10}
+
+
+def test_list_entities_by_label_rejects_unsafe_label(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_driver = MagicMock()
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        result = loader.list_entities_by_label("District}) DETACH DELETE n //")
+
+    assert result == []
+    mock_driver.session.assert_not_called()
+
+
+def test_list_entities_by_label_returns_empty_list_on_driver_error(monkeypatch):
+    monkeypatch.setattr(settings, "neo4j_uri", "neo4j+s://fake")
+    monkeypatch.setattr(settings, "neo4j_user", "neo4j")
+    monkeypatch.setattr(settings, "neo4j_password", "pw")
+
+    mock_driver = MagicMock()
+    mock_driver.session.side_effect = RuntimeError("connection refused")
+
+    with patch("src.knowledge_pipeline.loaders.neo4j_loader.GraphDatabase.driver", return_value=mock_driver):
+        loader = Neo4jLoader()
+        result = loader.list_entities_by_label("District")
+
+    assert result == []
+
+
 # --- Cypher injection guard: unsafe label/rel_type rejection ---------------
 
 def test_upsert_nodes_rejects_unsafe_label(monkeypatch):
