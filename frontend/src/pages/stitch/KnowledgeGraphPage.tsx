@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2, Network, Search, Share2 } from 'lucide-react'
+import Modal from '../../components/Modal'
 import { api } from '../../services/api'
 import { useTranslation } from '../../i18n/useTranslation'
 
@@ -25,6 +26,13 @@ export default function KnowledgeGraphPage() {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
+  const [detailEntity, setDetailEntity] = useState<string | null>(null)
+
+  const detailQuery = useQuery({
+    queryKey: ['knowledge-entity', detailEntity],
+    queryFn: () => api.getKnowledgeSummary(detailEntity!, 30),
+    enabled: Boolean(detailEntity),
+  })
 
   const { data: summary, isLoading, isError } = useQuery({
     queryKey: ['knowledge-summary', search],
@@ -122,7 +130,16 @@ export default function KnowledgeGraphPage() {
               ) : (
                 <div className="divide-y divide-outline-variant/30">
                   {visibleSample.map((item, i) => (
-                    <div key={i} data-testid="knowledge-sample-row" className="px-6 py-3 flex items-center justify-between text-sm">
+                    <button
+                      key={i}
+                      type="button"
+                      data-testid="knowledge-sample-row"
+                      disabled={!item.name}
+                      onClick={() => item.name && setDetailEntity(item.name)}
+                      className={`w-full px-6 py-3 flex items-center justify-between text-sm text-left transition-colors ${
+                        item.name ? 'hover:bg-surface-container-high/40 cursor-pointer' : 'cursor-default'
+                      }`}
+                    >
                       <div>
                         <span className="font-semibold">{item.name}</span>
                         <span className="text-outline text-xs ml-2">{item.label}</span>
@@ -132,13 +149,67 @@ export default function KnowledgeGraphPage() {
                           {item.relation} → {item.related_name}
                         </span>
                       )}
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
           )}
         </>
+      )}
+
+      {detailEntity && (
+        <Modal
+          open={Boolean(detailEntity)}
+          onClose={() => setDetailEntity(null)}
+          title={detailEntity}
+          icon={<Share2 size={16} className="text-primary" />}
+          testId="knowledge-entity-modal"
+        >
+          <p className="text-xs text-on-surface-variant mb-4">{t('knowledge.entityDetailSubtitle')}</p>
+          {detailQuery.isLoading && (
+            <div data-testid="knowledge-entity-loading" className="flex items-center justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-primary" />
+            </div>
+          )}
+          {!detailQuery.isLoading && (detailQuery.data?.sample.length ?? 0) === 0 && (
+            <p data-testid="knowledge-entity-empty" className="text-xs text-outline italic text-center py-6">
+              {t('knowledge.noRelationsForEntity')}
+            </p>
+          )}
+          {!detailQuery.isLoading && (detailQuery.data?.sample.length ?? 0) > 0 && (
+            <ul className="space-y-3">
+              {detailQuery.data!.sample.map((item, i) => {
+                const pct = item.rel_confidence != null ? Math.round(item.rel_confidence * 100) : null
+                const confidenceClass = pct == null
+                  ? 'text-on-surface-variant bg-surface-container-high border-outline-variant'
+                  : pct >= 80 ? 'text-secondary bg-secondary/10 border-secondary/30'
+                    : pct >= 50 ? 'text-tertiary bg-tertiary/10 border-tertiary/30'
+                      : 'text-error bg-error/10 border-error/30'
+                return (
+                  <li key={i} data-testid="knowledge-entity-relation-row" className="rounded-xl border border-outline-variant bg-surface-container-high/40 p-3.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-on-surface">
+                        {item.relation ?? '—'} → {item.related_name ?? '—'}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.rel_source && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant">
+                            {item.rel_source}
+                          </span>
+                        )}
+                        {pct != null && (
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${confidenceClass}`}>{pct}%</span>
+                        )}
+                      </div>
+                    </div>
+                    {item.rel_created_at && <p className="text-[10px] text-outline font-mono">{item.rel_created_at}</p>}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Modal>
       )}
     </div>
   )

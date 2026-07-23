@@ -132,6 +132,8 @@ export const en = {
   'knowledge.noSampleData': 'No sample entities found for these keywords yet — try a different search term.',
   'knowledge.entities': 'Entities',
   'knowledge.relations': 'Relations',
+  'knowledge.entityDetailSubtitle': 'All known relations for this entity, including source and confidence metadata.',
+  'knowledge.noRelationsForEntity': 'No relations found for this entity yet.',
 
   // cityIntelligence
   'cityIntelligence.title': 'City Intelligence',

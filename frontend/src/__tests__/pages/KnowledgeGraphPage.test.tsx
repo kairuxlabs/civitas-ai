@@ -107,4 +107,67 @@ describe('KnowledgeGraphPage', () => {
     await waitFor(() => expect(screen.getByText('Đồ thị tri thức')).toBeInTheDocument())
     localStorage.removeItem('civitas-language')
   })
+
+  it('clicking a sample row opens a detail modal with that entity\'s full relation list', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockImplementation(async (q) => {
+      if (q === 'Hoan Kiem') {
+        return {
+          configured: true, entities: 128, relations: 426,
+          sample: [
+            {
+              name: 'Hoan Kiem', label: 'District', relation: 'NEAR', related_name: 'Old Quarter',
+              rel_source: 'OSM', rel_confidence: 0.9, rel_created_at: '2026-07-20T10:00:00Z',
+            },
+            {
+              name: 'Hoan Kiem', label: 'District', relation: 'CONTAINS', related_name: 'Hoan Kiem Lake',
+              rel_source: 'OSM', rel_confidence: null, rel_created_at: null,
+            },
+          ],
+        }
+      }
+      return { configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]] }
+    })
+
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1))
+
+    await user.click(screen.getByText('Hoan Kiem'))
+
+    await waitFor(() => expect(screen.getByTestId('knowledge-entity-modal')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByTestId('knowledge-entity-relation-row')).toHaveLength(2))
+    expect(screen.getByText(/CONTAINS/)).toBeInTheDocument()
+    expect(screen.getByText('90%')).toBeInTheDocument()
+  })
+
+  it('shows an empty state in the entity modal when the drill-down query returns no relations', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockImplementation(async (q) => {
+      if (q === 'Hoan Kiem') return { configured: true, entities: 128, relations: 426, sample: [] }
+      return { configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]] }
+    })
+
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1))
+
+    await user.click(screen.getByText('Hoan Kiem'))
+
+    await waitFor(() => expect(screen.getByTestId('knowledge-entity-empty')).toBeInTheDocument())
+  })
+
+  it('closes the entity detail modal via the close button', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
+      configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]],
+    })
+
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1))
+
+    await user.click(screen.getByText('Hoan Kiem'))
+    await waitFor(() => expect(screen.getByTestId('knowledge-entity-modal')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByTestId('knowledge-entity-modal')).not.toBeInTheDocument())
+  })
 })
