@@ -1,14 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CloudDrizzle, Database, Loader2, Play, Square } from 'lucide-react'
+import { CloudDrizzle, Loader2, Play, Square } from 'lucide-react'
+import CrawlPanel from './CrawlPanel'
 import { api } from '../services/api'
-import type { CrawlResults } from '../types'
-
-const CRAWL_SOURCES: { key: string; label: string }[] = [
-  { key: 'weather', label: 'Thời tiết (Open-Meteo)' },
-  { key: 'aqi', label: 'AQI (OpenAQ)' },
-  { key: 'news', label: 'Tin tức (VnExpress RSS)' },
-]
 
 // Which reading is the actual auto-goal trigger signal for each scenario,
 // matching backend/src/simulation/profiles.py's per-scenario goal_trigger.
@@ -33,7 +27,6 @@ interface Props {
 export default function SimulationPanel({ districtId = 1 }: Props) {
   const [scenario, setScenario] = useState('heavy_rain')
   const [autoGoal, setAutoGoal] = useState(true)
-  const [crawlResults, setCrawlResults] = useState<CrawlResults | null>(null)
   const queryClient = useQueryClient()
 
   const { data: scenarios } = useQuery({ queryKey: ['v2-scenarios'], queryFn: api.getScenarios, staleTime: Infinity })
@@ -55,10 +48,6 @@ export default function SimulationPanel({ districtId = 1 }: Props) {
     mutationFn: api.stopSimulation,
     onSuccess: s => queryClient.setQueryData(['v2-sim-status'], s),
     onSettled: invalidate,
-  })
-  const crawl = useMutation({
-    mutationFn: () => api.runCrawl(),
-    onSuccess: setCrawlResults,
   })
 
   return (
@@ -136,38 +125,8 @@ export default function SimulationPanel({ districtId = 1 }: Props) {
       )}
 
       {/* Crawl */}
-      <div className="border-t border-slate-800 pt-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <button
-            data-testid="sim-crawl-btn"
-            onClick={() => crawl.mutate()}
-            disabled={crawl.isPending}
-            className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5"
-          >
-            {crawl.isPending ? <Loader2 size={12} className="animate-spin" /> : <Database size={12} />}
-            Crawl dữ liệu ngay
-          </button>
-          <span className="text-xs text-slate-600">Open-Meteo · OpenAQ · VnExpress RSS</span>
-        </div>
-        {crawlResults && (
-          <ul data-testid="sim-crawl-results" className="flex flex-wrap gap-2">
-            {CRAWL_SOURCES.map(({ key, label }) => {
-              const r = crawlResults[key]
-              if (!r) return null
-              return (
-                <li
-                  key={key}
-                  className={`text-xs px-2 py-0.5 rounded border ${
-                    r.ok ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-rose-950 text-rose-300 border-rose-800'
-                  }`}
-                  title={r.error}
-                >
-                  {label}: {r.ok ? (r.count != null ? `${r.count} mục` : 'OK') : 'lỗi'}
-                </li>
-              )
-            })}
-          </ul>
-        )}
+      <div className="border-t border-slate-800 pt-3">
+        <CrawlPanel />
       </div>
     </div>
   )
