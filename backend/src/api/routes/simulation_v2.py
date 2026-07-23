@@ -16,6 +16,7 @@ class SimulationStartIn(BaseModel):
     scenario: str
     interval_s: float = Field(default=30.0, ge=5.0, le=600.0)
     auto_goal: bool = True
+    district_id: int = 1
 
 
 class CrawlIn(BaseModel):
@@ -26,7 +27,9 @@ class CrawlIn(BaseModel):
 async def start_simulation(body: SimulationStartIn):
     if body.scenario not in PROFILES:
         raise HTTPException(status_code=422, detail=f"Unknown scenario. Available: {sorted(PROFILES)}")
-    return await simulation.start(body.scenario, interval_s=body.interval_s, auto_goal=body.auto_goal)
+    return await simulation.start(
+        body.scenario, interval_s=body.interval_s, auto_goal=body.auto_goal, district_id=body.district_id
+    )
 
 
 @router.post("/simulation/stop", dependencies=[Depends(require_api_key)])

@@ -26,7 +26,11 @@ function metricClass(metric: 'rain' | 'aqi' | 'temperature', activeScenario: str
   return PRIMARY_METRIC[activeScenario] === metric ? 'text-amber-300 font-semibold' : 'text-slate-400'
 }
 
-export default function SimulationPanel() {
+interface Props {
+  districtId?: number
+}
+
+export default function SimulationPanel({ districtId = 1 }: Props) {
   const [scenario, setScenario] = useState('heavy_rain')
   const [autoGoal, setAutoGoal] = useState(true)
   const [crawlResults, setCrawlResults] = useState<CrawlResults | null>(null)
@@ -43,7 +47,7 @@ export default function SimulationPanel() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['v2-sim-status'] })
 
   const start = useMutation({
-    mutationFn: () => api.startSimulation(scenario, 30, autoGoal),
+    mutationFn: () => api.startSimulation(scenario, 30, autoGoal, districtId),
     onSuccess: s => queryClient.setQueryData(['v2-sim-status'], s),
     onSettled: invalidate,
   })

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity, AlertTriangle, Brain, CheckCircle, Clock, FileSearch, Layers, Loader2,
@@ -73,6 +73,12 @@ export default function DecisionWorkspacePage() {
     queryFn: api.getRuns,
     refetchInterval: 5000,
   })
+  // Runs are newest-first; always follow the latest one (e.g. simulation
+  // auto-goals), even if the operator was viewing an older run.
+  useEffect(() => {
+    const newest = runs?.[0]
+    if (newest && newest.run_id !== activeRunId) setActiveRunId(newest.run_id)
+  }, [runs])
   const { data: monitor } = useQuery({
     queryKey: ['v2-monitor'],
     queryFn: api.getRuntimeMonitor,
@@ -180,7 +186,7 @@ export default function DecisionWorkspacePage() {
         </div>
       </div>
 
-      <SimulationPanel />
+      <SimulationPanel districtId={selectedDistrict} />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-gutter">
         <section className="xl:col-span-3 glass-panel rounded-xl p-4 space-y-3">

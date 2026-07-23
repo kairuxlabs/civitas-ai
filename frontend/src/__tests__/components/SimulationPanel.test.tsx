@@ -63,6 +63,20 @@ describe('SimulationPanel', () => {
     expect(screen.getByText('30°C').className).not.toContain('font-semibold')
   })
 
+  it('starts the simulation targeting the district passed in via props', async () => {
+    vi.mocked(api.startSimulation).mockResolvedValue({
+      running: true, scenario: 'heavy_rain', scenario_label: 'Mưa lớn', interval_s: 30, auto_goal: true, tick: 1,
+      district_id: 3, values: { rain: 0, aqi: 60, temperature: 28, humidity: 65, wind_speed: 8 }, last_auto_goal: null,
+    })
+
+    const user = userEvent.setup()
+    renderWithQueryClient(<SimulationPanel districtId={3} />)
+
+    await user.click(await screen.findByTestId('sim-start-btn'))
+
+    await waitFor(() => expect(api.startSimulation).toHaveBeenCalledWith('heavy_rain', 30, true, 3))
+  })
+
   it('shows the real per-source counts after a crawl, including a zero-count source', async () => {
     vi.mocked(api.runCrawl).mockResolvedValue({
       weather: { ok: true, count: 12 },

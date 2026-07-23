@@ -43,9 +43,9 @@ export const api = {
   getRuntimeMonitor: () => http.get<RuntimeMonitor>('/api/v2/monitor').then(r => r.data),
 
   // Digital Twin simulation + crawling
-  startSimulation: (scenario: string, intervalS = 30, autoGoal = true) =>
+  startSimulation: (scenario: string, intervalS = 30, autoGoal = true, districtId = 1) =>
     http.post<SimulationStatus>('/api/v2/simulation/start', {
-      scenario, interval_s: intervalS, auto_goal: autoGoal,
+      scenario, interval_s: intervalS, auto_goal: autoGoal, district_id: districtId,
     }).then(r => r.data),
   stopSimulation: () => http.post<SimulationStatus>('/api/v2/simulation/stop').then(r => r.data),
   getSimulationStatus: () => http.get<SimulationStatus>('/api/v2/simulation/status').then(r => r.data),

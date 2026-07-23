@@ -11,7 +11,7 @@ def _engine(**kwargs) -> SimulationEngine:
     calls = []
 
     async def submit_goal(goal, district_id=1, context_overrides=None):
-        calls.append({"goal": goal, "overrides": context_overrides})
+        calls.append({"goal": goal, "district_id": district_id, "overrides": context_overrides})
 
     async def broadcast(data):
         pass
@@ -123,7 +123,20 @@ async def test_start_stop_idempotent_and_status_shape():
     assert status["running"] is False
     status = await eng.stop()  # second stop is a no-op
     assert status["running"] is False
-    assert {"running", "scenario", "interval_s", "auto_goal", "tick", "values", "last_auto_goal"} <= set(eng.status())
+    assert {"running", "scenario", "interval_s", "auto_goal", "district_id", "tick", "values", "last_auto_goal"} <= set(eng.status())
+
+
+@pytest.mark.asyncio
+async def test_auto_goal_targets_the_district_selected_at_start():
+    eng = _engine()
+    await eng.start("heavy_rain", interval_s=999, auto_goal=True, district_id=7)
+    await eng.stop()
+    eng.auto_goal_cooldown_s = 9999
+    for _ in range(40):
+        await eng.tick()
+    assert len(eng._goal_calls) == 1
+    assert eng._goal_calls[0]["district_id"] == 7
+    assert eng.status()["district_id"] == 7
 
 
 @pytest.mark.asyncio

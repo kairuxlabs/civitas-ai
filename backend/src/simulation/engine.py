@@ -30,6 +30,7 @@ class SimulationEngine:
         self.scenario: str = "normal"
         self.interval_s: float = 30.0
         self.auto_goal: bool = True
+        self.district_id: int = 1
         self.auto_goal_cooldown_s: float = 300.0
         self.running: bool = False
         self.tick_count: int = 0
@@ -39,13 +40,16 @@ class SimulationEngine:
 
     # ── lifecycle ────────────────────────────────────────────────────────
 
-    async def start(self, scenario: str, interval_s: float = 30.0, auto_goal: bool = True) -> dict:
+    async def start(
+        self, scenario: str, interval_s: float = 30.0, auto_goal: bool = True, district_id: int = 1
+    ) -> dict:
         if scenario not in PROFILES:
             raise ValueError(f"Unknown scenario '{scenario}'. Available: {sorted(PROFILES)}")
         await self.stop()
         self.scenario = scenario
         self.interval_s = float(interval_s)  # minimum enforced at the API layer
         self.auto_goal = auto_goal
+        self.district_id = district_id
         self.running = True
         self._task = asyncio.create_task(self._loop())
         logger.info(f"Simulation started: {scenario} every {self.interval_s}s (auto_goal={auto_goal})")
@@ -69,6 +73,7 @@ class SimulationEngine:
             "scenario_label": PROFILES[self.scenario].label,
             "interval_s": self.interval_s,
             "auto_goal": self.auto_goal,
+            "district_id": self.district_id,
             "tick": self.tick_count,
             "values": {k: round(v, 1) for k, v in self.values.items()},
             "last_auto_goal": self.last_auto_goal_run,
@@ -204,7 +209,7 @@ class SimulationEngine:
         }
         try:
             submit = self._submit_goal or self._default_submit_goal
-            run = await submit(goal, district_id=1, context_overrides=overrides)
+            run = await submit(goal, district_id=self.district_id, context_overrides=overrides)
             self.last_auto_goal_run = getattr(run, "run_id", None) or goal
             logger.info(f"Simulation auto-submitted goal: {goal}")
         except Exception as e:

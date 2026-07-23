@@ -154,6 +154,7 @@ export interface SimulationStatus {
   scenario_label: string;
   interval_s: number;
   auto_goal: boolean;
+  district_id?: number;
   tick: number;
   values: { rain: number; aqi: number; temperature: number; humidity: number; wind_speed: number };
   last_auto_goal: string | null;

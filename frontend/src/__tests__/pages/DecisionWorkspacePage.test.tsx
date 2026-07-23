@@ -107,6 +107,18 @@ describe('DecisionWorkspacePage', () => {
     await waitFor(() => expect(api.startSimulation).toHaveBeenCalled())
   })
 
+  it('automatically activates the newest run when one appears, e.g. an auto-triggered simulation goal', async () => {
+    const autoRun: RuntimeRun = { ...activeRun, run_id: 'run-auto', goal: 'Auto: respond to heavy rain' }
+    vi.mocked(api.getRuns).mockResolvedValue([
+      { run_id: 'run-auto', goal: 'Auto: respond to heavy rain', district_id: 1, status: 'awaiting_approval', created_at: '2026-07-21T09:05:00Z', task_count: 1, confidence: 70 },
+    ])
+    vi.mocked(api.getRun).mockResolvedValue(autoRun)
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Auto: respond to heavy rain')).toBeInTheDocument())
+  })
+
   it('renders critic notes and reflection notes when present on the run', async () => {
     const runWithNotes: RuntimeRun = {
       ...activeRun,

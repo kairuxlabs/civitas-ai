@@ -30,6 +30,21 @@ async def test_simulation_start_status_stop(client, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_simulation_start_passes_district_id_through(client, monkeypatch):
+    monkeypatch.setattr(simulation, "_persist_enabled", False)
+
+    resp = await client.post(
+        "/api/v2/simulation/start",
+        json={"scenario": "heavy_rain", "interval_s": 60, "district_id": 5},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["district_id"] == 5
+
+    status = (await client.get("/api/v2/simulation/status")).json()
+    assert status["district_id"] == 5
+
+
+@pytest.mark.asyncio
 async def test_simulation_unknown_scenario_422(client):
     resp = await client.post("/api/v2/simulation/start", json={"scenario": "zombie"})
     assert resp.status_code == 422
