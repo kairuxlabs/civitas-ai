@@ -75,19 +75,45 @@ describe('api.getKnowledgeSummary', () => {
   it('sends a higher default limit even without a search query, so the default view is not capped at 5 samples', async () => {
     mockHttp.get.mockResolvedValueOnce({ data: { configured: true, entities: 1, relations: 1, sample: [] } })
     await api.getKnowledgeSummary()
-    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 15 } })
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 30 } })
   })
 
   it('includes the search query alongside the limit when provided', async () => {
     mockHttp.get.mockResolvedValueOnce({ data: { configured: true, entities: 1, relations: 1, sample: [] } })
     await api.getKnowledgeSummary('Cau Giay')
-    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 15, q: 'Cau Giay' } })
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 30, q: 'Cau Giay' } })
   })
 
   it('allows overriding the default limit, e.g. for an entity detail drill-down', async () => {
     mockHttp.get.mockResolvedValueOnce({ data: { configured: true, entities: 1, relations: 1, sample: [] } })
     await api.getKnowledgeSummary('Hoan Kiem', 30)
     expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 30, q: 'Hoan Kiem' } })
+  })
+})
+
+describe('api.getKnowledgeLabels', () => {
+  it('GETs /api/knowledge/labels and returns the label/count array', async () => {
+    const labels = [{ label: 'District', count: 12 }, { label: 'Hospital', count: 8 }]
+    mockHttp.get.mockResolvedValueOnce({ data: labels })
+    const result = await api.getKnowledgeLabels()
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/labels')
+    expect(result).toEqual(labels)
+  })
+})
+
+describe('api.getKnowledgeEntities', () => {
+  it('GETs /api/knowledge/entities with label and a default limit', async () => {
+    const entities = [{ name: 'Hoan Kiem', display_name: 'Hoan Kiem District' }]
+    mockHttp.get.mockResolvedValueOnce({ data: entities })
+    const result = await api.getKnowledgeEntities('District')
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/entities', { params: { label: 'District', limit: 50 } })
+    expect(result).toEqual(entities)
+  })
+
+  it('allows overriding the limit', async () => {
+    mockHttp.get.mockResolvedValueOnce({ data: [] })
+    await api.getKnowledgeEntities('Hospital', 10)
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/entities', { params: { label: 'Hospital', limit: 10 } })
   })
 })
 

@@ -4,6 +4,7 @@ import type {
   RuntimeRun, RuntimeRunSummary, RuntimeMonitor,
   SimulationStatus, ScenarioInfo, CrawlResults,
   DecisionSession, DecisionSessionAnalytics, SystemStatus, KnowledgeSummary,
+  KnowledgeLabelCount, KnowledgeEntityRef,
 } from '../types'
 
 const stripBOM = (s: string) => s.replace(/^﻿/, '').trim()
@@ -68,9 +69,13 @@ export const api = {
     http.get<DecisionSessionAnalytics>('/api/decision-sessions/analytics').then(r => r.data),
 
   getSystemStatus: () => http.get<SystemStatus>('/api/system/status').then(r => r.data),
-  getKnowledgeSummary: (q?: string, limit = 15) =>
+  getKnowledgeSummary: (q?: string, limit = 30) =>
     http.get<KnowledgeSummary>('/api/knowledge/summary', { params: { limit, ...(q ? { q } : {}) } })
       .then(r => r.data),
+  getKnowledgeLabels: () =>
+    http.get<KnowledgeLabelCount[]>('/api/knowledge/labels').then(r => r.data),
+  getKnowledgeEntities: (label: string, limit = 50) =>
+    http.get<KnowledgeEntityRef[]>('/api/knowledge/entities', { params: { label, limit } }).then(r => r.data),
 }
 
 export function createWebSocket(): WebSocket {

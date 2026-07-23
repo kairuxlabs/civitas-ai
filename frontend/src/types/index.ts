@@ -259,6 +259,16 @@ export interface KnowledgeSummary {
   sample: KnowledgeRelatedItem[];
 }
 
+export interface KnowledgeLabelCount {
+  label: string;
+  count: number;
+}
+
+export interface KnowledgeEntityRef {
+  name: string | null;
+  display_name: string | null;
+}
+
 export interface DecisionSessionAnalytics {
   total_sessions: number;
   approval_rate: number | null;
