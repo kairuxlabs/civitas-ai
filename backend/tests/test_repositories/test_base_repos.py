@@ -81,6 +81,38 @@ async def test_city_score_repo_get_city_overview_empty(db_session):
     assert await CityScoreRepo.get_city_overview(db_session) == []
 
 
+async def test_city_score_repo_get_recent_returns_chronological_order(db_session):
+    d = District(city_id="hanoi", name="Test")
+    db_session.add(d)
+    await db_session.flush()
+
+    base = datetime.now(timezone.utc)
+    db_session.add_all([
+        CityScore(
+            city_id="hanoi", district_id=d.id, timestamp=base - timedelta(minutes=20),
+            traffic_score=10, environment_score=10, citizen_score=10, risk_score=10, overall_score=10,
+        ),
+        CityScore(
+            city_id="hanoi", district_id=d.id, timestamp=base - timedelta(minutes=10),
+            traffic_score=20, environment_score=20, citizen_score=20, risk_score=20, overall_score=20,
+        ),
+        CityScore(
+            city_id="hanoi", district_id=d.id, timestamp=base,
+            traffic_score=30, environment_score=30, citizen_score=30, risk_score=30, overall_score=30,
+        ),
+    ])
+    await db_session.commit()
+
+    recent = await CityScoreRepo.get_recent(db_session, d.id, limit=2)
+
+    # limit=2 keeps only the two most recent rows, returned oldest-first
+    assert [s.traffic_score for s in recent] == [20, 30]
+
+
+async def test_city_score_repo_get_recent_empty(db_session):
+    assert await CityScoreRepo.get_recent(db_session, 1) == []
+
+
 async def test_weather_repo_save_all_commits_once(db_session):
     district = District(city_id="hanoi", name="Test")
     db_session.add(district)

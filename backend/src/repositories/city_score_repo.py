@@ -16,6 +16,17 @@ class CityScoreRepo:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_recent(session: AsyncSession, district_id: int, limit: int = 24) -> list[CityScore]:
+        result = await session.execute(
+            select(CityScore)
+            .where(CityScore.district_id == district_id)
+            .order_by(CityScore.timestamp.desc())
+            .limit(limit)
+        )
+        rows = result.scalars().all()
+        return list(reversed(rows))
+
+    @staticmethod
     async def save(session: AsyncSession, score: CityScore) -> CityScore:
         session.add(score)
         await session.commit()
