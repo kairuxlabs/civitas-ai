@@ -83,6 +83,28 @@ describe('api.getKnowledgeSummary', () => {
     await api.getKnowledgeSummary('Cau Giay')
     expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 15, q: 'Cau Giay' } })
   })
+
+  it('allows overriding the default limit, e.g. for an entity detail drill-down', async () => {
+    mockHttp.get.mockResolvedValueOnce({ data: { configured: true, entities: 1, relations: 1, sample: [] } })
+    await api.getKnowledgeSummary('Hoan Kiem', 30)
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/knowledge/summary', { params: { limit: 30, q: 'Hoan Kiem' } })
+  })
+})
+
+describe('api.getScoreHistory', () => {
+  it('GETs /api/scores/history/:id with a limit param', async () => {
+    const points = [{ time: '09:00', traffic_score: 80, environment_score: 70, citizen_score: 65, risk_score: 20 }]
+    mockHttp.get.mockResolvedValueOnce({ data: points })
+    const result = await api.getScoreHistory(3, 12)
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/scores/history/3', { params: { limit: 12 } })
+    expect(result).toEqual(points)
+  })
+
+  it('defaults the limit to 12 when not provided', async () => {
+    mockHttp.get.mockResolvedValueOnce({ data: [] })
+    await api.getScoreHistory(1)
+    expect(mockHttp.get).toHaveBeenCalledWith('/api/scores/history/1', { params: { limit: 12 } })
+  })
 })
 
 describe('createWebSocket', () => {

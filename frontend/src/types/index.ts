@@ -44,6 +44,14 @@ export interface AQIPoint {
   pm25: number;
 }
 
+export interface ScoreHistoryPoint {
+  time: string;
+  traffic_score: number;
+  environment_score: number;
+  citizen_score: number;
+  risk_score: number;
+}
+
 export interface AgentDecisionOut {
   id: number;
   city_id: string;

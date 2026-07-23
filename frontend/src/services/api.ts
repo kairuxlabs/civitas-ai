@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type {
-  District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint,
+  District, CityScore, DecisionOut, AgentDecisionOut, AQIPoint, ScoreHistoryPoint,
   RuntimeRun, RuntimeRunSummary, RuntimeMonitor,
   SimulationStatus, ScenarioInfo, CrawlResults,
   DecisionSession, DecisionSessionAnalytics, SystemStatus, KnowledgeSummary,
@@ -30,6 +30,8 @@ export const api = {
   getTimeline: (limit = 20) => http.get<AgentDecisionOut[]>(`/api/timeline?limit=${limit}`).then(r => r.data),
   getAQIHistory: (districtId: number, limit = 24) =>
     http.get<AQIPoint[]>(`/api/aqi/history/${districtId}?limit=${limit}`).then(r => r.data),
+  getScoreHistory: (districtId: number, limit = 12) =>
+    http.get<ScoreHistoryPoint[]>(`/api/scores/history/${districtId}`, { params: { limit } }).then(r => r.data),
   approveDecision: (id: number) => http.post(`/api/decisions/${id}/approve`).then(r => r.data),
   rejectDecision: (id: number) => http.post(`/api/decisions/${id}/reject`).then(r => r.data),
 
@@ -66,8 +68,8 @@ export const api = {
     http.get<DecisionSessionAnalytics>('/api/decision-sessions/analytics').then(r => r.data),
 
   getSystemStatus: () => http.get<SystemStatus>('/api/system/status').then(r => r.data),
-  getKnowledgeSummary: (q?: string) =>
-    http.get<KnowledgeSummary>('/api/knowledge/summary', { params: { limit: 15, ...(q ? { q } : {}) } })
+  getKnowledgeSummary: (q?: string, limit = 15) =>
+    http.get<KnowledgeSummary>('/api/knowledge/summary', { params: { limit, ...(q ? { q } : {}) } })
       .then(r => r.data),
 }
 
