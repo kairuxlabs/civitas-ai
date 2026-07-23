@@ -29,6 +29,9 @@ beforeEach(() => {
   vi.mocked(api.getAQIHistory).mockResolvedValue([
     { time: '2026-07-21T08:00:00Z', aqi_index: 90, pm25: 45 },
   ])
+  vi.mocked(api.getScoreHistory).mockResolvedValue([
+    { time: '08:00', traffic_score: 82, environment_score: 68, citizen_score: 74, risk_score: 20 },
+  ])
 })
 
 describe('CityIntelligencePage', () => {
@@ -57,6 +60,27 @@ describe('CityIntelligencePage', () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId('city-intelligence-overall-score')).toBeInTheDocument())
     expect(screen.queryByTestId('city-intelligence-aqi-trend')).not.toBeInTheDocument()
+  })
+
+  it('renders a trend chart for all four score categories when there is enough history', async () => {
+    vi.mocked(api.getScoreHistory).mockResolvedValue([
+      { time: '06:00', traffic_score: 70, environment_score: 60, citizen_score: 65, risk_score: 30 },
+      { time: '07:00', traffic_score: 82, environment_score: 68, citizen_score: 74, risk_score: 20 },
+    ])
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('city-intelligence-trend-traffic')).toBeInTheDocument())
+    expect(screen.getByTestId('city-intelligence-trend-environment')).toBeInTheDocument()
+    expect(screen.getByTestId('city-intelligence-trend-citizen')).toBeInTheDocument()
+    expect(screen.getByTestId('city-intelligence-trend-risk')).toBeInTheDocument()
+  })
+
+  it('does not render score trend charts with fewer than two data points', async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId('city-intelligence-overall-score')).toBeInTheDocument())
+    expect(screen.queryByTestId('city-intelligence-trend-traffic')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('city-intelligence-trend-environment')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('city-intelligence-trend-citizen')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('city-intelligence-trend-risk')).not.toBeInTheDocument()
   })
 
   it('shows a loading indicator before the scores query resolves', async () => {

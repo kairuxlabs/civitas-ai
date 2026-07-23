@@ -12,10 +12,10 @@ export default function CityIntelligencePage() {
   const [selectedDistrictId, setSelectedDistrictId] = useState(1)
 
   const categoryMeta = [
-    { key: 'traffic_score', label: t('cityIntelligence.traffic'), border: 'border-l-primary', icon: 'text-primary', invert: false },
-    { key: 'environment_score', label: t('cityIntelligence.environment'), border: 'border-l-secondary', icon: 'text-secondary', invert: false },
-    { key: 'citizen_score', label: t('cityIntelligence.citizen'), border: 'border-l-tertiary', icon: 'text-tertiary', invert: false },
-    { key: 'risk_score', label: t('cityIntelligence.risk'), border: 'border-l-error', icon: 'text-error', invert: true },
+    { key: 'traffic_score', label: t('cityIntelligence.traffic'), border: 'border-l-primary', icon: 'text-primary', invert: false, chartColor: '#adc6ff' },
+    { key: 'environment_score', label: t('cityIntelligence.environment'), border: 'border-l-secondary', icon: 'text-secondary', invert: false, chartColor: '#4edea3' },
+    { key: 'citizen_score', label: t('cityIntelligence.citizen'), border: 'border-l-tertiary', icon: 'text-tertiary', invert: false, chartColor: '#ffb786' },
+    { key: 'risk_score', label: t('cityIntelligence.risk'), border: 'border-l-error', icon: 'text-error', invert: true, chartColor: '#ffb4ab' },
   ] as const
 
   const { data: districts } = useQuery({ queryKey: ['districts'], queryFn: api.getDistricts })
@@ -23,6 +23,10 @@ export default function CityIntelligencePage() {
   const { data: aqiHistory } = useQuery({
     queryKey: ['aqi-history', selectedDistrictId],
     queryFn: () => api.getAQIHistory(selectedDistrictId, 12),
+  })
+  const { data: scoreHistory } = useQuery({
+    queryKey: ['score-history', selectedDistrictId],
+    queryFn: () => api.getScoreHistory(selectedDistrictId, 12),
   })
 
   const selectedScore = useMemo(
@@ -143,6 +147,7 @@ export default function CityIntelligencePage() {
         {categoryMeta.map(cat => {
           const value = selectedScore ? Math.round(selectedScore[cat.key]) : null
           const good = cat.invert ? (value ?? 0) < 40 : (value ?? 0) >= 60
+          const trendKey = cat.key.replace('_score', '')
           return (
             <div key={cat.key} className={`glass-panel rounded-xl p-5 border-l-4 ${cat.border}`}>
               <div className="flex items-center justify-between mb-3">
@@ -152,6 +157,15 @@ export default function CityIntelligencePage() {
               <span className="text-3xl font-black">
                 {value ?? '—'}<span className="text-xs font-normal text-outline ml-1">/100</span>
               </span>
+              {scoreHistory && scoreHistory.length > 1 && (
+                <div data-testid={`city-intelligence-trend-${trendKey}`} className="h-8 mt-2 -mx-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={scoreHistory}>
+                      <Line type="monotone" dataKey={cat.key} stroke={cat.chartColor} strokeWidth={2} dot={false} isAnimationActive={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           )
         })}
