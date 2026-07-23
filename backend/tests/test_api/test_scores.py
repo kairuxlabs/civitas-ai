@@ -76,3 +76,41 @@ async def test_get_all_scores_empty(client):
     response = await client.get("/api/scores")
     assert response.status_code == 200
     assert response.json() == []
+
+
+async def test_get_score_history_empty(client):
+    response = await client.get("/api/scores/history/1")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_get_score_history_returns_recent_rows_chronologically(client, db_session):
+    district = District(city_id="hanoi", name="Test")
+    db_session.add(district)
+    await db_session.flush()
+
+    base = datetime.now(timezone.utc)
+    db_session.add_all([
+        CityScore(
+            city_id="hanoi", district_id=district.id, timestamp=base - timedelta(minutes=10),
+            traffic_score=40, environment_score=50, citizen_score=60, risk_score=20, overall_score=55,
+        ),
+        CityScore(
+            city_id="hanoi", district_id=district.id, timestamp=base,
+            traffic_score=45, environment_score=55, citizen_score=65, risk_score=25, overall_score=60,
+        ),
+    ])
+    await db_session.commit()
+
+    response = await client.get(f"/api/scores/history/{district.id}")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert len(data) == 2
+    assert data[0]["traffic_score"] == 40
+    assert data[1]["traffic_score"] == 45
+
+
+async def test_get_score_history_limit_over_cap_rejected(client):
+    response = await client.get("/api/scores/history/1?limit=99999")
+    assert response.status_code == 422
