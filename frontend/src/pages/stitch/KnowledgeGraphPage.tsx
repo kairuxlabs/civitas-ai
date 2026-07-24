@@ -55,6 +55,7 @@ export default function KnowledgeGraphPage() {
   const [search, setSearch] = useState('')
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
   const [detailEntity, setDetailEntity] = useState<string | null>(null)
+  const [browseLabel, setBrowseLabel] = useState<string | null>(null)
 
   const detailQuery = useQuery({
     queryKey: ['knowledge-entity', detailEntity],
@@ -65,6 +66,18 @@ export default function KnowledgeGraphPage() {
   const { data: summary, isLoading, isError } = useQuery({
     queryKey: ['knowledge-summary', search],
     queryFn: () => api.getKnowledgeSummary(search || undefined),
+  })
+
+  const { data: labelCounts } = useQuery({
+    queryKey: ['knowledge-labels'],
+    queryFn: api.getKnowledgeLabels,
+    enabled: Boolean(summary?.configured),
+  })
+
+  const { data: browseEntities, isLoading: isBrowseLoading } = useQuery({
+    queryKey: ['knowledge-browse-entities', browseLabel],
+    queryFn: () => api.getKnowledgeEntities(browseLabel!, 50),
+    enabled: Boolean(browseLabel),
   })
 
   const labels = useMemo(
@@ -149,6 +162,60 @@ export default function KnowledgeGraphPage() {
               <span className="text-xs text-outline uppercase tracking-wide">{t('knowledge.relations')}</span>
             </div>
           </div>
+
+          {summary?.configured && (
+            <div className="glass-panel rounded-xl p-4 space-y-3">
+              <h3 className="text-sm font-semibold">{t('knowledge.browseByType')}</h3>
+              <div className="flex flex-wrap gap-2">
+                {(labelCounts ?? []).map(lc => {
+                  const ChipIcon = iconForLabel(lc.label)
+                  const active = browseLabel === lc.label
+                  return (
+                    <button
+                      key={lc.label}
+                      type="button"
+                      data-testid="knowledge-browse-label-chip"
+                      onClick={() => setBrowseLabel(lc.label)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${
+                        active
+                          ? 'bg-primary/20 border-primary text-primary font-semibold'
+                          : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
+                      }`}
+                    >
+                      <ChipIcon size={12} className={active ? '' : colorForLabel(lc.label)} />
+                      {lc.label} ({lc.count})
+                    </button>
+                  )
+                })}
+              </div>
+              {browseLabel && (
+                <div className="rounded-xl border border-outline-variant divide-y divide-outline-variant/30 overflow-hidden">
+                  {isBrowseLoading && (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 size={20} className="animate-spin text-primary" />
+                    </div>
+                  )}
+                  {!isBrowseLoading && (browseEntities?.length ?? 0) === 0 && (
+                    <p className="px-6 py-6 text-center text-outline italic text-xs">{t('knowledge.noEntitiesForLabel')}</p>
+                  )}
+                  {!isBrowseLoading && browseEntities?.map((entity, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      data-testid="knowledge-browse-entity-row"
+                      disabled={!entity.name}
+                      onClick={() => entity.name && setDetailEntity(entity.name)}
+                      className={`w-full px-6 py-2.5 text-left text-sm transition-colors ${
+                        entity.name ? 'hover:bg-surface-container-high/40 cursor-pointer' : 'cursor-default'
+                      }`}
+                    >
+                      {entity.display_name ?? entity.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {summary?.configured && (
             <div className="glass-panel rounded-xl overflow-hidden">

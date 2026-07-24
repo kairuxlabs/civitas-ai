@@ -135,6 +135,8 @@ export const en = {
   'knowledge.relations': 'Relations',
   'knowledge.entityDetailSubtitle': 'All known relations for this entity, including source and confidence metadata.',
   'knowledge.noRelationsForEntity': 'No relations found for this entity yet.',
+  'knowledge.browseByType': 'Browse by type',
+  'knowledge.noEntitiesForLabel': 'No entities found for this type yet.',
 
   // cityIntelligence
   'cityIntelligence.title': 'City Intelligence',

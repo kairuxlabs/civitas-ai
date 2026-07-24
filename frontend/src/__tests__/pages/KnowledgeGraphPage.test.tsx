@@ -24,6 +24,10 @@ const twoLabelSample = [
 ]
 
 describe('KnowledgeGraphPage', () => {
+  beforeEach(() => {
+    vi.mocked(api.getKnowledgeLabels).mockResolvedValue([])
+  })
+
   it('renders real entity/relation counts when Neo4j is configured', async () => {
     vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
       configured: true, entities: 128, relations: 426,
@@ -207,5 +211,77 @@ describe('KnowledgeGraphPage', () => {
     await waitFor(() => expect(screen.getAllByTestId('knowledge-sample-row')).toHaveLength(1))
     const row = screen.getByTestId('knowledge-sample-row')
     expect(row.querySelector('svg')).toBeInTheDocument()
+  })
+
+  it('shows label chips with counts and lists entities when a chip is clicked', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
+      configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]],
+    })
+    vi.mocked(api.getKnowledgeLabels).mockResolvedValue([
+      { label: 'District', count: 12 },
+      { label: 'Hospital', count: 8 },
+    ])
+    vi.mocked(api.getKnowledgeEntities).mockResolvedValue([
+      { name: 'Hoan Kiem', display_name: 'Hoan Kiem District' },
+    ])
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getAllByTestId('knowledge-browse-label-chip')).toHaveLength(2))
+    expect(screen.getByText('District (12)')).toBeInTheDocument()
+    expect(screen.getByText('Hospital (8)')).toBeInTheDocument()
+
+    await user.click(screen.getByText('District (12)'))
+
+    await waitFor(() => expect(screen.getByTestId('knowledge-browse-entity-row')).toBeInTheDocument())
+    expect(api.getKnowledgeEntities).toHaveBeenCalledWith('District', 50)
+    expect(screen.getByText('Hoan Kiem District')).toBeInTheDocument()
+  })
+
+  it('clicking a browsed entity opens its detail modal', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockImplementation(async (q) => {
+      if (q === 'Hoan Kiem') {
+        return {
+          configured: true, entities: 128, relations: 426,
+          sample: [
+            {
+              name: 'Hoan Kiem', label: 'District', relation: 'NEAR', related_name: 'Old Quarter',
+              rel_source: 'OSM', rel_confidence: null, rel_created_at: null,
+            },
+          ],
+        }
+      }
+      return { configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]] }
+    })
+    vi.mocked(api.getKnowledgeLabels).mockResolvedValue([{ label: 'District', count: 12 }])
+    vi.mocked(api.getKnowledgeEntities).mockResolvedValue([{ name: 'Hoan Kiem', display_name: 'Hoan Kiem District' }])
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('knowledge-browse-label-chip')).toBeInTheDocument())
+    await user.click(screen.getByText('District (12)'))
+    await waitFor(() => expect(screen.getByTestId('knowledge-browse-entity-row')).toBeInTheDocument())
+
+    await user.click(screen.getByText('Hoan Kiem District'))
+
+    await waitFor(() => expect(screen.getByTestId('knowledge-entity-modal')).toBeInTheDocument())
+  })
+
+  it('shows an empty state when a label has no entities', async () => {
+    vi.mocked(api.getKnowledgeSummary).mockResolvedValue({
+      configured: true, entities: 128, relations: 426, sample: [twoLabelSample[0]],
+    })
+    vi.mocked(api.getKnowledgeLabels).mockResolvedValue([{ label: 'District', count: 0 }])
+    vi.mocked(api.getKnowledgeEntities).mockResolvedValue([])
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByTestId('knowledge-browse-label-chip')).toBeInTheDocument())
+    await user.click(screen.getByText('District (0)'))
+
+    await waitFor(() => expect(screen.getByText('No entities found for this type yet.')).toBeInTheDocument())
   })
 })

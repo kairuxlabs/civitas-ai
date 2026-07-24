@@ -130,6 +130,8 @@ export const vi: Record<TranslationKey, string> = {
   'knowledge.relations': 'Quan hệ',
   'knowledge.entityDetailSubtitle': 'Tất cả quan hệ đã biết của thực thể này, kèm nguồn và độ tin cậy.',
   'knowledge.noRelationsForEntity': 'Chưa tìm thấy quan hệ nào cho thực thể này.',
+  'knowledge.browseByType': 'Duyệt theo loại',
+  'knowledge.noEntitiesForLabel': 'Chưa tìm thấy thực thể nào cho loại này.',
 
   'cityIntelligence.title': 'Thông tin thành phố',
   'cityIntelligence.subtitle': 'Phân tích chuyên sâu điểm số theo từng quận, dựa trên dữ liệu pipeline trực tiếp.',
