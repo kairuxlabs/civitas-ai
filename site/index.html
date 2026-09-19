@@ -28,9 +28,10 @@
         CityOS
       </a>
       <nav class="navbar__links">
-        <a href="#why">Why</a>
+        <a href="#why">The Problem</a>
+        <a href="#story">Building It</a>
+        <a href="#runtime">How It Works</a>
         <a href="#architecture">Architecture</a>
-        <a href="#runtime">Runtime</a>
         <a href="#knowledge">Knowledge</a>
         <a href="#stack">Stack</a>
         <a href="#screenshots">Screenshots</a>
@@ -58,28 +59,92 @@
 
   <section class="section" id="why">
     <div class="container">
-      <p class="eyebrow">Why This Project</p>
+      <p class="eyebrow">The Local Problem</p>
       <h2>City operators don't need another dashboard. They need a system that reasons.</h2>
       <p>
-        Hanoi generates a constant stream of fast-moving, ambiguous signals — a sudden downpour, a spike in
-        PM2.5, a cluster of citizen complaints, a crowd forming for an unplanned event. Individually, none of
-        these signals says much. Together, read in real time by someone who has to decide whether to close a
-        road or open a cooling station, they're exactly the kind of judgment call that's easy to get wrong —
-        either by reacting too slowly, or by trusting an opaque system that can't explain itself when the
-        decision turns out to matter.
+        Urban management in Hanoi runs on data that never sits still — a sudden downpour, a spike in PM2.5,
+        a traffic jam forming three streets over, a cluster of citizen complaints, a crowd gathering for an
+        unplanned event. A static dashboard can put all of that on a screen as numbers. It can't tell an
+        operator which signal matters right now, why it matters, or what to actually do about it.
       </p>
       <p>
-        CityOS is built around a different premise: an AI system that recommends action for real emergencies
-        should never be a black box. Every agent in the pipeline — Traffic, Environment, Emergency, Citizen,
-        Knowledge — cites structured evidence instead of asserting a conclusion. A rule-based Critic checks
-        that evidence for sufficiency before anything reaches a human. And nothing ships without an operator's
-        approval. The system's job is to make the reasoning behind a recommendation inspectable, not to
-        replace the person accountable for it.
+        That's the judgment call an operator has to make in real time: close a road, or open a cooling
+        station? Every option carries the same risk — either reacting too slowly, or trusting an opaque
+        system that can't explain itself once the decision turns out to matter. What Hanoi's operators need
+        isn't one more chart. It's a system built to reason about these signals together, and to explain the
+        reasoning behind whatever it recommends.
       </p>
+    </div>
+  </section>
+
+  <section class="section" id="story">
+    <div class="container">
+      <p class="eyebrow">The Story of Building It</p>
+      <h2>One rule shaped every decision: never a black box</h2>
       <p>
-        This project exists to demonstrate that a multi-agent architecture can do this in practice — not as a
-        toy demo with fabricated metrics, but as a system running against real weather and air-quality feeds,
-        a real knowledge graph, and a real (if simulated-scenario) approval workflow, end to end.
+        We built CityOS around a single non-negotiable: when an AI system is recommending action for a real
+        emergency, "trust me" isn't good enough. Every agent in the pipeline — Traffic, Environment,
+        Emergency, Citizen, Knowledge — has to cite the specific evidence behind its input: a source, a data
+        point, a timestamp, a confidence score. Never just a judgment call it made on its own.
+      </p>
+      <div class="stack-grid">
+        <div class="glass-card">
+          <h3>Traffic Agent</h3>
+          <p>Cites live congestion and incident data instead of guessing at road conditions.</p>
+        </div>
+        <div class="glass-card">
+          <h3>Environment Agent</h3>
+          <p>Cites real, timestamped AQI and weather readings instead of asserting a risk level.</p>
+        </div>
+        <div class="glass-card">
+          <h3>Emergency Agent</h3>
+          <p>Cites matched knowledge-graph precedent before recommending an emergency action.</p>
+        </div>
+      </div>
+      <p style="margin-top: 1.5rem;">
+        That principle ended up shaping the whole project, not just the agents: a rule-based Critic that
+        checks evidence for sufficiency before anything reaches a human, and a hard rule against fabricated
+        metrics. The agents run against real Open-Meteo/OpenAQ feeds and a real Neo4j + Qdrant knowledge
+        graph — not seeded fixtures dressed up for a screenshot.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="runtime">
+    <div class="container">
+      <p class="eyebrow">How the Prototype Works</p>
+      <h2>A goal doesn't run straight through an LLM</h2>
+      <p>
+        When an operator submits a goal, it isn't handed straight to a language model. A Planner first
+        breaks it down into a dependency-aware task graph — separate, parallel workflows for whatever pieces
+        don't depend on each other.
+      </p>
+      <div class="pipeline">
+        <div class="pipeline-step glass-card">Planner</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card">Traffic / Emergency / Knowledge Workers <small>(parallel)</small></div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card">Reflection + Critic</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card">Decision</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step glass-card pipeline-step--accent">Human Approval</div>
+      </div>
+      <h3 style="margin-top: 2.5rem;">Real data in, evidence out</h3>
+      <p>
+        Each worker agent pulls real data before it says anything — live weather and AQI readings from the
+        Open-Meteo/OpenAQ APIs, and structured facts from the Neo4j + Qdrant knowledge graph — and cites
+        exactly what it used: source, type, confidence, timestamp, instead of a prose conclusion. A
+        rule-based Critic (not another LLM call) then reviews that evidence for sufficiency and unsupported
+        claims; a weak or contradicted decision automatically routes to human approval rather than shipping
+        silently. Nothing executes until an operator approves it.
+      </p>
+      <h3>Outcomes are measured, not claimed</h3>
+      <p>
+        Every goal persists a Decision Session through its full lifecycle — collecting → analyzing →
+        recommend → awaiting approval → observing → evaluated. At approval, a real baseline CityScore is
+        captured. After a delay (or on demand via <strong>Check Outcome Now</strong>), the observed CityScore
+        is compared against that baseline, so "did this decision help" is a measured answer, not an assumed one.
       </p>
     </div>
   </section>
@@ -119,42 +184,6 @@
           <p>PostgreSQL (sensor readings, decisions, sessions) · Open-Meteo + OpenAQ (real per-district weather/AQI, refreshed every 15 minutes)</p>
         </div>
       </div>
-    </div>
-  </section>
-
-  <section class="section" id="runtime">
-    <div class="container">
-      <p class="eyebrow">Multi-Agent Runtime</p>
-      <h2>A goal decomposes into a task graph, not a single prompt</h2>
-      <p>
-        A submitted goal doesn't go straight to an LLM. A Planner decomposes it into a dependency-aware DAG,
-        and specialized workers execute the independent branches in parallel.
-      </p>
-      <div class="pipeline">
-        <div class="pipeline-step glass-card">Planner</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step glass-card">Traffic / Emergency / Knowledge Workers <small>(parallel)</small></div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step glass-card">Reflection</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step glass-card">Decision</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step glass-card pipeline-step--accent">Human Approval</div>
-      </div>
-      <h3 style="margin-top: 2.5rem;">Evidence, not assertions</h3>
-      <p>
-        Every agent cites structured evidence — source, type, confidence, timestamp — instead of writing
-        prose conclusions. A rule-based Critic (not an LLM call) reviews that evidence for sufficiency and
-        unsupported claims; a weak or contradicted decision automatically routes to human approval rather
-        than shipping silently.
-      </p>
-      <h3>Outcomes are measured, not claimed</h3>
-      <p>
-        Every goal persists a Decision Session through its full lifecycle — collecting → analyzing →
-        recommend → awaiting approval → observing → evaluated. At approval, a real baseline CityScore is
-        captured. After a delay (or on demand via <strong>Check Outcome Now</strong>), the observed CityScore
-        is compared against that baseline, so "did this decision help" is a measured answer, not an assumed one.
-      </p>
     </div>
   </section>
 
